@@ -1,0 +1,237 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #f8f9ff;
+  --color-surface: #f8f9ff;
+  --color-surface-bright: #ffffff;
+  --color-surface-dim: #d0dbed;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eff4ff;
+  --color-surface-container: #e6eeff;
+  --color-surface-container-high: #dee9fc;
+  --color-surface-container-highest: #d9e3f6;
+  --color-surface-variant: #d9e3f6;
+
+  --color-primary: #b61722;
+  --color-primary-container: #da3437;
+  --color-primary-fixed: #ffdad7;
+  --color-primary-fixed-dim: #ffb3ad;
+
+  --color-secondary: #9f3f3b;
+  --color-secondary-container: #ff8982;
+  --color-secondary-fixed: #ffdad7;
+  --color-secondary-fixed-dim: #ffb3ad;
+
+  --color-tertiary: #006765;
+  --color-tertiary-container: #008280;
+  --color-tertiary-fixed: #87f4f0;
+  --color-tertiary-fixed-dim: #69d8d4;
+
+  --color-on-surface: #121c2a;
+  --color-on-surface-variant: #5b403e;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #fffbff;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #762120;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #f3fffd;
+
+  --color-outline: #8f6f6d;
+  --color-outline-variant: #e4beba;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+
+  --font-sans: "Inter", sans-serif;
+  --font-heading: "Manrope", sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background:
+    radial-gradient(circle at top right, rgba(182, 23, 34, 0.07), transparent 32%),
+    radial-gradient(circle at bottom left, rgba(217, 227, 246, 0.85), transparent 28%),
+    var(--color-background);
+  color: var(--color-on-surface);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+}
+
+.auth-grid::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.24;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23b61722' fill-opacity='0.09'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+@keyframes authFadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(36px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes authPanelIn {
+  from {
+    opacity: 0;
+    transform: translateX(36px) rotate(6deg) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) rotate(3deg) scale(1);
+  }
+}
+
+@keyframes authFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes authPulse {
+  0%,
+  100% {
+    opacity: 0.75;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes authSpinner {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes modalBackdropIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalBackdropOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes modalCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(36px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modalCardOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(20px) scale(0.96);
+  }
+}
+
+.animate-auth-fade-up {
+  animation: authFadeUp 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-auth-panel {
+  animation:
+    authPanelIn 700ms cubic-bezier(0.22, 1, 0.36, 1) both,
+    authFloat 5s ease-in-out 750ms infinite;
+}
+
+.animate-auth-pulse {
+  animation: authPulse 3.4s ease-in-out infinite;
+}
+
+.animate-modal-backdrop {
+  animation: modalBackdropIn 240ms ease-out both;
+}
+
+.animate-modal-backdrop-out {
+  animation: modalBackdropOut 220ms ease-in both;
+}
+
+.animate-modal-card {
+  animation: modalCardIn 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-modal-card-out {
+  animation: modalCardOut 220ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+.spinner-sm {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: white;
+  animation: authSpinner 0.75s linear infinite;
+}
+
+button,
+a,
+label[for],
+input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
