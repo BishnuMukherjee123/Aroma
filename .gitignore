@@ -1,0 +1,35 @@
+node_modules/
+
+# Frontend
+client/node_modules/
+client/.next/
+client/out/
+client/build/
+client/coverage/
+client/.env*
+!client/.env.example
+client/.vercel/
+client/.pnp
+client/.pnp.*
+client/.yarn/*
+!client/.yarn/patches
+!client/.yarn/plugins
+!client/.yarn/releases
+!client/.yarn/versions
+client/*.tsbuildinfo
+client/next-env.d.ts
+client/.DS_Store
+client/*.pem
+client/npm-debug.log*
+client/yarn-debug.log*
+client/yarn-error.log*
+client/.pnpm-debug.log*
+
+# Backend
+server/node_modules/
+server/dist/
+server/.env
+server/src/generated/
+
+# Local logs
+*.log
