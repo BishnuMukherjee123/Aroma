@@ -135,7 +135,7 @@ export function PublicRestaurantMenu({
   }
 
   return (
-    <div className="min-h-screen bg-surface pb-28">
+    <div className="min-h-screen bg-surface">
       <header className="sticky top-0 z-50 border-b border-white/50 bg-white/80 px-4 py-4 backdrop-blur-xl md:px-6">
         <div className="mx-auto flex max-w-6xl items-center gap-4">
           <div className="min-w-0 flex-1">
@@ -156,13 +156,6 @@ export function PublicRestaurantMenu({
               className="w-full rounded-[1rem] bg-surface-container-low py-2.5 pl-10 pr-4 text-sm font-medium text-on-surface outline-none ring-1 ring-transparent transition-all focus:ring-primary/15"
             />
           </div>
-
-          <button
-            type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors hover:text-primary"
-          >
-            <span className="material-symbols-outlined">account_circle</span>
-          </button>
         </div>
       </header>
 
@@ -299,61 +292,6 @@ export function PublicRestaurantMenu({
         </div>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-slate-100 bg-white/90 px-4 py-3 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-md items-center justify-around">
-          <div className="flex flex-col items-center gap-1 rounded-[1rem] bg-primary/8 px-4 py-2 text-primary">
-            <span className="material-symbols-outlined">restaurant</span>
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em]">
-              Menu
-            </span>
-          </div>
-
-          <Link
-            href={
-              highlightedDish?.modelUrl
-                ? `/r/${restaurant.publicId}/ar?dish=${highlightedDish.id}`
-                : `/r/${restaurant.publicId}`
-            }
-            className="flex flex-col items-center gap-1 px-4 py-2 text-on-surface-variant transition-colors hover:text-primary"
-          >
-            <span className="material-symbols-outlined">view_in_ar</span>
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em]">
-              AR View
-            </span>
-          </Link>
-
-          <button
-            type="button"
-            className="flex flex-col items-center gap-1 px-4 py-2 text-on-surface-variant"
-          >
-            <span className="material-symbols-outlined">shopping_bag</span>
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em]">
-              Bag
-            </span>
-          </button>
-
-          <button
-            type="button"
-            className="flex flex-col items-center gap-1 px-4 py-2 text-on-surface-variant"
-          >
-            <span className="material-symbols-outlined">person</span>
-            <span className="text-[11px] font-bold uppercase tracking-[0.14em]">
-              Profile
-            </span>
-          </button>
-        </div>
-      </nav>
-
-      {highlightedDish?.modelUrl ? (
-        <Link
-          href={`/r/${restaurant.publicId}/ar?dish=${highlightedDish.id}`}
-          className="fixed bottom-24 right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary-container text-white shadow-[0_18px_32px_rgba(182,23,34,0.28)] transition-transform hover:scale-105"
-        >
-          <span className="material-symbols-outlined text-[1.7rem]">
-            view_in_ar
-          </span>
-        </Link>
-      ) : null}
     </div>
   );
 }
