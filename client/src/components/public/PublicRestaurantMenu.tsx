@@ -174,7 +174,7 @@ export function PublicRestaurantMenu({
         </section>
 
         {highlightedDish ? (
-          <section className="mb-6 overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-surface-container-low to-white p-4 shadow-[0_16px_36px_rgba(18,28,42,0.05)] md:p-5">
+          <section className="mb-6 hidden overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-surface-container-low to-white p-4 shadow-[0_16px_36px_rgba(18,28,42,0.05)] md:block md:p-5">
             <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr] md:items-center">
               <div className="order-2 md:order-1">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
