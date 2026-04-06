@@ -1936,8 +1936,6 @@ export function RestaurantWorkspace({
             </div>
           </div>
         </section>
-
-        {renderTeamSection()}
       </>
     );
   };
