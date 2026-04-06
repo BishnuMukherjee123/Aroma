@@ -29,6 +29,7 @@ export function PublicRestaurantMenu({
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [activeMenuId, setActiveMenuId] = useState("all");
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   const deferredSearch = useDeferredValue(search);
 
@@ -144,6 +145,17 @@ export function PublicRestaurantMenu({
             </p>
           </div>
 
+          <button
+            type="button"
+            onClick={() => setIsMobileSearchOpen((current) => !current)}
+            aria-label={isMobileSearchOpen ? "Close search" : "Open search"}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-surface-container-low text-on-surface shadow-[0_10px_22px_rgba(18,28,42,0.08)] transition-all active:scale-95 md:hidden"
+          >
+            <span className="material-symbols-outlined text-[22px]">
+              {isMobileSearchOpen ? "close" : "search"}
+            </span>
+          </button>
+
           <div className="relative hidden min-w-0 flex-1 md:block">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
               search
@@ -157,6 +169,23 @@ export function PublicRestaurantMenu({
             />
           </div>
         </div>
+
+        {isMobileSearchOpen ? (
+          <div className="mx-auto mt-4 max-w-6xl md:hidden">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
+                search
+              </span>
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search menu..."
+                className="w-full rounded-[1rem] bg-surface-container-low py-3 pl-10 pr-4 text-sm font-medium text-on-surface outline-none ring-1 ring-transparent transition-all focus:ring-primary/15"
+              />
+            </div>
+          </div>
+        ) : null}
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6 md:px-6">
@@ -224,20 +253,7 @@ export function PublicRestaurantMenu({
           </section>
         ) : null}
 
-        <div className="relative mb-6 md:hidden">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
-            search
-          </span>
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search menu..."
-            className="w-full rounded-[1rem] bg-surface-container-low py-3 pl-10 pr-4 text-sm font-medium text-on-surface outline-none ring-1 ring-transparent transition-all focus:ring-primary/15"
-          />
-        </div>
-
-        <nav className="no-scrollbar sticky top-[4.85rem] z-40 mb-6 flex gap-2 overflow-x-auto bg-surface/92 py-1 backdrop-blur-sm">
+        <nav className="no-scrollbar mb-6 flex gap-2 overflow-x-auto py-1 md:sticky md:top-[4.85rem] md:z-40 md:bg-surface/92 md:backdrop-blur-sm">
           <button
             type="button"
             onClick={() => setActiveMenuId("all")}
