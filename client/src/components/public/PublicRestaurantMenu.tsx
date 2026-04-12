@@ -401,7 +401,6 @@ function TopArCard({
           <model-viewer
             src={dish.modelUrl}
             alt={dish.name}
-            poster={dish.posterUrl ?? dish.thumbnailUrl ?? undefined}
             camera-controls
             auto-rotate
             shadow-intensity="1"
