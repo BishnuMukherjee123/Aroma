@@ -216,11 +216,6 @@ const isCurrentSnapshotShape = (
 export const getPublicRestaurantSnapshot = async (
   publicId: string,
 ): Promise<PublicRestaurantPayload> => {
-  const cached = publicMenuCache.get(publicId);
-  if (cached) {
-    return cached;
-  }
-
   const restaurant = await prisma.restaurant.findUnique({
     where: { publicId },
     select: {
@@ -234,7 +229,13 @@ export const getPublicRestaurantSnapshot = async (
 
   const existingRestaurant = ensureFoundValue(restaurant, "Restaurant not found");
   if (!existingRestaurant.isActive || !existingRestaurant.isPublished) {
+    invalidatePublicRestaurantSnapshot(publicId);
     notFound("Restaurant not found");
+  }
+
+  const cached = publicMenuCache.get(publicId);
+  if (cached) {
+    return cached;
   }
 
   const snapshot = isCurrentSnapshotShape(existingRestaurant.publicMenuSnapshot)
