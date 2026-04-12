@@ -1,4 +1,10 @@
-export function BrandLockup() {
+export function BrandLockup({
+  title = "Aroma AR",
+  subtitle = "Management Portal",
+}: {
+  title?: string;
+  subtitle?: string;
+}) {
   return (
     <header className="animate-auth-fade-up text-center">
       <div className="mx-auto flex h-16 w-16 animate-auth-pulse items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary-container shadow-[0_14px_36px_rgba(182,23,34,0.22)]">
@@ -10,10 +16,10 @@ export function BrandLockup() {
         </div>
       </div>
       <h1 className="mt-5 text-[2.35rem] font-extrabold tracking-[-0.04em] text-on-surface">
-        Aroma AR
+        {title}
       </h1>
       <p className="mt-1 text-sm font-semibold text-on-surface-variant">
-        Management Portal
+        {subtitle}
       </p>
     </header>
   );

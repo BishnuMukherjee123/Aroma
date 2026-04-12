@@ -4,9 +4,16 @@ import Link from "next/link";
 import { RefObject } from "react";
 
 import { clearStoredToken } from "@/lib/auth-storage";
+import {
+  getPortalHomePath,
+  getPortalLoginPath,
+  getPortalSubtitle,
+  getPortalTitle,
+  type PortalVariant,
+} from "@/lib/portal";
 import { cn } from "@/lib/utils";
 
-const primaryNav = [
+const ownerNav = [
   { label: "Overview", icon: "dashboard", active: true },
   { label: "Restaurants", icon: "restaurant", active: false },
   { label: "Assets", icon: "inventory_2", active: false },
@@ -14,11 +21,21 @@ const primaryNav = [
   { label: "Settings", icon: "settings", active: false },
 ] as const;
 
+const managerNav = [
+  { label: "Overview", icon: "dashboard", active: true },
+  { label: "Restaurant", icon: "restaurant", active: false },
+  { label: "Share & QR", icon: "qr_code_2", active: false },
+] as const;
+
 export function DashboardSidebar({
   createPanelRef,
+  portalVariant = "owner",
 }: {
-  createPanelRef: RefObject<HTMLElement | null>;
+  createPanelRef?: RefObject<HTMLElement | null>;
+  portalVariant?: PortalVariant;
 }) {
+  const primaryNav = portalVariant === "owner" ? ownerNav : managerNav;
+
   return (
     <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/70 bg-white/86 px-4 py-4 shadow-[0_8px_34px_rgba(18,28,42,0.05)] backdrop-blur md:fixed md:left-0 md:top-0 md:flex">
       <div className="mb-8 flex items-center gap-3 px-2">
@@ -32,10 +49,10 @@ export function DashboardSidebar({
         </div>
         <div>
           <h1 className="text-lg font-bold tracking-[-0.03em] text-primary">
-            Aroma Admin
+            {getPortalTitle(portalVariant)}
           </h1>
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-on-surface-variant/60">
-            Management Portal
+            {getPortalSubtitle(portalVariant)}
           </p>
         </div>
       </div>
@@ -61,22 +78,33 @@ export function DashboardSidebar({
       </nav>
 
       <div className="mt-auto space-y-3 border-t border-outline-variant/20 pt-4">
-        <button
-          type="button"
-          onClick={() =>
-            createPanelRef.current?.scrollIntoView({
-              behavior: "smooth",
-              block: "start",
-            })
-          }
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5"
-        >
-          <span className="material-symbols-outlined text-[1rem]">add_circle</span>
-          New Location
-        </button>
+        {portalVariant === "owner" ? (
+          <button
+            type="button"
+            onClick={() =>
+              createPanelRef?.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
+              })
+            }
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5"
+          >
+            <span className="material-symbols-outlined text-[1rem]">
+              add_circle
+            </span>
+            New Location
+          </button>
+        ) : (
+          <Link
+            href={getPortalHomePath(portalVariant)}
+            className="flex items-center justify-center rounded-xl bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high"
+          >
+            Assigned Workspace
+          </Link>
+        )}
 
         <Link
-          href="/"
+          href={getPortalLoginPath(portalVariant)}
           onClick={() => clearStoredToken()}
           className="flex items-center justify-center rounded-xl border border-outline-variant/25 px-4 py-3 text-sm font-semibold text-on-surface/70 transition-colors hover:bg-surface-container-low"
         >

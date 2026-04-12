@@ -4,8 +4,19 @@ import Link from "next/link";
 
 import { type MeResponse } from "@/lib/api";
 import { clearStoredToken } from "@/lib/auth-storage";
+import {
+  getAccountLabel,
+  getPortalLoginPath,
+  type PortalVariant,
+} from "@/lib/portal";
 
-export function DashboardTopbar({ user }: { user: MeResponse }) {
+export function DashboardTopbar({
+  user,
+  portalVariant = "owner",
+}: {
+  user: MeResponse;
+  portalVariant?: PortalVariant;
+}) {
   return (
     <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-4 border-b border-white/80 bg-surface/88 px-6 py-3 backdrop-blur md:px-8">
       <div className="relative w-full max-w-sm">
@@ -33,7 +44,9 @@ export function DashboardTopbar({ user }: { user: MeResponse }) {
         <div className="mx-1 hidden h-8 w-px bg-outline-variant/30 md:block" />
 
         <div className="hidden text-right md:block">
-          <p className="text-xs font-bold text-on-surface">Account Owner</p>
+          <p className="text-xs font-bold text-on-surface">
+            {getAccountLabel(portalVariant)}
+          </p>
           <p className="text-[11px] font-medium text-on-surface-variant">
             {user.email}
           </p>
@@ -44,7 +57,7 @@ export function DashboardTopbar({ user }: { user: MeResponse }) {
         </div>
 
         <Link
-          href="/"
+          href={getPortalLoginPath(portalVariant)}
           onClick={() => clearStoredToken()}
           className="ml-2 text-sm font-semibold text-on-surface-variant transition-colors hover:text-primary"
         >

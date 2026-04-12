@@ -3,40 +3,63 @@
 import Link from "next/link";
 
 import { clearStoredToken } from "@/lib/auth-storage";
+import {
+  getPortalLoginPath,
+  getPortalSubtitle,
+  getPortalTitle,
+  type PortalVariant,
+} from "@/lib/portal";
 import { cn } from "@/lib/utils";
 
-const workspaceNav = [
+const ownerWorkspaceNav = [
   { label: "Menu & Dishes", icon: "restaurant_menu", active: true },
   { label: "Team Members", icon: "group", active: false },
   { label: "Performance", icon: "analytics", active: false },
   { label: "Store Settings", icon: "settings", active: false },
 ] as const;
 
+const managerWorkspaceNav = [
+  { label: "Menu & Dishes", icon: "restaurant_menu", active: true },
+  { label: "Share & QR", icon: "qr_code_2", active: false },
+  { label: "Workspace Access", icon: "badge", active: false },
+] as const;
+
 export function WorkspaceSidebar({
-  ownerLabel,
+  profileLabel,
+  profileCaption,
+  homePath,
+  portalVariant = "owner",
 }: {
-  ownerLabel: string;
+  profileLabel: string;
+  profileCaption: string;
+  homePath: string;
+  portalVariant?: PortalVariant;
 }) {
+  const workspaceNav =
+    portalVariant === "owner" ? ownerWorkspaceNav : managerWorkspaceNav;
+
   return (
     <aside className="hidden h-screen w-64 flex-col border-r border-white/75 bg-slate-50/94 px-4 py-4 shadow-[0_8px_34px_rgba(18,28,42,0.05)] backdrop-blur md:fixed md:left-0 md:top-0 md:flex">
       <div className="px-2 py-2">
         <h1 className="text-xl font-bold tracking-[-0.04em] text-on-surface">
-          Aroma Admin
+          {getPortalTitle(portalVariant)}
         </h1>
         <p className="mt-1 text-[11px] font-medium text-on-surface-variant">
-          Management Portal
+          {getPortalSubtitle(portalVariant)}
         </p>
       </div>
 
       <nav className="mt-8 flex-1 space-y-2">
         <Link
-          href="/dashboard"
+          href={homePath}
           className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-on-surface/72 transition-colors hover:bg-white hover:text-primary"
         >
           <span className="material-symbols-outlined text-[1.05rem]">
             arrow_back
           </span>
-          Back to Portfolio
+          {portalVariant === "owner"
+            ? "Back to Portfolio"
+            : "Back to Manager Home"}
         </Link>
 
         <div className="px-4 pt-4 pb-2">
@@ -67,20 +90,20 @@ export function WorkspaceSidebar({
       <div className="mt-auto space-y-3 p-2">
         <div className="flex items-center gap-3 rounded-[1.2rem] bg-white p-3 shadow-[0_10px_24px_rgba(18,28,42,0.05)]">
           <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-primary/12 to-surface-container-high text-sm font-bold text-primary">
-            {ownerLabel.charAt(0).toUpperCase()}
+            {profileLabel.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-on-surface">
-              {ownerLabel}
+              {profileLabel}
             </p>
             <p className="text-[10px] font-medium uppercase tracking-[0.18em] text-on-surface-variant">
-              Workspace Owner
+              {profileCaption}
             </p>
           </div>
         </div>
 
         <Link
-          href="/"
+          href={getPortalLoginPath(portalVariant)}
           onClick={() => clearStoredToken()}
           className="flex items-center justify-center rounded-xl border border-outline-variant/25 px-4 py-3 text-sm font-semibold text-on-surface/70 transition-colors hover:bg-white"
         >

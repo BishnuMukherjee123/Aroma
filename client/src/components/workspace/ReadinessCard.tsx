@@ -5,8 +5,10 @@ type ReadinessCardProps = {
   hasMenu: boolean;
   publishedDishesCount: number;
   readyModelCount: number;
+  isActive: boolean;
   isPublished: boolean;
   isPublishing: boolean;
+  canGoLive?: boolean;
   onGoLive: () => void;
 };
 
@@ -26,8 +28,10 @@ export function ReadinessCard({
   hasMenu,
   publishedDishesCount,
   readyModelCount,
+  isActive,
   isPublished,
   isPublishing,
+  canGoLive = true,
   onGoLive,
 }: ReadinessCardProps) {
   const checks = [
@@ -94,10 +98,18 @@ export function ReadinessCard({
         <button
           type="button"
           onClick={onGoLive}
-          disabled={isPublishing}
+          disabled={isPublishing || !canGoLive}
           className="flex w-full items-center justify-center gap-2 rounded-[1rem] bg-slate-900 px-4 py-3 text-sm font-bold text-white transition-all hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-70"
         >
-          <span>{isPublished ? "Workspace Live" : "Go Live"}</span>
+            <span>
+            {!canGoLive
+              ? "Owner Only"
+              : !isActive
+                ? "Kitchen Deactivated"
+                : isPublished
+                  ? "Workspace Live"
+                  : "Go Live"}
+          </span>
           <span className="material-symbols-outlined text-[1rem]">
             rocket_launch
           </span>

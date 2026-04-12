@@ -1,10 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import Script from "next/script";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 
 import {
   fetchPublicRestaurant,
+  type PublicCategoryPayload,
   type PublicDishPayload,
   type PublicRestaurantPayload,
 } from "@/lib/api";
@@ -14,21 +16,44 @@ type PublicRestaurantMenuProps = {
   publicId: string;
 };
 
-const formatPrice = (value: number) =>
+type CategoryView = PublicCategoryPayload & {
+  menuId: string;
+  menuName: string;
+};
+
+type ArDishView = PublicDishPayload & {
+  categoryId: string;
+  categoryName: string;
+  menuId: string;
+  menuName: string;
+};
+
+const TOP_AR_VIEW = "top-ar";
+
+const formatPrice = (
+  value: number,
+  currency: PublicDishPayload["currency"] | string | undefined,
+) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency:
+      currency &&
+      ["USD", "INR", "EUR", "GBP", "AED"].includes(currency)
+        ? currency
+        : "USD",
     minimumFractionDigits: 2,
   }).format(value);
 
 export function PublicRestaurantMenu({
   publicId,
 }: PublicRestaurantMenuProps) {
-  const [restaurant, setRestaurant] = useState<PublicRestaurantPayload | null>(null);
+  const [restaurant, setRestaurant] = useState<PublicRestaurantPayload | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [activeMenuId, setActiveMenuId] = useState("all");
+  const [activeViewId, setActiveViewId] = useState(TOP_AR_VIEW);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   const deferredSearch = useDeferredValue(search);
@@ -67,45 +92,97 @@ export function PublicRestaurantMenu({
     };
   }, [publicId]);
 
-  const filteredMenus = useMemo(() => {
+  const categories = useMemo<CategoryView[]>(() => {
     if (!restaurant) {
       return [];
     }
 
-    const normalizedSearch = deferredSearch.trim().toLowerCase();
+    return restaurant.menus.flatMap((menu) =>
+      menu.categories.map((category) => ({
+        ...category,
+        menuId: menu.id,
+        menuName: menu.name,
+      })),
+    );
+  }, [restaurant]);
 
-    return restaurant.menus
-      .filter((menu) => activeMenuId === "all" || menu.id === activeMenuId)
-      .map((menu) => ({
-        ...menu,
-        dishes: menu.dishes.filter((dish) => {
+  useEffect(() => {
+    if (!restaurant) {
+      return;
+    }
+
+    setActiveViewId((current) => {
+      if (current === TOP_AR_VIEW) {
+        return TOP_AR_VIEW;
+      }
+
+      const categoryExists = categories.some((category) => category.id === current);
+      if (categoryExists) {
+        return current;
+      }
+
+      return categories[0]?.id ?? TOP_AR_VIEW;
+    });
+  }, [categories, restaurant]);
+
+  const normalizedSearch = deferredSearch.trim().toLowerCase();
+
+  const topArDishes = useMemo<ArDishView[]>(() => {
+    return categories.flatMap((category) =>
+      category.dishes
+        .filter((dish) => Boolean(dish.modelUrl))
+        .filter((dish) => {
           if (!normalizedSearch) {
             return true;
           }
 
-          return [dish.name, dish.description ?? ""]
+          return [dish.name, dish.description ?? "", category.name]
             .join(" ")
             .toLowerCase()
             .includes(normalizedSearch);
-        }),
-      }))
-      .filter((menu) => menu.dishes.length > 0);
-  }, [activeMenuId, deferredSearch, restaurant]);
+        })
+        .map((dish) => ({
+          ...dish,
+          categoryId: category.id,
+          categoryName: category.name,
+          menuId: category.menuId,
+          menuName: category.menuName,
+        })),
+    );
+  }, [categories, normalizedSearch]);
 
-  const highlightedDish = useMemo(() => {
-    if (!filteredMenus[0]?.dishes[0]) {
+  const selectedCategory = useMemo(() => {
+    if (activeViewId === TOP_AR_VIEW) {
       return null;
     }
 
-    const firstArDish = filteredMenus
-      .flatMap((menu) => menu.dishes)
-      .find((dish) => dish.modelUrl);
+    return categories.find((category) => category.id === activeViewId) ?? null;
+  }, [activeViewId, categories]);
 
-    return firstArDish ?? filteredMenus[0].dishes[0];
-  }, [filteredMenus]);
+  const filteredCategoryDishes = useMemo(() => {
+    if (!selectedCategory) {
+      return [];
+    }
+
+    return selectedCategory.dishes.filter((dish) => {
+      if (!normalizedSearch) {
+        return true;
+      }
+
+      return [dish.name, dish.description ?? ""]
+        .join(" ")
+        .toLowerCase()
+        .includes(normalizedSearch);
+    });
+  }, [normalizedSearch, selectedCategory]);
 
   const totalDishCount = restaurant?.menus.reduce(
-    (count, menu) => count + menu.dishes.length,
+    (count, menu) =>
+      count +
+      menu.categories.reduce(
+        (categoryCount, category) => categoryCount + category.dishes.length,
+        0,
+      ),
     0,
   );
 
@@ -137,6 +214,12 @@ export function PublicRestaurantMenu({
 
   return (
     <div className="min-h-screen bg-surface">
+      <Script
+        src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"
+        type="module"
+        strategy="afterInteractive"
+      />
+
       <header className="sticky top-0 z-50 border-b border-white/50 bg-white/80 px-4 py-4 backdrop-blur-xl md:px-6">
         <div className="mx-auto flex max-w-6xl items-center gap-4">
           <div className="min-w-0 flex-1">
@@ -164,7 +247,11 @@ export function PublicRestaurantMenu({
               type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search menu..."
+              placeholder={
+                activeViewId === TOP_AR_VIEW
+                  ? "Search AR dishes..."
+                  : "Search dishes..."
+              }
               className="w-full rounded-[1rem] bg-surface-container-low py-2.5 pl-10 pr-4 text-sm font-medium text-on-surface outline-none ring-1 ring-transparent transition-all focus:ring-primary/15"
             />
           </div>
@@ -180,7 +267,11 @@ export function PublicRestaurantMenu({
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Search menu..."
+                placeholder={
+                  activeViewId === TOP_AR_VIEW
+                    ? "Search AR dishes..."
+                    : "Search dishes..."
+                }
                 className="w-full rounded-[1rem] bg-surface-container-low py-3 pl-10 pr-4 text-sm font-medium text-on-surface outline-none ring-1 ring-transparent transition-all focus:ring-primary/15"
               />
             </div>
@@ -195,138 +286,131 @@ export function PublicRestaurantMenu({
           </h1>
           <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-on-surface-variant">
             <span className="material-symbols-outlined text-sm text-primary">
-              view_in_ar
+              menu_book
             </span>
-            {totalDishCount ?? 0} published dishes and immersive AR previews for
-            select plates
+            {totalDishCount ?? 0} published dishes arranged under submenu
+            categories, with AR previews for selected plates
           </p>
         </section>
-
-        {highlightedDish ? (
-          <section className="mb-6 hidden overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-surface-container-low to-white p-4 shadow-[0_16px_36px_rgba(18,28,42,0.05)] md:block md:p-5">
-            <div className="grid gap-4 md:grid-cols-[1.1fr_0.9fr] md:items-center">
-              <div className="order-2 md:order-1">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                  Signature Preview
-                </p>
-                <h2 className="mt-2 text-2xl font-extrabold tracking-[-0.03em] text-on-surface">
-                  {highlightedDish.name}
-                </h2>
-                <p className="mt-2 text-sm leading-6 text-on-surface-variant">
-                  {highlightedDish.description ??
-                    "A featured dish from today’s digital menu."}
-                </p>
-                <div className="mt-4 flex items-center gap-3">
-                  <span className="text-lg font-extrabold text-primary">
-                    {formatPrice(highlightedDish.price)}
-                  </span>
-                  {highlightedDish.modelUrl ? (
-                    <Link
-                      href={`/r/${restaurant.publicId}/ar?dish=${highlightedDish.id}`}
-                      className="inline-flex items-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5"
-                    >
-                      <span className="material-symbols-outlined text-lg">
-                        view_in_ar
-                      </span>
-                      View in AR
-                    </Link>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="order-1 overflow-hidden rounded-[1.35rem] bg-surface-container-high md:order-2">
-                {highlightedDish.thumbnailUrl ? (
-                  <img
-                    src={highlightedDish.thumbnailUrl}
-                    alt={highlightedDish.name}
-                    className="h-60 w-full object-cover md:h-72"
-                  />
-                ) : (
-                  <div className="flex h-60 items-center justify-center text-on-surface-variant md:h-72">
-                    <span className="material-symbols-outlined text-5xl">
-                      restaurant
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </section>
-        ) : null}
 
         <nav className="no-scrollbar mb-6 flex gap-2 overflow-x-auto py-1 md:sticky md:top-[4.85rem] md:z-40 md:bg-surface/92 md:backdrop-blur-sm">
           <button
             type="button"
-            onClick={() => setActiveMenuId("all")}
+            onClick={() => setActiveViewId(TOP_AR_VIEW)}
             className={cn(
               "whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all",
-              activeMenuId === "all"
+              activeViewId === TOP_AR_VIEW
                 ? "bg-primary text-white shadow-[0_8px_18px_rgba(182,23,34,0.18)]"
                 : "bg-white text-on-surface-variant",
             )}
           >
-            All
+            Top AR
           </button>
-          {restaurant.menus.map((menu) => (
+          {categories.map((category) => (
             <button
-              key={menu.id}
+              key={category.id}
               type="button"
-              onClick={() => setActiveMenuId(menu.id)}
+              onClick={() => setActiveViewId(category.id)}
               className={cn(
                 "whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all",
-                activeMenuId === menu.id
+                activeViewId === category.id
                   ? "bg-primary text-white shadow-[0_8px_18px_rgba(182,23,34,0.18)]"
                   : "bg-white text-on-surface-variant",
               )}
             >
-              {menu.name}
+              {category.name}
             </button>
           ))}
         </nav>
 
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {filteredMenus.length === 0 ? (
-            <div className="rounded-[1.5rem] bg-white px-5 py-8 shadow-[0_16px_36px_rgba(18,28,42,0.05)] md:col-span-2 xl:col-span-3">
+        {activeViewId === TOP_AR_VIEW ? (
+          topArDishes.length === 0 ? (
+            <div className="rounded-[1.5rem] bg-white px-5 py-8 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
               <p className="text-lg font-bold text-on-surface">
-                No dishes match your search
+                No AR dishes ready yet
               </p>
               <p className="mt-2 text-sm text-on-surface-variant">
-                Try another keyword or switch to a different category.
+                Upload a 3D model to a dish and it will appear here as a quick
+                launch AR card.
               </p>
             </div>
           ) : (
-            filteredMenus.flatMap((menu) =>
-              menu.dishes.map((dish) => (
-                <DishCard
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+              {topArDishes.map((dish) => (
+                <TopArCard
                   key={dish.id}
                   dish={dish}
-                  menuName={menu.name}
                   publicId={restaurant.publicId}
                 />
-              )),
-            )
-          )}
-        </div>
-      </main>
+              ))}
+            </div>
+          )
+        ) : selectedCategory ? (
+          <section className="rounded-[1.75rem] bg-white p-5 shadow-[0_16px_36px_rgba(18,28,42,0.05)] md:p-6">
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-surface-container-low pb-4">
+              <div>
+                <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-on-surface">
+                  {selectedCategory.name}
+                </h2>
+              </div>
+              <span className="rounded-full bg-surface-container-low px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                {filteredCategoryDishes.length} items
+              </span>
+            </div>
 
+            {filteredCategoryDishes.length === 0 ? (
+              <div className="rounded-[1.2rem] border border-dashed border-outline/40 bg-surface-container-low px-4 py-5 text-sm text-on-surface-variant">
+                No dishes match this category right now.
+              </div>
+            ) : (
+              <div className="overflow-hidden rounded-[1.2rem] border border-surface-container-low bg-surface-container-lowest">
+                <div className="divide-y divide-surface-container-low">
+                  {filteredCategoryDishes.map((dish) => (
+                    <DishMenuRow key={dish.id} dish={dish} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+        ) : (
+          <div className="rounded-[1.5rem] bg-white px-5 py-8 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
+            <p className="text-lg font-bold text-on-surface">
+              No submenu selected
+            </p>
+            <p className="mt-2 text-sm text-on-surface-variant">
+              Pick a category like Pizza or Chicken to browse dishes and prices.
+            </p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }
 
-function DishCard({
+function TopArCard({
   dish,
-  menuName,
   publicId,
 }: {
-  dish: PublicDishPayload;
-  menuName: string;
+  dish: ArDishView;
   publicId: string;
 }) {
-  const isArReady = Boolean(dish.modelUrl);
-
   return (
     <article className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]">
-      <div className="relative h-56 overflow-hidden bg-surface-container-high">
-        {dish.thumbnailUrl ? (
+      <div className="relative h-56 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_50%),linear-gradient(180deg,#dbe7fb_0%,#cfdcf5_100%)]">
+        {dish.modelUrl ? (
+          <model-viewer
+            src={dish.modelUrl}
+            alt={dish.name}
+            poster={dish.posterUrl ?? dish.thumbnailUrl ?? undefined}
+            camera-controls
+            auto-rotate
+            shadow-intensity="1"
+            exposure="1"
+            touch-action="pan-y"
+            loading="lazy"
+            className="h-full w-full bg-transparent"
+          />
+        ) : dish.thumbnailUrl ? (
           <img
             src={dish.thumbnailUrl}
             alt={dish.name}
@@ -334,60 +418,88 @@ function DishCard({
           />
         ) : (
           <div className="flex h-full items-center justify-center text-on-surface-variant">
-            <span className="material-symbols-outlined text-5xl">image</span>
+            <span className="material-symbols-outlined text-5xl">view_in_ar</span>
           </div>
         )}
 
-        {isArReady ? (
-          <div className="absolute right-3 top-3 flex items-center gap-1 rounded-[0.8rem] bg-white/90 px-2.5 py-1.5 shadow-sm backdrop-blur-md">
-            <span className="material-symbols-outlined text-lg text-primary">
-              view_in_ar
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface">
-              AR Ready
-            </span>
-          </div>
-        ) : null}
+        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-[0.8rem] bg-white/90 px-2.5 py-1.5 shadow-sm backdrop-blur-md">
+          <span className="material-symbols-outlined text-lg text-primary">
+            view_in_ar
+          </span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface">
+            AR Ready
+          </span>
+        </div>
       </div>
 
       <div className="p-5">
         <div className="mb-2 flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-              {menuName}
+              {dish.categoryName}
             </p>
             <h3 className="mt-1 text-lg font-extrabold leading-tight text-on-surface">
               {dish.name}
             </h3>
           </div>
           <span className="text-base font-extrabold text-primary">
-            {formatPrice(dish.price)}
+            {formatPrice(dish.price, dish.currency)}
           </span>
         </div>
 
         <p className="min-h-12 text-sm leading-6 text-on-surface-variant">
-          {dish.description ?? "A signature dish prepared fresh for this menu."}
+          {dish.description ?? "Tap to place this dish in AR on your table."}
         </p>
 
-        {isArReady ? (
-          <Link
-            href={`/r/${publicId}/ar?dish=${dish.id}`}
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-[0.95rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_10px_20px_rgba(182,23,34,0.16)] transition-all hover:-translate-y-0.5"
-          >
-            <span className="material-symbols-outlined text-lg">view_in_ar</span>
-            View in AR
-          </Link>
-        ) : (
-          <button
-            type="button"
-            className="mt-4 flex w-full items-center justify-center gap-2 rounded-[0.95rem] bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface-variant"
-          >
-            <span className="material-symbols-outlined text-lg">
-              add_shopping_cart
+        <Link
+          href={`/r/${publicId}/ar?dish=${dish.id}`}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-[0.95rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_10px_20px_rgba(182,23,34,0.16)] transition-all hover:-translate-y-0.5"
+        >
+          <span className="material-symbols-outlined text-lg">view_in_ar</span>
+          View in AR
+        </Link>
+      </div>
+    </article>
+  );
+}
+
+function DishMenuRow({ dish }: { dish: PublicDishPayload }) {
+  return (
+    <article className="px-4 py-4 md:px-5">
+      <div className="flex items-start gap-4">
+        <div className="min-w-0 flex-1">
+          <h4 className="text-lg font-bold leading-tight text-on-surface md:text-xl">
+            {dish.name}
+          </h4>
+
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <span className="text-base font-extrabold text-primary md:text-lg">
+              {formatPrice(dish.price, dish.currency)}
             </span>
-            AR preview coming soon
-          </button>
-        )}
+          </div>
+
+          {dish.description ? (
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-on-surface-variant">
+              {dish.description}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="h-22 w-22 shrink-0 overflow-hidden rounded-[1.15rem] bg-surface-container-high shadow-[0_8px_18px_rgba(18,28,42,0.06)] md:h-24 md:w-24">
+          {dish.thumbnailUrl ? (
+            <img
+              src={dish.thumbnailUrl}
+              alt={dish.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
+              <span className="material-symbols-outlined text-3xl">
+                restaurant
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </article>
   );

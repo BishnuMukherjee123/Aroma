@@ -25,6 +25,14 @@ enum AssetStatus {
   FAILED
 }
 
+enum CurrencyCode {
+  USD
+  INR
+  EUR
+  GBP
+  AED
+}
+
 model User {
   id               String             @id @default(uuid())
   email            String             @unique
@@ -41,21 +49,40 @@ model Restaurant {
   name                        String
   publicId                    String             @unique
   ownerId                     String
+  isActive                    Boolean            @default(true)
   isPublished                 Boolean            @default(false)
   publicMenuSnapshot          Json?
   publicMenuSnapshotUpdatedAt DateTime?
   createdAt                   DateTime           @default(now())
   updatedAt                   DateTime           @updatedAt
 
-  owner   User               @relation("RestaurantOwner", fields: [ownerId], references: [id])
-  members RestaurantMember[]
-  menus   Menu[]
-  dishes  Dish[]
-  assets  Asset[]
+  owner      User       @relation("RestaurantOwner", fields: [ownerId], references: [id])
+  members    RestaurantMember[]
+  menus      MainMenu[]
+  categories Menu[]
+  dishes     Dish[]
+  assets     Asset[]
 
   @@index([ownerId])
   @@index([publicId])
+  @@index([isActive])
   @@index([isPublished])
+}
+
+model MainMenu {
+  id           String   @id @default(uuid())
+  name         String
+  restaurantId String
+  isPublished  Boolean  @default(true)
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  categories Menu[]
+
+  @@index([restaurantId])
+  @@index([restaurantId, isPublished, sortOrder])
 }
 
 model RestaurantMember {
@@ -78,22 +105,26 @@ model Menu {
   id           String   @id @default(uuid())
   name         String
   restaurantId String
+  mainMenuId   String
   isPublished  Boolean  @default(false)
   sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  mainMenu   MainMenu   @relation(fields: [mainMenuId], references: [id])
   dishes     Dish[]
 
   @@index([restaurantId])
-  @@index([restaurantId, isPublished, sortOrder])
+  @@index([mainMenuId])
+  @@index([mainMenuId, isPublished, sortOrder])
 }
 
 model Dish {
   id           String   @id @default(uuid())
   name         String
   price        Int
+  currency     CurrencyCode @default(USD)
   description  String?
   restaurantId String
   menuId       String

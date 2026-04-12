@@ -1,5 +1,7 @@
 "use client";
 
+import { type PortalVariant } from "@/lib/portal";
+
 type WorkspaceHeaderProps = {
   restaurantName: string;
   publicId: string;
@@ -7,6 +9,7 @@ type WorkspaceHeaderProps = {
   isCopyingQr: boolean;
   onCopyQr: () => void;
   onCreateDish: () => void;
+  portalVariant?: PortalVariant;
 };
 
 export function WorkspaceHeader({
@@ -16,6 +19,7 @@ export function WorkspaceHeader({
   isCopyingQr,
   onCopyQr,
   onCreateDish,
+  portalVariant = "owner",
 }: WorkspaceHeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4 border-b border-white/80 bg-white/88 px-6 py-4 backdrop-blur md:px-8">
@@ -29,7 +33,8 @@ export function WorkspaceHeader({
             {restaurantName}
           </h1>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-on-surface-variant">
-            Active Workspace - {publicId}
+            {portalVariant === "owner" ? "Active Workspace" : "Manager Workspace"}{" "}
+            - {publicId}
           </p>
         </div>
       </div>
@@ -55,7 +60,7 @@ export function WorkspaceHeader({
               <span className="material-symbols-outlined text-[1rem]">
                 qr_code_2
               </span>
-              {isCopyingQr ? "Working" : "Copy QR"}
+              {isCopyingQr ? "Working" : "Copy Link"}
             </button>
           </div>
           {qrState ? (

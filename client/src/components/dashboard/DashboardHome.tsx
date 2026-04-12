@@ -1,14 +1,27 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import {
   createRestaurant,
+  deleteRestaurant,
   fetchRestaurant,
+  updateRestaurant,
   type RestaurantCardData,
   type RestaurantDetails,
 } from "@/lib/api";
+import {
+  filterMembershipsForPortal,
+  getPortalDestinationForVariant,
+  getPortalHomePath,
+  getPortalLoginPath,
+  getRoleLabel,
+  getWorkspacePath,
+  hasOwnerMembership,
+  type PortalVariant,
+} from "@/lib/portal";
 import { cn } from "@/lib/utils";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { DashboardSidebar } from "./DashboardSidebar";
@@ -19,7 +32,15 @@ type RestaurantBundle = {
   details?: RestaurantDetails;
 };
 
+type RestaurantLifecycleDialog =
+  | {
+      kind: "delete";
+      restaurantId: string;
+      restaurantName: string;
+    };
+
 const statCards = (
+  portalVariant: PortalVariant,
   totalRestaurants: number,
   activeMenus: number,
 ): Array<{
@@ -29,7 +50,8 @@ const statCards = (
   accent?: boolean;
 }> => [
   {
-    label: "Total Restaurants",
+    label:
+      portalVariant === "owner" ? "Total Restaurants" : "Managed Restaurants",
     value: totalRestaurants.toString().padStart(2, "0"),
     icon: "storefront",
   },
@@ -39,9 +61,9 @@ const statCards = (
     icon: "restaurant_menu",
   },
   {
-    label: "Subscription Plan",
-    value: "Professional",
-    icon: "verified",
+    label: portalVariant === "owner" ? "Subscription Plan" : "Access Level",
+    value: portalVariant === "owner" ? "Professional" : "Manager",
+    icon: portalVariant === "owner" ? "verified" : "badge",
     accent: true,
   },
 ];
@@ -56,14 +78,50 @@ const getCoverTheme = (publicId: string) => {
   return themes[publicId.length % themes.length];
 };
 
-export function DashboardHome() {
-  const session = useAuthSession();
+export function DashboardHome({
+  portalVariant = "owner",
+}: {
+  portalVariant?: PortalVariant;
+}) {
+  const router = useRouter();
+  const session = useAuthSession({
+    portalVariant,
+    loginPath: getPortalLoginPath(portalVariant),
+  });
   const createPanelRef = useRef<HTMLElement | null>(null);
   const [restaurants, setRestaurants] = useState<RestaurantBundle[]>([]);
   const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [createName, setCreateName] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
   const [isCreating, startCreateTransition] = useTransition();
+  const [activeCardMenuId, setActiveCardMenuId] = useState<string | null>(null);
+  const [lifecycleDialog, setLifecycleDialog] =
+    useState<RestaurantLifecycleDialog | null>(null);
+  const [lifecycleMessage, setLifecycleMessage] = useState<string | null>(null);
+  const [isSubmittingLifecycle, setIsSubmittingLifecycle] = useState(false);
+  const [lifecyclePendingRestaurantId, setLifecyclePendingRestaurantId] =
+    useState<string | null>(null);
+  const [dashboardError, setDashboardError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (session.status !== "authenticated") {
+      return;
+    }
+
+    const isOwnerUser = hasOwnerMembership(session.user.memberships);
+
+    if (portalVariant === "owner" && !isOwnerUser) {
+      router.replace(
+        getPortalDestinationForVariant(session.user, "manager") ??
+          getPortalLoginPath("manager"),
+      );
+      return;
+    }
+
+    if (portalVariant === "manager" && isOwnerUser) {
+      router.replace(getPortalHomePath("owner"));
+    }
+  }, [portalVariant, router, session]);
 
   useEffect(() => {
     if (session.status !== "authenticated") {
@@ -76,8 +134,12 @@ export function DashboardHome() {
       setIsBootstrapping(true);
 
       try {
+        const memberships = filterMembershipsForPortal(
+          session.user.memberships,
+          portalVariant,
+        );
         const bundles = await Promise.all(
-          session.user.memberships.map(async (membership) => ({
+          memberships.map(async (membership) => ({
             summary: {
               ...membership.restaurant,
               role: membership.role,
@@ -91,6 +153,7 @@ export function DashboardHome() {
 
         if (!cancelled) {
           setRestaurants(bundles);
+          setDashboardError(null);
         }
       } finally {
         if (!cancelled) {
@@ -104,7 +167,39 @@ export function DashboardHome() {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [portalVariant, session]);
+
+  useEffect(() => {
+    if (!activeCardMenuId) {
+      return;
+    }
+
+    const closeMenu = () => setActiveCardMenuId(null);
+    window.addEventListener("click", closeMenu);
+
+    return () => {
+      window.removeEventListener("click", closeMenu);
+    };
+  }, [activeCardMenuId]);
+
+  if (
+    session.status === "authenticated" &&
+    ((portalVariant === "owner" &&
+      !hasOwnerMembership(session.user.memberships)) ||
+      (portalVariant === "manager" &&
+        hasOwnerMembership(session.user.memberships)))
+  ) {
+    return (
+      <div className="auth-grid flex min-h-screen items-center justify-center">
+        <div className="rounded-[1.35rem] bg-white/90 px-8 py-7 shadow-[0_18px_40px_rgba(18,28,42,0.08)]">
+          <div className="mx-auto spinner-sm border-primary/30 border-t-primary" />
+          <p className="mt-4 text-sm font-semibold text-on-surface-variant">
+            Redirecting to the correct portal...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (session.status === "loading" || isBootstrapping) {
     return (
@@ -136,9 +231,18 @@ export function DashboardHome() {
   const activeMenus = restaurants.reduce(
     (sum, restaurant) =>
       sum +
-      (restaurant.details?.menus.filter((menu) => menu.isPublished).length ?? 0),
+      (restaurant.summary.isActive
+        ? restaurant.details?.menus.filter((menu) => menu.isPublished).length ?? 0
+        : 0),
     0,
   );
+  const inactiveManagerAssignments =
+    portalVariant === "manager"
+      ? session.user.memberships.filter(
+          (membership) =>
+            membership.role !== "OWNER" && !membership.restaurant.isActive,
+        ).length
+      : 0;
 
   const activityItems = restaurants.flatMap((restaurant) => {
     if (!restaurant.details) {
@@ -146,7 +250,9 @@ export function DashboardHome() {
     }
 
     const publishedDishes = restaurant.details.menus.flatMap((menu) =>
-      menu.dishes.filter((dish) => dish.isPublished),
+      menu.categories.flatMap((category) =>
+        category.dishes.filter((dish) => dish.isPublished),
+      ),
     );
 
     return [
@@ -172,6 +278,10 @@ export function DashboardHome() {
   const limitedActivityItems = activityItems.slice(0, 4);
 
   const handleCreateRestaurant = () => {
+    if (portalVariant !== "owner") {
+      return;
+    }
+
     const trimmedName = createName.trim();
     if (!trimmedName) {
       setCreateError("Restaurant name is required.");
@@ -200,26 +310,150 @@ export function DashboardHome() {
     });
   };
 
+  const openLifecycleDialog = (
+    restaurant: RestaurantBundle,
+  ) => {
+    setLifecycleMessage(null);
+    setActiveCardMenuId(null);
+    setLifecycleDialog({
+      kind: "delete",
+      restaurantId: restaurant.summary.id,
+      restaurantName: restaurant.summary.name,
+    });
+  };
+
+  const closeLifecycleDialog = () => {
+    if (isSubmittingLifecycle) {
+      return;
+    }
+
+    setLifecycleDialog(null);
+    setLifecycleMessage(null);
+  };
+
+  const handleConfirmLifecycle = async () => {
+    if (!lifecycleDialog) {
+      return;
+    }
+
+    setIsSubmittingLifecycle(true);
+    setLifecycleMessage(null);
+
+    try {
+      await deleteRestaurant(session.token, lifecycleDialog.restaurantId);
+      setRestaurants((current) =>
+        current.filter(
+          (restaurant) => restaurant.summary.id !== lifecycleDialog.restaurantId,
+        ),
+      );
+      setDashboardError(null);
+
+      setLifecycleDialog(null);
+    } catch (error) {
+      setLifecycleMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to update restaurant status.",
+      );
+    } finally {
+      setIsSubmittingLifecycle(false);
+    }
+  };
+
+  const handleToggleRestaurantActive = async (
+    restaurant: RestaurantBundle,
+    nextActiveState: boolean,
+  ) => {
+    setActiveCardMenuId(null);
+    setDashboardError(null);
+    setLifecyclePendingRestaurantId(restaurant.summary.id);
+
+    try {
+      const updated = await updateRestaurant(
+        session.token,
+        restaurant.summary.id,
+        {
+          isActive: nextActiveState,
+        },
+      );
+
+      setRestaurants((current) =>
+        current.map((currentRestaurant) =>
+          currentRestaurant.summary.id === restaurant.summary.id
+            ? {
+                ...currentRestaurant,
+                summary: {
+                  ...currentRestaurant.summary,
+                  isActive: updated.isActive,
+                  isPublished: updated.isPublished,
+                },
+                details: currentRestaurant.details
+                  ? {
+                      ...currentRestaurant.details,
+                      isActive: updated.isActive,
+                      isPublished: updated.isPublished,
+                      updatedAt: updated.updatedAt,
+                    }
+                  : currentRestaurant.details,
+              }
+            : currentRestaurant,
+        ),
+      );
+    } catch (error) {
+      setDashboardError(
+        error instanceof Error
+          ? error.message
+          : "Unable to update kitchen status.",
+      );
+    } finally {
+      setLifecyclePendingRestaurantId(null);
+    }
+  };
+
+  const lifecycleDialogMeta = lifecycleDialog
+    ? {
+        eyebrow: "Delete Kitchen",
+        title: `Delete ${lifecycleDialog.restaurantName}?`,
+        description:
+          "This removes the restaurant, its manager login, dishes, menus, assets, and guest access permanently.",
+        confirmLabel: "Delete Kitchen",
+        tone: "danger" as const,
+      }
+    : null;
+
   return (
     <div className="min-h-screen bg-surface">
-      <DashboardSidebar createPanelRef={createPanelRef} />
+      <DashboardSidebar
+        createPanelRef={createPanelRef}
+        portalVariant={portalVariant}
+      />
 
       <main className="min-h-screen md:ml-64">
-        <DashboardTopbar user={session.user} />
+        <DashboardTopbar
+          user={session.user}
+          portalVariant={portalVariant}
+        />
 
         <div className="mx-auto max-w-7xl space-y-10 px-6 py-8 md:px-8">
           <section className="space-y-3 animate-auth-fade-up">
             <h1 className="text-[3.4rem] font-extrabold leading-none tracking-[-0.06em] text-on-surface">
-              Control Room
+              {portalVariant === "owner"
+                ? "Control Room"
+                : "Manager Console"}
             </h1>
             <p className="max-w-2xl text-lg font-medium leading-8 text-on-surface-variant">
-              Manage your hospitality ecosystem, monitor active menus, and
-              orchestrate brand growth from a single pane of glass.
+              {portalVariant === "owner"
+                ? "Manage your hospitality ecosystem, monitor active menus, and orchestrate brand growth from a single pane of glass."
+                : "Open the assigned restaurant, update menus and dishes, and share the public menu link or QR without touching owner-only controls."}
             </p>
           </section>
 
           <section className="grid gap-6 md:grid-cols-3">
-            {statCards(totalRestaurants, activeMenus).map((card) => (
+            {statCards(
+              portalVariant,
+              totalRestaurants,
+              activeMenus,
+            ).map((card) => (
               <div
                 key={card.label}
                 className="rounded-[1.1rem] border-l-4 border-primary bg-surface-container-low p-6 shadow-[0_12px_28px_rgba(18,28,42,0.04)]"
@@ -247,10 +481,19 @@ export function DashboardHome() {
           </section>
 
           <div className="grid items-start gap-8 lg:grid-cols-12">
-            <section className="space-y-6 lg:col-span-8">
+            <section
+              className={cn(
+                "space-y-6",
+                portalVariant === "owner"
+                  ? "lg:col-span-8"
+                  : "lg:col-span-12",
+              )}
+            >
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold tracking-[-0.04em] text-on-surface">
-                  Managed Entities
+                  {portalVariant === "owner"
+                    ? "Managed Entities"
+                    : "Assigned Restaurant"}
                 </h2>
                 <button
                   type="button"
@@ -263,15 +506,26 @@ export function DashboardHome() {
                 </button>
               </div>
 
+              {dashboardError ? (
+                <div className="rounded-[1rem] bg-error-container px-4 py-3 text-sm font-semibold text-error">
+                  {dashboardError}
+                </div>
+              ) : null}
+
               <div className="grid gap-6 md:grid-cols-2">
                 {restaurants.length === 0 ? (
                   <div className="rounded-[1.2rem] bg-surface-container-lowest p-8 shadow-[0_18px_40px_rgba(18,28,42,0.06)] md:col-span-2">
                     <h3 className="text-xl font-bold tracking-[-0.03em] text-on-surface">
-                      No restaurants yet
+                      {portalVariant === "owner"
+                      ? "No restaurants yet"
+                      : "No restaurant has been assigned yet"}
                     </h3>
                     <p className="mt-2 max-w-lg text-sm font-medium text-on-surface-variant">
-                      Create your first restaurant from the panel on the right to
-                      start building menus, dishes, and AR assets.
+                      {portalVariant === "owner"
+                        ? "Create your first restaurant from the panel on the right to start building menus, dishes, and AR assets."
+                        : inactiveManagerAssignments > 0
+                          ? "Your assigned restaurant has been deactivated. Contact the owner or admin to restore access."
+                          : "Once the owner shares a restaurant with this account, it will appear here for menu updates, QR sharing, and daily operations."}
                     </p>
                   </div>
                 ) : (
@@ -280,7 +534,9 @@ export function DashboardHome() {
                       restaurant.details?.menus.filter((menu) => menu.isPublished)
                         .length ?? 0;
                     const allDishes =
-                      restaurant.details?.menus.flatMap((menu) => menu.dishes) ?? [];
+                      restaurant.details?.menus.flatMap((menu) =>
+                        menu.categories.flatMap((category) => category.dishes),
+                      ) ?? [];
                     const ready3dAssets = allDishes.flatMap((dish) =>
                       dish.assets.filter(
                         (asset) =>
@@ -304,32 +560,112 @@ export function DashboardHome() {
                             <span
                               className={cn(
                                 "rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em]",
-                                restaurant.summary.isPublished
+                                !restaurant.summary.isActive
+                                  ? "bg-amber-100 text-amber-700"
+                                  : restaurant.summary.isPublished
                                   ? "bg-tertiary text-white"
                                   : "bg-white/18 text-white",
                               )}
                             >
-                              {restaurant.summary.isPublished ? "Published" : "Draft"}
+                              {!restaurant.summary.isActive
+                                ? "Deactivated"
+                                : restaurant.summary.isPublished
+                                  ? "Published"
+                                  : "Draft"}
                             </span>
                           </div>
                         </div>
 
                         <div className="space-y-4 p-5">
-                          <div className="flex items-start justify-between gap-4">
+                          <div className="relative flex items-start justify-between gap-4">
                             <div>
                               <h3 className="text-xl font-bold tracking-[-0.03em] text-on-surface">
                                 {restaurant.summary.name}
                               </h3>
                               <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
-                                {restaurant.summary.publicId} • {restaurant.summary.role} role
+                                {restaurant.summary.publicId} -{" "}
+                                {getRoleLabel(restaurant.summary.role)} access
                               </p>
                             </div>
 
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant">
-                              <span className="material-symbols-outlined text-base">
-                                more_vert
-                              </span>
-                            </div>
+                            {portalVariant === "owner" ? (
+                              <div className="relative">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    setActiveCardMenuId((current) =>
+                                      current === restaurant.summary.id
+                                        ? null
+                                        : restaurant.summary.id,
+                                    );
+                                  }}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant"
+                                >
+                                  <span className="material-symbols-outlined text-base">
+                                    more_vert
+                                  </span>
+                                </button>
+
+                                {activeCardMenuId === restaurant.summary.id ? (
+                                  <div
+                                    className="absolute right-0 top-11 z-20 w-52 rounded-[1rem] border border-outline-variant/18 bg-white p-2 shadow-[0_18px_40px_rgba(18,28,42,0.14)]"
+                                    onClick={(event) => event.stopPropagation()}
+                                  >
+                                    <Link
+                                      href={getWorkspacePath(
+                                        portalVariant,
+                                        restaurant.summary.id,
+                                      )}
+                                      className="flex w-full items-center gap-2 rounded-[0.85rem] px-3 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
+                                    >
+                                      <span className="material-symbols-outlined text-base">
+                                        open_in_new
+                                      </span>
+                                      Open workspace
+                                    </Link>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        void handleToggleRestaurantActive(
+                                          restaurant,
+                                          !restaurant.summary.isActive,
+                                        )
+                                      }
+                                      disabled={
+                                        lifecyclePendingRestaurantId ===
+                                        restaurant.summary.id
+                                      }
+                                      className="flex w-full items-center gap-2 rounded-[0.85rem] px-3 py-2.5 text-left text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
+                                    >
+                                      <span className="material-symbols-outlined text-base">
+                                        {restaurant.summary.isActive
+                                          ? "pause_circle"
+                                          : "play_circle"}
+                                      </span>
+                                      {lifecyclePendingRestaurantId ===
+                                      restaurant.summary.id
+                                        ? restaurant.summary.isActive
+                                          ? "Deactivating..."
+                                          : "Reactivating..."
+                                        : restaurant.summary.isActive
+                                          ? "Deactivate kitchen"
+                                          : "Reactivate kitchen"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => openLifecycleDialog(restaurant)}
+                                      className="flex w-full items-center gap-2 rounded-[0.85rem] px-3 py-2.5 text-left text-sm font-semibold text-error transition-colors hover:bg-error-container"
+                                    >
+                                      <span className="material-symbols-outlined text-base">
+                                        delete
+                                      </span>
+                                      Delete kitchen
+                                    </button>
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
                           </div>
 
                           <div className="grid grid-cols-3 gap-3 text-center">
@@ -360,17 +696,25 @@ export function DashboardHome() {
                           </div>
 
                           <Link
-                            href={`/dashboard/restaurants/${restaurant.summary.id}`}
+                            href={getWorkspacePath(
+                              portalVariant,
+                              restaurant.summary.id,
+                            )}
                             className={cn(
                               "flex w-full items-center justify-center gap-2 rounded-[0.95rem] px-4 py-3 text-sm font-bold transition-all",
+                              restaurant.summary.isActive &&
                               restaurant.summary.isPublished
                                 ? "bg-gradient-to-br from-primary to-primary-container text-white shadow-[0_12px_26px_rgba(182,23,34,0.18)]"
                                 : "bg-surface-container-high text-on-surface hover:bg-surface-container-highest",
                             )}
                           >
-                            {restaurant.summary.isPublished
-                              ? "View Dashboard"
-                              : "Continue Setup"}
+                            {portalVariant === "owner"
+                              ? !restaurant.summary.isActive
+                                ? "Review Kitchen"
+                                : restaurant.summary.isPublished
+                                ? "View Dashboard"
+                                : "Continue Setup"
+                              : "Open Workspace"}
                             <span className="material-symbols-outlined text-base">
                               arrow_forward
                             </span>
@@ -383,87 +727,90 @@ export function DashboardHome() {
               </div>
             </section>
 
-            <aside
-              ref={createPanelRef}
-              className="lg:sticky lg:top-24 lg:col-span-4"
-            >
-              <div className="relative overflow-hidden rounded-[1.5rem] bg-surface-container-low p-8 shadow-[0_18px_40px_rgba(18,28,42,0.06)]">
-                <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-primary/8 blur-3xl" />
-                <div className="relative z-10 space-y-6">
-                  <div>
-                    <h2 className="text-3xl font-bold tracking-[-0.04em] text-on-surface">
-                      Expand Brand
-                    </h2>
-                    <p className="mt-2 text-sm font-medium text-on-surface-variant">
-                      Register a new physical location or digital storefront.
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
+            {portalVariant === "owner" ? (
+              <aside
+                ref={createPanelRef}
+                className="lg:sticky lg:top-24 lg:col-span-4"
+              >
+                <div className="relative overflow-hidden rounded-[1.5rem] bg-surface-container-low p-8 shadow-[0_18px_40px_rgba(18,28,42,0.06)]">
+                  <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-primary/8 blur-3xl" />
+                  <div className="relative z-10 space-y-6">
                     <div>
-                      <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-                        Restaurant Name
-                      </label>
-                      <input
-                        type="text"
-                        value={createName}
-                        onChange={(event) => setCreateName(event.target.value)}
-                        placeholder="e.g. The Golden Truffle"
-                        className="w-full rounded-[0.95rem] bg-white px-4 py-3 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 transition-all placeholder:text-on-surface-variant/55 focus:ring-2 focus:ring-primary/20"
-                      />
+                      <h2 className="text-3xl font-bold tracking-[-0.04em] text-on-surface">
+                        Expand Brand
+                      </h2>
+                      <p className="mt-2 text-sm font-medium text-on-surface-variant">
+                        Register a new physical location or digital storefront.
+                      </p>
                     </div>
 
-                    <div>
-                      <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-                        Unique URL Slug
-                      </label>
-                      <div className="flex overflow-hidden rounded-[0.95rem] ring-1 ring-outline-variant/12">
-                        <span className="flex items-center bg-surface-container-low px-3 text-xs font-semibold text-on-surface-variant">
-                          aroma.app/
-                        </span>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                          Restaurant Name
+                        </label>
                         <input
                           type="text"
-                          value={createName
-                            .trim()
-                            .toLowerCase()
-                            .replace(/[^a-z0-9]+/g, "-")
-                            .replace(/^-+|-+$/g, "")}
-                          readOnly
-                          className="w-full bg-white px-4 py-3 text-sm font-medium text-on-surface outline-none"
+                          value={createName}
+                          onChange={(event) => setCreateName(event.target.value)}
+                          placeholder="e.g. The Golden Truffle"
+                          className="w-full rounded-[0.95rem] bg-white px-4 py-3 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 transition-all placeholder:text-on-surface-variant/55 focus:ring-2 focus:ring-primary/20"
                         />
                       </div>
+
+                      <div>
+                        <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                          Unique URL Slug
+                        </label>
+                        <div className="flex overflow-hidden rounded-[0.95rem] ring-1 ring-outline-variant/12">
+                          <span className="flex items-center bg-surface-container-low px-3 text-xs font-semibold text-on-surface-variant">
+                            aroma.app/
+                          </span>
+                          <input
+                            type="text"
+                            value={createName
+                              .trim()
+                              .toLowerCase()
+                              .replace(/[^a-z0-9]+/g, "-")
+                              .replace(/^-+|-+$/g, "")}
+                            readOnly
+                            className="w-full bg-white px-4 py-3 text-sm font-medium text-on-surface outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      {createError ? (
+                        <div className="rounded-[0.95rem] bg-error-container px-4 py-3 text-sm font-semibold text-error">
+                          {createError}
+                        </div>
+                      ) : null}
+
+                      <button
+                        type="button"
+                        onClick={handleCreateRestaurant}
+                        disabled={isCreating}
+                        className="flex w-full items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-4 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-75"
+                      >
+                        {isCreating ? <span className="spinner-sm" /> : null}
+                        <span className="material-symbols-outlined text-base">
+                          add_business
+                        </span>
+                        Add New Restaurant
+                      </button>
                     </div>
 
-                    {createError ? (
-                      <div className="rounded-[0.95rem] bg-error-container px-4 py-3 text-sm font-semibold text-error">
-                        {createError}
-                      </div>
-                    ) : null}
-
-                    <button
-                      type="button"
-                      onClick={handleCreateRestaurant}
-                      disabled={isCreating}
-                      className="flex w-full items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-4 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-75"
-                    >
-                      {isCreating ? <span className="spinner-sm" /> : null}
-                      <span className="material-symbols-outlined text-base">
-                        add_business
-                      </span>
-                      Add New Restaurant
-                    </button>
-                  </div>
-
-                  <div className="rounded-[1rem] bg-white/56 p-4 ring-1 ring-white/55">
-                    <p className="text-[11px] italic leading-5 text-on-surface-variant/75">
-                      Each new restaurant is linked to your account immediately.
-                      Public IDs are generated by the backend after creation, so
-                      your routes stay unique and production-safe.
-                    </p>
+                    <div className="rounded-[1rem] bg-white/56 p-4 ring-1 ring-white/55">
+                      <p className="text-[11px] italic leading-5 text-on-surface-variant/75">
+                        Each new restaurant is linked to your account
+                        immediately. Public IDs are generated by the backend
+                        after creation, so your routes stay unique and
+                        production-safe.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </aside>
+              </aside>
+            ) : null}
           </div>
 
           <section className="grid gap-8 lg:grid-cols-2">
@@ -540,6 +887,59 @@ export function DashboardHome() {
           </section>
         </div>
       </main>
+
+      {lifecycleDialog && lifecycleDialogMeta ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(18,28,42,0.36)] p-4 backdrop-blur-md"
+          onClick={closeLifecycleDialog}
+        >
+          <section
+            className="w-full max-w-xl rounded-[1.6rem] bg-white p-6 shadow-[0_30px_80px_rgba(18,28,42,0.22)]"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+              {lifecycleDialogMeta.eyebrow}
+            </p>
+            <h2 className="mt-2 text-2xl font-bold tracking-[-0.04em] text-on-surface">
+              {lifecycleDialogMeta.title}
+            </h2>
+            <p className="mt-3 text-sm leading-7 text-on-surface-variant">
+              {lifecycleDialogMeta.description}
+            </p>
+
+            {lifecycleMessage ? (
+              <div className="mt-5 rounded-[1rem] bg-error-container px-4 py-3 text-sm font-semibold text-error">
+                {lifecycleMessage}
+              </div>
+            ) : null}
+
+            <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeLifecycleDialog}
+                disabled={isSubmittingLifecycle}
+                className="rounded-[1rem] border border-slate-200 px-5 py-3 text-sm font-bold text-on-surface-variant transition-colors hover:border-primary/25 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleConfirmLifecycle()}
+                disabled={isSubmittingLifecycle}
+                className={cn(
+                  "flex items-center gap-2 rounded-[1rem] px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70",
+                  lifecycleDialogMeta.tone === "danger"
+                    ? "bg-gradient-to-br from-[#9d1321] to-[#cf2334]"
+                    : "bg-gradient-to-br from-primary to-primary-container",
+                )}
+              >
+                {isSubmittingLifecycle ? <span className="spinner-sm" /> : null}
+                {lifecycleDialogMeta.confirmLabel}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 }

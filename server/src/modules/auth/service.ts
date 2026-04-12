@@ -13,6 +13,12 @@ const authUserSelect = {
   updatedAt: true,
 } as const;
 
+const roleRank = {
+  EDITOR: 1,
+  ADMIN: 2,
+  OWNER: 3,
+} as const;
+
 export const registerUser = async (input: {
   email: string;
   password: string;
@@ -85,6 +91,15 @@ export const getCurrentUser = async (userId: string) => {
     where: { id: userId },
     select: {
       ...authUserSelect,
+      restaurantsOwned: {
+        select: {
+          id: true,
+          name: true,
+          publicId: true,
+          isActive: true,
+          isPublished: true,
+        },
+      },
       memberships: {
         select: {
           id: true,
@@ -94,6 +109,7 @@ export const getCurrentUser = async (userId: string) => {
               id: true,
               name: true,
               publicId: true,
+              isActive: true,
               isPublished: true,
             },
           },
@@ -102,5 +118,34 @@ export const getCurrentUser = async (userId: string) => {
     },
   });
 
-  return ensureFoundValue(user, "User not found");
+  const existingUser = ensureFoundValue(user, "User not found");
+  const membershipMap = new Map(
+    existingUser.memberships.map((membership) => [
+      membership.restaurant.id,
+      membership,
+    ]),
+  );
+
+  for (const restaurant of existingUser.restaurantsOwned) {
+    const currentMembership = membershipMap.get(restaurant.id);
+
+    if (
+      !currentMembership ||
+      roleRank[currentMembership.role] < roleRank.OWNER
+    ) {
+      membershipMap.set(restaurant.id, {
+        id: currentMembership?.id ?? `owner-${restaurant.id}`,
+        role: "OWNER",
+        restaurant,
+      });
+    }
+  }
+
+  return {
+    id: existingUser.id,
+    email: existingUser.email,
+    createdAt: existingUser.createdAt,
+    updatedAt: existingUser.updatedAt,
+    memberships: Array.from(membershipMap.values()),
+  };
 };

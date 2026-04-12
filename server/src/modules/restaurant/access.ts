@@ -14,6 +14,30 @@ export const ensureRestaurantRole = async (
   restaurantId: string,
   minimumRole: RestaurantRole,
 ) => {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: {
+      id: true,
+      ownerId: true,
+      isActive: true,
+    },
+  });
+
+  const existingRestaurant = ensureFoundValue(restaurant, "Restaurant not found");
+
+  if (existingRestaurant.ownerId === userId) {
+    return {
+      id: `owner-${restaurantId}`,
+      role: "OWNER" as const,
+      restaurantId,
+      userId,
+    };
+  }
+
+  if (!existingRestaurant.isActive) {
+    forbidden("This kitchen has been deactivated. Contact the owner or admin.");
+  }
+
   const membership = await prisma.restaurantMember.findUnique({
     where: {
       userId_restaurantId: {

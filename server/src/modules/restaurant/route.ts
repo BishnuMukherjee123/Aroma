@@ -29,11 +29,23 @@ export const createRestaurantRouter = (): Router => {
     adminWriteLimiter,
     asyncHandler(controller.update),
   );
+  router.delete(
+    "/:id",
+    asyncHandler(requireAuth),
+    adminWriteLimiter,
+    asyncHandler(controller.remove),
+  );
   router.post(
     "/:id/members",
     asyncHandler(requireAuth),
     adminWriteLimiter,
     asyncHandler(memberController.add),
+  );
+  router.post(
+    "/:id/manager-account",
+    asyncHandler(requireAuth),
+    adminWriteLimiter,
+    asyncHandler(memberController.createManagerAccount),
   );
   router.post(
     "/:id/menus",

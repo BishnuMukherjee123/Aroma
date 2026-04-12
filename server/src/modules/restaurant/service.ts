@@ -23,6 +23,7 @@ export const createRestaurant = async (
         name: true,
         publicId: true,
         ownerId: true,
+        isActive: true,
         isPublished: true,
         createdAt: true,
         updatedAt: true,
@@ -54,6 +55,7 @@ export const getRestaurant = async (actorUserId: string, restaurantId: string) =
       name: true,
       publicId: true,
       ownerId: true,
+      isActive: true,
       isPublished: true,
       publicMenuSnapshotUpdatedAt: true,
       createdAt: true,
@@ -77,27 +79,38 @@ export const getRestaurant = async (actorUserId: string, restaurantId: string) =
           name: true,
           isPublished: true,
           sortOrder: true,
-          dishes: {
+          categories: {
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
             select: {
               id: true,
               name: true,
-              price: true,
-              description: true,
+              mainMenuId: true,
               isPublished: true,
               sortOrder: true,
-              assets: {
-                orderBy: [{ createdAt: "asc" }],
+              dishes: {
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
                 select: {
                   id: true,
-                  kind: true,
-                  status: true,
-                  storageKey: true,
-                  url: true,
-                  mimeType: true,
-                  sizeBytes: true,
-                  createdAt: true,
-                  updatedAt: true,
+                  name: true,
+                  price: true,
+                  currency: true,
+                  description: true,
+                  isPublished: true,
+                  sortOrder: true,
+                  assets: {
+                    orderBy: [{ createdAt: "asc" }],
+                    select: {
+                      id: true,
+                      kind: true,
+                      status: true,
+                      storageKey: true,
+                      url: true,
+                      mimeType: true,
+                      sizeBytes: true,
+                      createdAt: true,
+                      updatedAt: true,
+                    },
+                  },
                 },
               },
             },
@@ -116,10 +129,11 @@ export const updateRestaurant = async (
   input: {
     name?: string;
     publicId?: string;
+    isActive?: boolean;
     isPublished?: boolean;
   },
 ) => {
-  await ensureRestaurantRole(actorUserId, restaurantId, "ADMIN");
+  await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
 
   const restaurant = await prisma.restaurant.findUnique({
     where: { id: restaurantId },
@@ -150,6 +164,7 @@ export const updateRestaurant = async (
     data: {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.publicId !== undefined ? { publicId: input.publicId } : {}),
+      ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       ...(input.isPublished !== undefined
         ? { isPublished: input.isPublished }
         : {}),
@@ -159,6 +174,7 @@ export const updateRestaurant = async (
       name: true,
       publicId: true,
       ownerId: true,
+      isActive: true,
       isPublished: true,
       createdAt: true,
       updatedAt: true,
@@ -171,4 +187,80 @@ export const updateRestaurant = async (
 
   await rebuildPublicRestaurantSnapshot(restaurantId);
   return updatedRestaurant;
+};
+
+export const deleteRestaurant = async (
+  actorUserId: string,
+  restaurantId: string,
+) => {
+  await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
+
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: {
+      id: true,
+      name: true,
+      publicId: true,
+      members: {
+        where: {
+          role: "ADMIN",
+        },
+        select: {
+          userId: true,
+        },
+      },
+    },
+  });
+
+  const existingRestaurant = ensureFoundValue(restaurant, "Restaurant not found");
+  const managerUserIds = [...new Set(existingRestaurant.members.map((member) => member.userId))];
+
+  await prisma.$transaction(async (tx) => {
+    await tx.asset.deleteMany({
+      where: { restaurantId },
+    });
+
+    await tx.dish.deleteMany({
+      where: { restaurantId },
+    });
+
+    await tx.menu.deleteMany({
+      where: { restaurantId },
+    });
+
+    await tx.mainMenu.deleteMany({
+      where: { restaurantId },
+    });
+
+    await tx.restaurantMember.deleteMany({
+      where: { restaurantId },
+    });
+
+    await tx.restaurant.delete({
+      where: { id: restaurantId },
+    });
+
+    for (const managerUserId of managerUserIds) {
+      const remainingMemberships = await tx.restaurantMember.count({
+        where: { userId: managerUserId },
+      });
+      const remainingOwnedRestaurants = await tx.restaurant.count({
+        where: { ownerId: managerUserId },
+      });
+
+      if (remainingMemberships === 0 && remainingOwnedRestaurants === 0) {
+        await tx.user.delete({
+          where: { id: managerUserId },
+        });
+      }
+    }
+  });
+
+  invalidatePublicRestaurantSnapshot(existingRestaurant.publicId);
+
+  return {
+    id: existingRestaurant.id,
+    name: existingRestaurant.name,
+    deleted: true,
+  };
 };

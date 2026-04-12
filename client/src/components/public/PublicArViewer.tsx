@@ -24,6 +24,7 @@ type ViewerState = "loading" | "ready" | "error";
 
 type DishWithMenu = PublicDishPayload & {
   menuName: string;
+  categoryName: string;
 };
 
 type ModelViewerElement = HTMLElement & {
@@ -31,10 +32,17 @@ type ModelViewerElement = HTMLElement & {
   canActivateAR?: boolean;
 };
 
-const formatPrice = (value: number) =>
+const formatPrice = (
+  value: number,
+  currency: PublicDishPayload["currency"] | string | undefined,
+) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency:
+      currency &&
+      ["USD", "INR", "EUR", "GBP", "AED"].includes(currency)
+        ? currency
+        : "USD",
     minimumFractionDigits: 2,
   }).format(value);
 
@@ -166,10 +174,13 @@ export function PublicArViewer({
     }
 
     return restaurant.menus.flatMap((menu) =>
-      menu.dishes.map((dish) => ({
-        ...dish,
-        menuName: menu.name,
-      })),
+      menu.categories.flatMap((category) =>
+        category.dishes.map((dish) => ({
+          ...dish,
+          menuName: menu.name,
+          categoryName: category.name,
+        })),
+      ),
     );
   }, [restaurant]);
 
@@ -462,7 +473,9 @@ export function PublicArViewer({
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-white/68">
-                      {selectedDish?.menuName ?? "Restaurant Preview"}
+                      {selectedDish
+                        ? `${selectedDish.menuName} / ${selectedDish.categoryName}`
+                        : "Restaurant Preview"}
                     </p>
                     <p className="mt-2 text-2xl font-extrabold tracking-[-0.03em]">
                       {selectedDish?.name ?? "Select a dish"}
@@ -470,7 +483,7 @@ export function PublicArViewer({
                   </div>
                   {selectedDish ? (
                     <span className="text-base font-extrabold text-white">
-                      {formatPrice(selectedDish.price)}
+                      {formatPrice(selectedDish.price, selectedDish.currency)}
                     </span>
                   ) : null}
                 </div>
@@ -633,10 +646,10 @@ export function PublicArViewer({
                         ) : null}
                       </div>
                       <p className="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-on-surface-variant">
-                        {dish.menuName}
+                        {dish.menuName} / {dish.categoryName}
                       </p>
                       <p className="mt-2 text-sm font-semibold text-primary">
-                        {formatPrice(dish.price)}
+                        {formatPrice(dish.price, dish.currency)}
                       </p>
                     </div>
                   </button>

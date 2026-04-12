@@ -2,6 +2,7 @@ import type { Request, Response } from "express";
 
 import { requireAuthContext } from "../../lib/request.js";
 import {
+  optionalCurrencyCode,
   optionalBoolean,
   optionalInteger,
   optionalString,
@@ -16,11 +17,13 @@ export const update = async (req: Request, res: Response): Promise<void> => {
     auth.userId,
     requireString(req.params.id, "id", 1),
     {
+      menuId: optionalString(req.body.menuId, "menuId"),
       name: optionalString(req.body.name, "name"),
       price:
         req.body.price === undefined
           ? undefined
           : requireInteger(req.body.price, "price", { min: 0 }),
+      currency: optionalCurrencyCode(req.body.currency),
       description: optionalString(req.body.description, "description"),
       isPublished: optionalBoolean(req.body.isPublished, "isPublished"),
       sortOrder: optionalInteger(req.body.sortOrder, "sortOrder", { min: 0 }),

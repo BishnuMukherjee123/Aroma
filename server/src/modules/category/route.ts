@@ -3,22 +3,21 @@ import { Router } from "express";
 import { asyncHandler } from "../../lib/async-handler.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { createRateLimitMiddleware } from "../../middleware/rate-limit.js";
-import * as categoryController from "../category/controller.js";
 import * as controller from "./controller.js";
 
-export const createMenuRouter = (): Router => {
+export const createCategoryRouter = (): Router => {
   const router = Router();
   const adminWriteLimiter = createRateLimitMiddleware({
-    key: "menu-admin",
+    key: "category-admin",
     windowMs: 60 * 1000,
     maxRequests: 120,
   });
 
   router.post(
-    "/:id/categories",
+    "/:id/dishes",
     asyncHandler(requireAuth),
     adminWriteLimiter,
-    asyncHandler(categoryController.createForMenu),
+    asyncHandler(controller.createDish),
   );
   router.patch(
     "/:id",

@@ -9,6 +9,7 @@ import {
 } from "../../lib/validation.js";
 import {
   createRestaurant,
+  deleteRestaurant,
   getRestaurant,
   updateRestaurant,
 } from "./service.js";
@@ -40,8 +41,19 @@ export const update = async (req: Request, res: Response): Promise<void> => {
     {
       name: optionalString(req.body.name, "name"),
       publicId: optionalPublicId(req.body.publicId, "publicId"),
+      isActive: optionalBoolean(req.body.isActive, "isActive"),
       isPublished: optionalBoolean(req.body.isPublished, "isPublished"),
     },
+  );
+
+  res.status(200).json(payload);
+};
+
+export const remove = async (req: Request, res: Response): Promise<void> => {
+  const auth = requireAuthContext(req);
+  const payload = await deleteRestaurant(
+    auth.userId,
+    requireString(req.params.id, "id", 1),
   );
 
   res.status(200).json(payload);

@@ -1,7 +1,17 @@
 import { randomBytes } from "node:crypto";
 
+export const normalizePublicId = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
+
 export const createPublicId = (prefix = "r"): string => {
-  return `${prefix}_${randomBytes(8).toString("hex")}`;
+  const safePrefix = normalizePublicId(prefix) || "r";
+  return `${safePrefix}-${randomBytes(8).toString("hex")}`;
 };
 
 export const slugifyFileName = (fileName: string): string => {

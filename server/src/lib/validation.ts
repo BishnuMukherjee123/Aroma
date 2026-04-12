@@ -1,5 +1,7 @@
 import { badRequest } from "./errors.js";
 
+import { normalizePublicId } from "./ids.js";
+
 export const requireString = (
   value: unknown,
   fieldName: string,
@@ -111,7 +113,7 @@ export const requirePublicId = (
   value: unknown,
   fieldName = "publicId",
 ): string => {
-  const publicId = requireString(value, fieldName, 3).toLowerCase();
+  const publicId = normalizePublicId(requireString(value, fieldName, 3));
   const publicIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
   if (publicId.length > 50) {
@@ -149,4 +151,22 @@ export const requireEnumValue = <T extends readonly string[]>(
   }
 
   return normalized as T[number];
+};
+
+const currencyCodes = ["USD", "INR", "EUR", "GBP", "AED"] as const;
+
+export const requireCurrencyCode = (
+  value: unknown,
+  fieldName = "currency",
+) => requireEnumValue(value, fieldName, currencyCodes);
+
+export const optionalCurrencyCode = (
+  value: unknown,
+  fieldName = "currency",
+): (typeof currencyCodes)[number] | undefined => {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  return requireCurrencyCode(value, fieldName);
 };

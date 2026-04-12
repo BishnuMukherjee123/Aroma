@@ -1,28 +1,40 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import {
-  addRestaurantMember,
   completeAssetUpload,
+  createCategory,
   createAssetUpload,
   createDish,
+  createRestaurantManagerAccount,
+  createMenu,
+  deleteCategory,
   deleteDish,
   deleteMenu,
-  createMenu,
   fetchRestaurant,
   generateRestaurantQr,
+  updateCategory,
   updateDish,
   updateMenu,
   updateRestaurant,
   uploadFileToSignedUrl,
   type AssetSummary,
+  type CategorySummary,
+  type CurrencyCode,
   type DishSummary,
-  type MenuSummary,
   type RestaurantDetails,
   type RestaurantQrPayload,
 } from "@/lib/api";
 import { useAuthSession } from "@/hooks/use-auth-session";
+import {
+  getPortalLoginPath,
+  getPortalHomePath,
+  getRoleLabel,
+  getWorkspacePath,
+  type PortalVariant,
+} from "@/lib/portal";
 import { cn } from "@/lib/utils";
 import { ReadinessCard } from "./ReadinessCard";
 import { WorkspaceHeader } from "./WorkspaceHeader";
@@ -30,6 +42,7 @@ import { WorkspaceSidebar } from "./WorkspaceSidebar";
 
 type RestaurantWorkspaceProps = {
   restaurantId: string;
+  portalVariant?: PortalVariant;
 };
 
 type WorkspaceTab = "dishes" | "menus" | "team" | "settings";
@@ -39,18 +52,22 @@ type ComposerState = {
   dishId: string | null;
   name: string;
   price: string;
+  currency: CurrencyCode;
   description: string;
   isPublished: boolean;
 };
 
 type DishRow = DishSummary & {
+  mainMenuId: string;
+  mainMenuName: string;
   menuId: string;
   menuName: string;
 };
 
 type TeamComposerState = {
   email: string;
-  role: "OWNER" | "ADMIN" | "EDITOR";
+  password: string;
+  mode: "create" | "edit";
 };
 
 type MenuComposerState = {
@@ -73,11 +90,39 @@ type WorkspaceToast = {
   message: string;
 };
 
+type WorkspaceActionDialog =
+  | {
+      kind: "createMainMenu";
+      value: string;
+    }
+  | {
+      kind: "renameMainMenu";
+      menuId: string;
+      currentName: string;
+      value: string;
+    }
+  | {
+      kind: "deleteMainMenu";
+      menuId: string;
+      name: string;
+    }
+  | {
+      kind: "deleteCategory";
+      categoryId: string;
+      name: string;
+    }
+  | {
+      kind: "deleteDish";
+      dishId: string;
+      name: string;
+    };
+
 const emptyComposerState: ComposerState = {
   mode: "create",
   dishId: null,
   name: "",
   price: "",
+  currency: "USD",
   description: "",
   isPublished: false,
 };
@@ -92,7 +137,8 @@ const emptyMenuComposerState: MenuComposerState = {
 
 const emptyTeamComposerState: TeamComposerState = {
   email: "",
-  role: "EDITOR",
+  password: "",
+  mode: "create",
 };
 
 const emptySettingsFormState: SettingsFormState = {
@@ -101,17 +147,43 @@ const emptySettingsFormState: SettingsFormState = {
   isPublished: false,
 };
 
-const workspaceTabs: Array<{ id: WorkspaceTab; label: string }> = [
+const ownerWorkspaceTabs: Array<{ id: WorkspaceTab; label: string }> = [
   { id: "dishes", label: "Manage Dishes" },
-  { id: "menus", label: "Menu Categories" },
-  { id: "team", label: "Team & Roles" },
+  { id: "menus", label: "Menus & Categories" },
+  { id: "team", label: "Manager Access" },
   { id: "settings", label: "Settings" },
 ];
 
-const flattenDishes = (menus: MenuSummary[]): DishRow[] =>
+const managerWorkspaceTabs: Array<{ id: WorkspaceTab; label: string }> = [
+  { id: "dishes", label: "Manage Dishes" },
+  { id: "menus", label: "Menus & Categories" },
+  { id: "settings", label: "Share & QR" },
+];
+
+type CategorySection = CategorySummary & {
+  mainMenuId: string;
+  mainMenuName: string;
+};
+
+const getMainMenuCategories = (
+  menu: { categories?: CategorySummary[] } | null | undefined,
+): CategorySummary[] => (Array.isArray(menu?.categories) ? menu.categories : []);
+
+const sanitizePublicId = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 50);
+
+const flattenDishes = (menus: CategorySection[]): DishRow[] =>
   menus.flatMap((menu) =>
     menu.dishes.map((dish) => ({
       ...dish,
+      mainMenuId: menu.mainMenuId,
+      mainMenuName: menu.mainMenuName,
       menuId: menu.id,
       menuName: menu.name,
     })),
@@ -122,10 +194,18 @@ const getAssetByKind = (
   kind: AssetSummary["kind"],
 ): AssetSummary | undefined => assets.find((asset) => asset.kind === kind);
 
-const formatPrice = (value: number) =>
+const currencyOptions: Array<{ value: CurrencyCode; label: string }> = [
+  { value: "USD", label: "USD ($)" },
+  { value: "INR", label: "INR (₹)" },
+  { value: "EUR", label: "EUR (€)" },
+  { value: "GBP", label: "GBP (£)" },
+  { value: "AED", label: "AED (د.إ)" },
+];
+
+const formatPrice = (value: number, currency: CurrencyCode) =>
   new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "USD",
+    currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(value);
@@ -134,7 +214,9 @@ const buildReadinessPercent = (checks: boolean[]) =>
   Math.round((checks.filter(Boolean).length / checks.length) * 100);
 
 const resolveOwnerLabel = (restaurant: RestaurantDetails) =>
-  restaurant.members[0]?.user.email ?? "Workspace Owner";
+  restaurant.members.find((member) => member.role === "OWNER")?.user.email ??
+  restaurant.members[0]?.user.email ??
+  "Workspace Owner";
 
 const getMimeTypeForModel = (file: File) =>
   file.type ||
@@ -144,13 +226,19 @@ const getMimeTypeForModel = (file: File) =>
 
 export function RestaurantWorkspace({
   restaurantId,
+  portalVariant = "owner",
 }: RestaurantWorkspaceProps) {
   const COMPOSER_CLOSE_ANIMATION_MS = 240;
-  const session = useAuthSession();
+  const router = useRouter();
+  const session = useAuthSession({
+    portalVariant,
+    loginPath: getPortalLoginPath(portalVariant),
+  });
   const [restaurant, setRestaurant] = useState<RestaurantDetails | null>(null);
   const [isLoadingRestaurant, setIsLoadingRestaurant] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("dishes");
+  const [selectedMainMenuId, setSelectedMainMenuId] = useState("");
   const [selectedDishId, setSelectedDishId] = useState<string | null>(null);
   const [selectedMenuId, setSelectedMenuId] = useState("");
   const [isComposerVisible, setIsComposerVisible] = useState(false);
@@ -191,6 +279,10 @@ export function RestaurantWorkspace({
     null,
   );
   const [toasts, setToasts] = useState<WorkspaceToast[]>([]);
+  const [actionDialog, setActionDialog] = useState<WorkspaceActionDialog | null>(
+    null,
+  );
+  const [isSubmittingActionDialog, setIsSubmittingActionDialog] = useState(false);
 
   useEffect(() => {
     if (session.status !== "authenticated") {
@@ -240,7 +332,7 @@ export function RestaurantWorkspace({
     return details;
   };
 
-  const sortedMenus = useMemo(
+  const sortedMainMenus = useMemo(
     () =>
       restaurant
         ? [...restaurant.menus].sort(
@@ -251,7 +343,59 @@ export function RestaurantWorkspace({
     [restaurant],
   );
 
-  const dishRows = useMemo(() => flattenDishes(sortedMenus), [sortedMenus]);
+  const selectedMainMenu =
+    sortedMainMenus.find((menu) => menu.id === selectedMainMenuId) ??
+    sortedMainMenus[0] ??
+    null;
+
+  const sortedMenus = useMemo(
+    () =>
+      selectedMainMenu
+        ? [...getMainMenuCategories(selectedMainMenu)].sort(
+            (left, right) =>
+              left.sortOrder - right.sortOrder || left.name.localeCompare(right.name),
+          )
+        : [],
+    [selectedMainMenu],
+  );
+
+  const menuSections = useMemo(
+    () =>
+      sortedMenus.map((menu) => ({
+        ...menu,
+        mainMenuId: selectedMainMenu?.id ?? "",
+        mainMenuName: selectedMainMenu?.name ?? "Main Menu",
+        dishes: [...menu.dishes].sort(
+          (left, right) =>
+            left.sortOrder - right.sortOrder || left.name.localeCompare(right.name),
+        ),
+      })),
+    [selectedMainMenu, sortedMenus],
+  );
+
+  const allCategorySections = useMemo(
+    () =>
+      sortedMainMenus.flatMap((menu) =>
+        [...getMainMenuCategories(menu)]
+          .sort(
+            (left, right) =>
+              left.sortOrder - right.sortOrder || left.name.localeCompare(right.name),
+          )
+          .map((category) => ({
+            ...category,
+            mainMenuId: menu.id,
+            mainMenuName: menu.name,
+            dishes: [...category.dishes].sort(
+              (left, right) =>
+                left.sortOrder - right.sortOrder ||
+                left.name.localeCompare(right.name),
+            ),
+          })),
+      ),
+    [sortedMainMenus],
+  );
+
+  const dishRows = useMemo(() => flattenDishes(allCategorySections), [allCategorySections]);
 
   const selectedDish =
     dishRows.find((dish) => dish.id === selectedDishId) ?? dishRows[0] ?? null;
@@ -261,6 +405,20 @@ export function RestaurantWorkspace({
       setSelectedDishId(dishRows[0].id);
     }
   }, [dishRows, selectedDish]);
+
+  useEffect(() => {
+    if (sortedMainMenus.length === 0) {
+      setSelectedMainMenuId("");
+      return;
+    }
+
+    if (
+      !selectedMainMenuId ||
+      !sortedMainMenus.some((menu) => menu.id === selectedMainMenuId)
+    ) {
+      setSelectedMainMenuId(sortedMainMenus[0].id);
+    }
+  }, [selectedMainMenuId, sortedMainMenus]);
 
   useEffect(() => {
     if (sortedMenus.length === 0) {
@@ -283,7 +441,7 @@ export function RestaurantWorkspace({
 
     setSettingsFormState({
       name: restaurant.name,
-      publicId: restaurant.publicId,
+      publicId: sanitizePublicId(restaurant.publicId),
       isPublished: restaurant.isPublished,
     });
   }, [restaurant]);
@@ -372,14 +530,19 @@ export function RestaurantWorkspace({
   }, [isComposerVisible]);
 
   useEffect(() => {
-    if (!isComposerVisible) {
+    if (!isComposerVisible && !actionDialog) {
       return;
     }
 
     const previousOverflow = document.body.style.overflow;
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        closeComposer();
+        if (isComposerVisible) {
+          closeComposer();
+          return;
+        }
+
+        closeActionDialog();
       }
     };
 
@@ -390,7 +553,62 @@ export function RestaurantWorkspace({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", handleEscape);
     };
-  }, [isComposerVisible]);
+  }, [actionDialog, isComposerVisible, isSubmittingActionDialog]);
+
+  const currentMembership =
+    session.status === "authenticated"
+      ? restaurant?.members.find((member) => member.user.id === session.user.id) ??
+        null
+      : null;
+  const currentRole = currentMembership?.role ?? null;
+  const isOwnerUser = currentRole === "OWNER";
+  const effectivePortalVariant = portalVariant;
+  const canManageMembers = isOwnerUser;
+  const canManageSettings = isOwnerUser;
+  const canUseShareTools = currentMembership !== null;
+  const availableWorkspaceTabs =
+    effectivePortalVariant === "owner"
+      ? ownerWorkspaceTabs
+      : managerWorkspaceTabs;
+
+  useEffect(() => {
+    if (activeTab === "team" && !isOwnerUser) {
+      setActiveTab("settings");
+    }
+  }, [activeTab, isOwnerUser]);
+
+  useEffect(() => {
+    if (session.status !== "authenticated" || !restaurant) {
+      return;
+    }
+
+    if (portalVariant === "owner" && !isOwnerUser) {
+      router.replace(getWorkspacePath("manager", restaurantId));
+      return;
+    }
+
+    if (portalVariant === "manager" && isOwnerUser) {
+      router.replace(getWorkspacePath("owner", restaurantId));
+    }
+  }, [isOwnerUser, portalVariant, restaurant, restaurantId, router, session.status]);
+
+  if (
+    session.status === "authenticated" &&
+    restaurant &&
+    ((portalVariant === "owner" && !isOwnerUser) ||
+      (portalVariant === "manager" && isOwnerUser))
+  ) {
+    return (
+      <div className="auth-grid flex min-h-screen items-center justify-center">
+        <div className="rounded-[1.35rem] bg-white/90 px-8 py-7 shadow-[0_18px_40px_rgba(18,28,42,0.08)]">
+          <div className="mx-auto spinner-sm border-primary/30 border-t-primary" />
+          <p className="mt-4 text-sm font-semibold text-on-surface-variant">
+            Redirecting to the correct portal...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (session.status === "loading" || isLoadingRestaurant) {
     return (
@@ -439,7 +657,7 @@ export function RestaurantWorkspace({
     (dish) => getAssetByKind(dish.assets, "MODEL_3D")?.status === "READY",
   ).length;
   const readinessPercent = buildReadinessPercent([
-    sortedMenus.length > 0,
+    allCategorySections.length > 0,
     publishedDishesCount > 0,
     readyModelCount > 0,
   ]);
@@ -454,14 +672,11 @@ export function RestaurantWorkspace({
     ? getAssetByKind(editingDish.assets, "THUMBNAIL")
     : undefined;
   const selectedMenu =
-    sortedMenus.find((menu) => menu.id === selectedMenuId) ?? sortedMenus[0] ?? null;
-  const currentMembership =
-    session.status === "authenticated"
-      ? restaurant.members.find((member) => member.user.id === session.user.id) ?? null
-      : null;
-  const canManageMembers = currentMembership?.role === "OWNER";
-  const canManageSettings =
-    currentMembership?.role === "OWNER" || currentMembership?.role === "ADMIN";
+    menuSections.find((menu) => menu.id === selectedMenuId) ?? menuSections[0] ?? null;
+  const ownerMember =
+    restaurant.members.find((member) => member.role === "OWNER") ?? null;
+  const assignedManager =
+    restaurant.members.find((member) => member.role === "ADMIN") ?? null;
 
   const removeToast = (toastId: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== toastId));
@@ -478,6 +693,158 @@ export function RestaurantWorkspace({
     }, 4200);
   };
 
+  const closeActionDialog = () => {
+    if (isSubmittingActionDialog) {
+      return;
+    }
+
+    setActionDialog(null);
+  };
+
+  const updateActionDialogValue = (value: string) => {
+    setActionDialog((current) => {
+      if (!current) {
+        return current;
+      }
+
+      if (current.kind === "createMainMenu" || current.kind === "renameMainMenu") {
+        return {
+          ...current,
+          value,
+        };
+      }
+
+      return current;
+    });
+  };
+
+  const handleSubmitActionDialog = async () => {
+    if (session.status !== "authenticated" || !actionDialog) {
+      return;
+    }
+
+    setIsSubmittingActionDialog(true);
+
+    try {
+      if (actionDialog.kind === "createMainMenu") {
+        const name = actionDialog.value.trim();
+        if (!name) {
+          setMenuMessage("Main menu name is required.");
+          return;
+        }
+
+        setMenuMessage(null);
+        setPendingMenuActionId("main-menu:create");
+
+        const createdMenu = await createMenu(session.token, restaurant.id, {
+          name,
+          isPublished: true,
+          sortOrder: sortedMainMenus.length,
+        });
+        await refreshRestaurant();
+        setSelectedMainMenuId(createdMenu.id);
+        setSelectedMenuId("");
+        pushToast(`${name} created as a main menu.`, "success");
+        setActionDialog(null);
+        return;
+      }
+
+      if (actionDialog.kind === "renameMainMenu") {
+        const name = actionDialog.value.trim();
+        if (!name || name === actionDialog.currentName) {
+          setActionDialog(null);
+          return;
+        }
+
+        setPendingMenuActionId(`${actionDialog.menuId}:rename`);
+        setMenuMessage(null);
+
+        await updateMenu(session.token, actionDialog.menuId, { name });
+        await refreshRestaurant();
+        pushToast("Main menu renamed.", "success");
+        setActionDialog(null);
+        return;
+      }
+
+      if (actionDialog.kind === "deleteMainMenu") {
+        setPendingMenuActionId(`${actionDialog.menuId}:delete-main`);
+        setMenuMessage(null);
+
+        await deleteMenu(session.token, actionDialog.menuId);
+        await refreshRestaurant();
+        setSelectedMenuId("");
+        pushToast(`${actionDialog.name} deleted.`, "success");
+        setActionDialog(null);
+        return;
+      }
+
+      if (actionDialog.kind === "deleteCategory") {
+        setPendingMenuActionId(`${actionDialog.categoryId}:delete`);
+        setMenuMessage(null);
+
+        await deleteCategory(session.token, actionDialog.categoryId);
+        await refreshRestaurant();
+
+        if (menuComposerState.menuId === actionDialog.categoryId) {
+          handleResetMenuComposer();
+        }
+
+        const successMessage = `${actionDialog.name} deleted.`;
+        setMenuMessage(successMessage);
+        pushToast(successMessage, "success");
+        setActionDialog(null);
+        return;
+      }
+
+      if (actionDialog.kind === "deleteDish") {
+        setPendingDishActionId(`${actionDialog.dishId}:delete`);
+        setComposerMessage(null);
+
+        await deleteDish(session.token, actionDialog.dishId);
+        await refreshRestaurant();
+
+        if (composerState.dishId === actionDialog.dishId) {
+          setComposerState(emptyComposerState);
+          closeComposer();
+        }
+
+        const successMessage = `${actionDialog.name} deleted.`;
+        setComposerMessage(successMessage);
+        pushToast(successMessage, "success");
+        setActionDialog(null);
+      }
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Unable to complete this action.";
+
+      if (
+        actionDialog.kind === "createMainMenu" ||
+        actionDialog.kind === "renameMainMenu" ||
+        actionDialog.kind === "deleteMainMenu" ||
+        actionDialog.kind === "deleteCategory"
+      ) {
+        setMenuMessage(message);
+      } else {
+        setComposerMessage(message);
+      }
+
+      pushToast(message, "error");
+    } finally {
+      setPendingDishActionId((current) =>
+        current && current.includes(":delete") ? null : current,
+      );
+      setPendingMenuActionId((current) =>
+        current &&
+        (current === "main-menu:create" ||
+          current.includes(":rename") ||
+          current.includes(":delete"))
+          ? null
+          : current,
+      );
+      setIsSubmittingActionDialog(false);
+    }
+  };
+
   const handleStartCreate = () => {
     setComposerState(emptyComposerState);
     setComposerMessage(null);
@@ -489,12 +856,14 @@ export function RestaurantWorkspace({
 
   const handleStartEdit = (dish: DishRow) => {
     setSelectedDishId(dish.id);
+    setSelectedMainMenuId(dish.mainMenuId);
     setSelectedMenuId(dish.menuId);
     setComposerState({
       mode: "edit",
       dishId: dish.id,
       name: dish.name,
       price: dish.price.toString(),
+      currency: dish.currency,
       description: dish.description ?? "",
       isPublished: dish.isPublished,
     });
@@ -573,9 +942,14 @@ export function RestaurantWorkspace({
       let menuId = selectedMenuId;
       let dishId = composerState.dishId;
 
+      if (!selectedMainMenu) {
+        setComposerMessage("Create a main menu first.");
+        return;
+      }
+
       if (!menuId) {
-        const createdMenu = await createMenu(session.token, restaurant.id, {
-          name: "Primary Menu",
+        const createdMenu = await createCategory(session.token, selectedMainMenu.id, {
+          name: "General",
           isPublished: true,
           sortOrder: 0,
         });
@@ -585,8 +959,10 @@ export function RestaurantWorkspace({
 
       if (composerState.mode === "edit" && composerState.dishId) {
         await updateDish(session.token, composerState.dishId, {
+          menuId,
           name,
           price: Math.round(priceValue),
+          currency: composerState.currency,
           description: composerState.description.trim() || undefined,
           isPublished: composerState.isPublished,
         });
@@ -595,9 +971,10 @@ export function RestaurantWorkspace({
         const createdDish = await createDish(session.token, menuId, {
           name,
           price: Math.round(priceValue),
+          currency: composerState.currency,
           description: composerState.description.trim() || undefined,
           isPublished: composerState.isPublished,
-          sortOrder: dishRows.length,
+          sortOrder: selectedMenu?.dishes.length ?? 0,
         });
         dishId = createdDish.id;
         setSelectedDishId(createdDish.id);
@@ -657,40 +1034,11 @@ export function RestaurantWorkspace({
   };
 
   const handleDeleteDish = async (dish: DishRow) => {
-    if (session.status !== "authenticated") {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      `Delete "${dish.name}"? This removes the dish from the workspace and clears its attached asset records.`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    setPendingDishActionId(`${dish.id}:delete`);
-    setComposerMessage(null);
-
-    try {
-      await deleteDish(session.token, dish.id);
-      await refreshRestaurant();
-
-      if (composerState.dishId === dish.id) {
-        setComposerState(emptyComposerState);
-        closeComposer();
-      }
-
-      const successMessage = `${dish.name} deleted.`;
-      setComposerMessage(successMessage);
-      pushToast(successMessage, "success");
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to delete this dish.";
-      setComposerMessage(message);
-      pushToast(message, "error");
-    } finally {
-      setPendingDishActionId(null);
-    }
+    setActionDialog({
+      kind: "deleteDish",
+      dishId: dish.id,
+      name: dish.name,
+    });
   };
 
   const loadQrPayload = async (): Promise<RestaurantQrPayload | null> => {
@@ -801,6 +1149,13 @@ export function RestaurantWorkspace({
       return;
     }
 
+    if (!isOwnerUser) {
+      const message = "Only the top-level owner can publish the workspace.";
+      setPublishMessage(message);
+      pushToast(message, "error");
+      return;
+    }
+
     setIsPublishing(true);
     setPublishMessage(null);
 
@@ -830,12 +1185,12 @@ export function RestaurantWorkspace({
     }
 
     if (!canManageSettings) {
-      setSettingsMessage("Only admins and owners can update workspace settings.");
+      setSettingsMessage("Only the top-level owner can update workspace settings.");
       return;
     }
 
     const name = settingsFormState.name.trim();
-    const publicId = settingsFormState.publicId.trim().toLowerCase();
+    const publicId = sanitizePublicId(settingsFormState.publicId);
 
     if (!name) {
       setSettingsMessage("Restaurant name is required.");
@@ -856,6 +1211,10 @@ export function RestaurantWorkspace({
         publicId,
         isPublished: settingsFormState.isPublished,
       });
+      setSettingsFormState((current) => ({
+        ...current,
+        publicId,
+      }));
       await refreshRestaurant();
       setQrPreview(null);
       setSettingsMessage("Workspace settings updated.");
@@ -870,6 +1229,54 @@ export function RestaurantWorkspace({
     }
   };
 
+  const handleCreateMainMenu = async () => {
+    if (sortedMainMenus.length > 0) {
+      const message =
+        "This workspace already has a main menu. Rename the existing main menu instead.";
+      setMenuMessage(message);
+      pushToast(message, "info");
+      return;
+    }
+
+    setActionDialog({
+      kind: "createMainMenu",
+      value: "Main Menu",
+    });
+  };
+
+  const handleRenameMainMenu = async () => {
+    if (!selectedMainMenu) {
+      return;
+    }
+
+    setActionDialog({
+      kind: "renameMainMenu",
+      menuId: selectedMainMenu.id,
+      currentName: selectedMainMenu.name,
+      value: selectedMainMenu.name,
+    });
+  };
+
+  const handleDeleteMainMenu = async () => {
+    if (!selectedMainMenu) {
+      return;
+    }
+
+    if (getMainMenuCategories(selectedMainMenu).length > 0) {
+      const message =
+        "Delete or move categories out of this main menu before removing it.";
+      setMenuMessage(message);
+      pushToast(message, "error");
+      return;
+    }
+
+    setActionDialog({
+      kind: "deleteMainMenu",
+      menuId: selectedMainMenu.id,
+      name: selectedMainMenu.name,
+    });
+  };
+
   const handleStartCreateMenu = () => {
     setActiveTab("menus");
     setMenuComposerState({
@@ -879,7 +1286,7 @@ export function RestaurantWorkspace({
     setMenuMessage(null);
   };
 
-  const handleStartEditMenu = (menu: MenuSummary) => {
+  const handleStartEditMenu = (menu: CategorySummary) => {
     setActiveTab("menus");
     setSelectedMenuId(menu.id);
     setMenuComposerState({
@@ -909,7 +1316,7 @@ export function RestaurantWorkspace({
     const sortOrderValue = Number(menuComposerState.sortOrder);
 
     if (!name) {
-      setMenuMessage("Menu category name is required.");
+      setMenuMessage("Category name is required.");
       return;
     }
 
@@ -924,17 +1331,22 @@ export function RestaurantWorkspace({
     try {
       const successMessage =
         menuComposerState.mode === "edit"
-          ? "Menu category updated."
-          : "Menu category created.";
+          ? "Category updated."
+          : "Category created.";
 
       if (menuComposerState.mode === "edit" && menuComposerState.menuId) {
-        await updateMenu(session.token, menuComposerState.menuId, {
+        await updateCategory(session.token, menuComposerState.menuId, {
           name,
           isPublished: menuComposerState.isPublished,
           sortOrder: sortOrderValue,
         });
       } else {
-        const createdMenu = await createMenu(session.token, restaurant.id, {
+        if (!selectedMainMenu) {
+          setMenuMessage("Create a main menu first.");
+          return;
+        }
+
+        const createdMenu = await createCategory(session.token, selectedMainMenu.id, {
           name,
           isPublished: menuComposerState.isPublished,
           sortOrder: sortOrderValue,
@@ -948,7 +1360,7 @@ export function RestaurantWorkspace({
       pushToast(successMessage, "success");
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unable to save this menu category.";
+        error instanceof Error ? error.message : "Unable to save this category.";
       setMenuMessage(message);
       pushToast(message, "error");
     } finally {
@@ -956,7 +1368,7 @@ export function RestaurantWorkspace({
     }
   };
 
-  const handleToggleMenuStatus = async (menu: MenuSummary) => {
+  const handleToggleMenuStatus = async (menu: CategorySummary) => {
     if (session.status !== "authenticated") {
       return;
     }
@@ -965,7 +1377,7 @@ export function RestaurantWorkspace({
     setPendingMenuActionId(`${menu.id}:status`);
 
     try {
-      await updateMenu(session.token, menu.id, {
+      await updateCategory(session.token, menu.id, {
         isPublished: !menu.isPublished,
       });
       await refreshRestaurant();
@@ -978,7 +1390,7 @@ export function RestaurantWorkspace({
       const message =
         error instanceof Error
           ? error.message
-          : "Unable to update this menu category.";
+          : "Unable to update this category.";
       setMenuMessage(message);
       pushToast(message, "error");
     } finally {
@@ -1008,17 +1420,17 @@ export function RestaurantWorkspace({
     setPendingMenuActionId(`${menuId}:${direction}`);
 
     try {
-      await updateMenu(session.token, currentMenu.id, {
+      await updateCategory(session.token, currentMenu.id, {
         sortOrder: targetMenu.sortOrder,
       });
-      await updateMenu(session.token, targetMenu.id, {
+      await updateCategory(session.token, targetMenu.id, {
         sortOrder: currentMenu.sortOrder,
       });
       await refreshRestaurant();
       pushToast("Menu order updated.", "success");
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unable to reorder menu categories.";
+        error instanceof Error ? error.message : "Unable to reorder categories.";
       setMenuMessage(message);
       pushToast(message, "error");
     } finally {
@@ -1026,11 +1438,7 @@ export function RestaurantWorkspace({
     }
   };
 
-  const handleDeleteMenu = async (menu: MenuSummary) => {
-    if (session.status !== "authenticated") {
-      return;
-    }
-
+  const handleDeleteMenu = async (menu: CategorySummary) => {
     if (menu.dishes.length > 0) {
       const message =
         "Delete or move dishes out of this category before removing it.";
@@ -1039,38 +1447,14 @@ export function RestaurantWorkspace({
       return;
     }
 
-    const confirmed = window.confirm(
-      `Delete "${menu.name}"? Empty categories are removed permanently.`,
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    setPendingMenuActionId(`${menu.id}:delete`);
-    setMenuMessage(null);
-
-    try {
-      await deleteMenu(session.token, menu.id);
-      await refreshRestaurant();
-
-      if (menuComposerState.menuId === menu.id) {
-        handleResetMenuComposer();
-      }
-
-      const successMessage = `${menu.name} deleted.`;
-      setMenuMessage(successMessage);
-      pushToast(successMessage, "success");
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Unable to delete this category.";
-      setMenuMessage(message);
-      pushToast(message, "error");
-    } finally {
-      setPendingMenuActionId(null);
-    }
+    setActionDialog({
+      kind: "deleteCategory",
+      categoryId: menu.id,
+      name: menu.name,
+    });
   };
 
-  const handleStartInviteMember = (
+  const handleStartManagerAccess = (
     member?: RestaurantDetails["members"][number],
   ) => {
     setActiveTab("team");
@@ -1078,7 +1462,8 @@ export function RestaurantWorkspace({
       member
         ? {
             email: member.user.email,
-            role: member.role as TeamComposerState["role"],
+            password: "",
+            mode: "edit",
           }
         : emptyTeamComposerState,
     );
@@ -1091,13 +1476,21 @@ export function RestaurantWorkspace({
     }
 
     if (!canManageMembers) {
-      setTeamMessage("Only the restaurant owner can invite or update members.");
+      setTeamMessage(
+        "Only the company owner can create or update manager credentials.",
+      );
       return;
     }
 
     const email = teamComposerState.email.trim().toLowerCase();
     if (!email) {
-      setTeamMessage("Member email is required.");
+      setTeamMessage("Manager email is required.");
+      return;
+    }
+
+    const password = teamComposerState.password.trim();
+    if (!password) {
+      setTeamMessage("Manager password is required.");
       return;
     }
 
@@ -1105,17 +1498,30 @@ export function RestaurantWorkspace({
     setTeamMessage(null);
 
     try {
-      await addRestaurantMember(session.token, restaurant.id, {
-        email,
-        role: teamComposerState.role,
-      });
+      const payload = await createRestaurantManagerAccount(
+        session.token,
+        restaurant.id,
+        {
+          email,
+          password,
+        },
+      );
       await refreshRestaurant();
-      setTeamComposerState(emptyTeamComposerState);
-      setTeamMessage("Member access updated.");
-      pushToast("Member access updated.", "success");
+      setTeamComposerState({
+        email: payload.membership.user.email,
+        password: "",
+        mode: "edit",
+      });
+      const successMessage = payload.createdUser
+        ? "Manager account created. The manager can now sign in from the manager portal."
+        : "Manager credentials updated. The latest password is now active.";
+      setTeamMessage(successMessage);
+      pushToast(successMessage, "success");
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Unable to update team access.";
+        error instanceof Error
+          ? error.message
+          : "Unable to save manager access.";
       setTeamMessage(message);
       pushToast(message, "error");
     } finally {
@@ -1129,76 +1535,101 @@ export function RestaurantWorkspace({
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-[-0.03em] text-on-surface">
-              Restaurant Team
+              Restaurant Access
             </h2>
             <p className="mt-1 text-sm font-medium text-on-surface-variant">
-              Invite operational teammates and adjust their access to this
-              workspace.
+              The company owner controls this restaurant and creates one manager
+              login for daily menu operations.
             </p>
           </div>
 
           <button
             type="button"
-            onClick={() => handleStartInviteMember()}
-            className="rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5"
+            onClick={() => handleStartManagerAccess(assignedManager ?? undefined)}
+            disabled={!canManageMembers}
+            className="rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Invite Member
+            {assignedManager ? "Reset Manager Login" : "Create Manager Login"}
           </button>
         </div>
 
         <div className="mt-6 grid gap-4">
-          {restaurant.members.map((member) => {
-            const isOwner = member.role === "OWNER";
-
-            return (
-              <div
-                key={member.id}
-                className="rounded-[1.3rem] border border-slate-100 bg-surface-container-low px-5 py-5"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex min-w-0 items-center gap-4">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/15 to-surface-container-high text-sm font-bold text-primary">
-                      {member.user.email.charAt(0).toUpperCase()}
-                    </div>
-
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-bold text-on-surface">
-                        {member.user.email}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]",
-                            member.role === "OWNER"
-                              ? "bg-primary/10 text-primary"
-                              : member.role === "ADMIN"
-                                ? "bg-sky-50 text-sky-700"
-                                : "bg-slate-100 text-slate-600",
-                          )}
-                        >
-                          {member.role}
-                        </span>
-                        {member.user.id === session.user.id ? (
-                          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
-                            You
-                          </span>
-                        ) : null}
-                      </div>
-                    </div>
+          {ownerMember ? (
+            <div className="rounded-[1.3rem] border border-slate-100 bg-surface-container-low px-5 py-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/15 to-surface-container-high text-sm font-bold text-primary">
+                    {ownerMember.user.email.charAt(0).toUpperCase()}
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => handleStartInviteMember(member)}
-                    disabled={isOwner || !canManageMembers}
-                    className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant transition-colors hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    {isOwner ? "Owner Locked" : "Edit Role"}
-                  </button>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-on-surface">
+                      {ownerMember.user.email}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                        Company Owner
+                      </span>
+                      {ownerMember.user.id === session.user.id ? (
+                        <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                          You
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
                 </div>
+
+                <span className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                  Full Access
+                </span>
               </div>
-            );
-          })}
+            </div>
+          ) : null}
+
+          <div className="rounded-[1.3rem] border border-slate-100 bg-surface-container-low px-5 py-5">
+            {assignedManager ? (
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-sky-100 to-sky-50 text-sm font-bold text-sky-700">
+                    {assignedManager.user.email.charAt(0).toUpperCase()}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-on-surface">
+                      {assignedManager.user.email}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="inline-flex rounded-full bg-sky-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-700">
+                        Restaurant Manager
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                        1 restaurant assigned
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleStartManagerAccess(assignedManager)}
+                  disabled={!canManageMembers}
+                  className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant transition-colors hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Edit Login
+                </button>
+              </div>
+            ) : (
+              <div className="rounded-[1rem] border border-dashed border-slate-200 bg-white/65 px-4 py-4">
+                <p className="text-sm font-bold text-on-surface">
+                  No manager account assigned yet
+                </p>
+                <p className="mt-1 text-sm text-on-surface-variant">
+                  Create one manager login for this restaurant. That manager
+                  will only use the restaurant manager portal.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1206,16 +1637,20 @@ export function RestaurantWorkspace({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-              Team Access
+              Manager Login
             </p>
             <h3 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-on-surface">
-              Invite or update a member
+              {assignedManager
+                ? "Update manager credentials"
+                : "Create manager credentials"}
             </h3>
           </div>
 
           <button
             type="button"
-            onClick={() => handleStartInviteMember()}
+            onClick={() =>
+              handleStartManagerAccess(assignedManager ?? undefined)
+            }
             className="text-sm font-bold text-on-surface-variant transition-colors hover:text-primary"
           >
             Reset
@@ -1225,7 +1660,7 @@ export function RestaurantWorkspace({
         <div className="mt-6 grid gap-5">
           <div>
             <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-              Member Email
+              Manager Email
             </label>
             <input
               type="email"
@@ -1243,34 +1678,43 @@ export function RestaurantWorkspace({
 
           <div>
             <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-              Role
+              Manager Password
             </label>
-            <select
-              value={teamComposerState.role}
+            <input
+              type="password"
+              value={teamComposerState.password}
               onChange={(event) =>
                 setTeamComposerState((current) => ({
                   ...current,
-                  role: event.target.value as TeamComposerState["role"],
+                  password: event.target.value,
                 }))
               }
               disabled={!canManageMembers}
+              placeholder={
+                assignedManager
+                  ? "Enter a new password to reset this manager login"
+                  : "Create the manager password"
+              }
               className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <option value="EDITOR">Editor</option>
-              <option value="ADMIN">Admin</option>
-              <option value="OWNER">Owner</option>
-            </select>
+            />
           </div>
 
           <div className="rounded-[1.2rem] bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
             <p className="font-semibold text-on-surface">Important</p>
             <p className="mt-1">
-              The invited user must already be registered in Aroma before you
-              assign them to this workspace.
+              Each restaurant gets one manager login. The company owner creates
+              the email and password, then the manager signs in through the
+              manager portal to control dishes, menus, the public link, and QR.
+            </p>
+            <p className="mt-2">
+              Manager login URL:
+              <span className="ml-1 font-semibold text-on-surface">
+                /manager/login
+              </span>
             </p>
             {!canManageMembers ? (
               <p className="mt-2 font-medium text-error">
-                Only the restaurant owner can change team access.
+                Only the company owner can change manager access.
               </p>
             ) : null}
           </div>
@@ -1283,7 +1727,8 @@ export function RestaurantWorkspace({
             </p>
           ) : (
             <p className="text-sm font-medium text-on-surface-variant">
-              Reusing an existing email updates that member&apos;s role.
+              Saving with a new email replaces the current manager assignment
+              for this restaurant.
             </p>
           )}
 
@@ -1294,51 +1739,221 @@ export function RestaurantWorkspace({
             className="flex items-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-6 py-3.5 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isSavingMember ? <span className="spinner-sm" /> : null}
-            Save Member Access
+            {assignedManager ? "Save Manager Login" : "Create Manager Login"}
           </button>
         </div>
       </div>
     </section>
   );
 
+  const renderQrAccessCard = () => (
+    <div className="rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+            QR Access
+          </p>
+          <h3 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-on-surface">
+            Guest entry tools
+          </h3>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void loadQrPayload()}
+          className="text-sm font-bold text-on-surface-variant transition-colors hover:text-primary"
+        >
+          Refresh
+        </button>
+      </div>
+
+      <div className="mt-6 overflow-hidden rounded-[1.5rem] bg-surface-container-low p-5">
+        <div className="flex min-h-64 items-center justify-center rounded-[1.25rem] bg-white p-4">
+          {isLoadingQrPreview ? (
+            <div className="spinner-sm border-primary/30 border-t-primary" />
+          ) : qrPreview?.qrCodeDataUrl ? (
+            <img
+              src={qrPreview.qrCodeDataUrl}
+              alt={`QR code for ${restaurant.name}`}
+              className="h-52 w-52 rounded-[1rem]"
+            />
+          ) : (
+            <div className="text-center text-on-surface-variant">
+              <span className="material-symbols-outlined text-5xl">
+                qr_code_2
+              </span>
+              <p className="mt-3 text-sm font-medium">QR preview loads here</p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-4 rounded-[1rem] bg-white px-4 py-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+            Public Destination
+          </p>
+          <p className="mt-2 break-all text-sm font-semibold text-on-surface">
+            {qrPreview?.publicUrl ?? `/r/${settingsFormState.publicId}`}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={handleCopyQr}
+          disabled={isCopyingQr || !canUseShareTools}
+          className="rounded-[1rem] bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {isCopyingQr ? "Copying..." : "Copy Public Link"}
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleDownloadQr("png")}
+          disabled={!canUseShareTools}
+          className="rounded-[1rem] bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          Download PNG
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleDownloadQr("svg")}
+          disabled={!canUseShareTools}
+          className="rounded-[1rem] bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          Download SVG
+        </button>
+        <button
+          type="button"
+          onClick={() => void handleOpenPublicPage()}
+          disabled={!canUseShareTools}
+          className="rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          Open Public Page
+        </button>
+      </div>
+    </div>
+  );
+
   const renderMainContent = () => {
     if (activeTab === "menus") {
+      const hasMainMenu = sortedMainMenus.length > 0;
+
       return (
         <section className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
           <div className="rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
-            <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="rounded-[1.35rem] bg-surface-container-low px-5 py-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                Main Menu Layer
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {sortedMainMenus.length === 0 ? (
+                  <span className="rounded-full bg-white px-3 py-2 text-xs font-semibold text-on-surface-variant shadow-[0_8px_20px_rgba(18,28,42,0.04)]">
+                    No main menus yet
+                  </span>
+                ) : (
+                  sortedMainMenus.map((menu) => (
+                    <button
+                      key={menu.id}
+                      type="button"
+                      onClick={() => setSelectedMainMenuId(menu.id)}
+                      className={cn(
+                        "rounded-full px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] transition-all",
+                        selectedMainMenu?.id === menu.id
+                          ? "bg-primary text-white shadow-[0_10px_20px_rgba(182,23,34,0.18)]"
+                          : "bg-white text-on-surface-variant shadow-[0_8px_20px_rgba(18,28,42,0.04)]",
+                      )}
+                    >
+                      {menu.name}
+                    </button>
+                  ))
+                )}
+              </div>
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-[-0.03em] text-on-surface">
+                    {selectedMainMenu?.name ?? "Create a main menu"}
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm font-medium leading-6 text-on-surface-variant">
+                    Main menus hold categories like Pizza, Chicken, Drinks, or
+                    Desserts. Each category then holds the actual dish items and prices.
+                  </p>
+                </div>
+
+                <span className="rounded-full bg-white px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant shadow-[0_8px_20px_rgba(18,28,42,0.04)]">
+                  {menuSections.length} categor{menuSections.length === 1 ? "y" : "ies"}
+                </span>
+              </div>
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                {!hasMainMenu ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleCreateMainMenu()}
+                    className="rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5"
+                  >
+                    Create Main Menu
+                  </button>
+                ) : (
+                  <div className="rounded-[1rem] bg-white px-5 py-3 text-sm font-bold text-on-surface-variant shadow-[0_8px_20px_rgba(18,28,42,0.04)]">
+                    One main menu per workspace
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => void handleRenameMainMenu()}
+                  disabled={!selectedMainMenu || pendingMenuActionId !== null}
+                  className="rounded-[1rem] border border-slate-200 px-5 py-3 text-sm font-bold text-on-surface-variant transition-colors hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Rename Main Menu
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteMainMenu()}
+                  disabled={!selectedMainMenu || pendingMenuActionId !== null}
+                  className="rounded-[1rem] border border-slate-200 px-5 py-3 text-sm font-bold text-on-surface-variant transition-colors hover:border-red-300 hover:text-error disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  Delete Main Menu
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="text-2xl font-bold tracking-[-0.03em] text-on-surface">
-                  Menu Categories
+                  Category Builder
                 </h2>
                 <p className="mt-1 text-sm font-medium text-on-surface-variant">
-                  Structure the customer experience with clean category names,
-                  publish states, and ordering.
+                  Add sub categories inside the selected main menu, then place
+                  dish items under each one.
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={handleStartCreateMenu}
-                className="rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5"
+                disabled={!selectedMainMenu}
+                className="rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
               >
                 Add Category
               </button>
             </div>
 
             <div className="mt-6 grid gap-4">
-              {sortedMenus.length === 0 ? (
+              {menuSections.length === 0 ? (
                 <div className="rounded-[1.35rem] border border-dashed border-slate-200 bg-surface-container-low px-5 py-8 text-center">
                   <p className="text-sm font-bold text-on-surface">
-                    No menu categories yet
+                    {selectedMainMenu
+                      ? "No categories inside this main menu yet"
+                      : "Create a main menu first"}
                   </p>
                   <p className="mt-2 text-sm text-on-surface-variant">
-                    Create your first category to organize dishes before you go
-                    live.
+                    {selectedMainMenu
+                      ? "Create your first category, like Pizza or Drinks, to start structuring this menu."
+                      : "Once a main menu exists, you can add sub categories like Pizza, Chicken, Drinks, or Desserts."}
                   </p>
                 </div>
               ) : (
-                sortedMenus.map((menu, index) => (
+                menuSections.map((menu, index) => (
                   <div
                     key={menu.id}
                     className={cn(
@@ -1385,7 +2000,7 @@ export function RestaurantWorkspace({
                           type="button"
                           onClick={() => handleMoveMenu(menu.id, "down")}
                           disabled={
-                            index === sortedMenus.length - 1 ||
+                            index === menuSections.length - 1 ||
                             pendingMenuActionId !== null
                           }
                           className="material-symbols-outlined rounded-full border border-slate-200 p-2 text-on-surface-variant transition-colors hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-35"
@@ -1413,6 +2028,59 @@ export function RestaurantWorkspace({
                       </div>
                     </div>
 
+                    <div className="mt-4 overflow-hidden rounded-[1.15rem] border border-slate-100 bg-surface-container-lowest">
+                      <div className="grid grid-cols-[minmax(0,1.5fr)_auto_auto] gap-3 border-b border-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                        <span>Item</span>
+                        <span>Price</span>
+                        <span>Status</span>
+                      </div>
+
+                      {menu.dishes.length === 0 ? (
+                        <div className="px-4 py-4 text-sm text-on-surface-variant">
+                          No items in this category yet.
+                        </div>
+                      ) : (
+                        menu.dishes.map((dish) => (
+                          <button
+                            key={dish.id}
+                            type="button"
+                            onClick={() =>
+                              handleStartEdit({
+                                ...dish,
+                                mainMenuId: menu.mainMenuId,
+                                mainMenuName: menu.mainMenuName,
+                                menuId: menu.id,
+                                menuName: menu.name,
+                              })
+                            }
+                            className="grid w-full grid-cols-[minmax(0,1.5fr)_auto_auto] gap-3 border-t border-slate-100 px-4 py-3 text-left transition-colors first:border-t-0 hover:bg-slate-50"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-semibold text-on-surface">
+                                {dish.name}
+                              </span>
+                              <span className="mt-1 block truncate text-xs text-on-surface-variant">
+                                {dish.description || "No description yet"}
+                              </span>
+                            </span>
+                            <span className="self-center text-sm font-bold text-on-surface">
+                              {formatPrice(dish.price, dish.currency)}
+                            </span>
+                            <span
+                              className={cn(
+                                "self-center rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]",
+                                dish.isPublished
+                                  ? "bg-emerald-50 text-emerald-600"
+                                  : "bg-slate-100 text-slate-500",
+                              )}
+                            >
+                              {dish.isPublished ? "Live" : "Draft"}
+                            </span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+
                     <div className="mt-4 flex flex-wrap gap-3">
                       <button
                         type="button"
@@ -1422,7 +2090,7 @@ export function RestaurantWorkspace({
                         }}
                         className="rounded-full bg-surface-container-low px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-on-surface transition-colors hover:bg-surface-container"
                       >
-                        Create Dish Here
+                        Add Item
                       </button>
                       <button
                         type="button"
@@ -1446,9 +2114,11 @@ export function RestaurantWorkspace({
                   {menuComposerState.mode === "edit" ? "Edit Category" : "Create Category"}
                 </p>
                 <h3 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-on-surface">
-                  {menuComposerState.mode === "edit"
-                    ? "Refine this menu category"
-                    : "Add a new category"}
+                  {!selectedMainMenu
+                    ? "Create a main menu first"
+                    : menuComposerState.mode === "edit"
+                      ? `Refine this category inside ${selectedMainMenu.name}`
+                      : `Add a new category to ${selectedMainMenu.name}`}
                 </h3>
               </div>
 
@@ -1477,6 +2147,7 @@ export function RestaurantWorkspace({
                       name: event.target.value,
                     }))
                   }
+                  disabled={!selectedMainMenu}
                   className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
@@ -1495,6 +2166,7 @@ export function RestaurantWorkspace({
                       sortOrder: event.target.value,
                     }))
                   }
+                  disabled={!selectedMainMenu}
                   className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
                 />
               </div>
@@ -1517,6 +2189,7 @@ export function RestaurantWorkspace({
                       isPublished: event.target.checked,
                     }))
                   }
+                  disabled={!selectedMainMenu}
                   className="h-4 w-4 rounded border-outline-variant/40 text-primary focus:ring-primary"
                 />
               </label>
@@ -1525,9 +2198,11 @@ export function RestaurantWorkspace({
             <div className="mt-6 rounded-[1.2rem] bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
               <p className="font-semibold text-on-surface">Current selection</p>
               <p className="mt-1">
-                {selectedMenu
-                  ? `${selectedMenu.name} currently holds ${selectedMenu.dishes.length} dish${selectedMenu.dishes.length === 1 ? "" : "es"}.`
-                  : "Choose a category to make it the default for new dishes."}
+                {!selectedMainMenu
+                  ? "Create the main menu first, then you can add categories like Pizza, Chicken, Drinks, or Desserts."
+                  : selectedMenu
+                  ? `${selectedMenu.name} currently holds ${selectedMenu.dishes.length} item${selectedMenu.dishes.length === 1 ? "" : "s"} inside ${selectedMainMenu?.name ?? "this main menu"}.`
+                  : "Choose a category to make it the default destination for new items."}
               </p>
             </div>
 
@@ -1538,14 +2213,16 @@ export function RestaurantWorkspace({
                 </p>
               ) : (
                 <p className="text-sm font-medium text-on-surface-variant">
-                  Use order slots to control how categories appear in the menu.
+                  {selectedMainMenu
+                    ? "Main menus hold categories, and categories hold the actual dish items guests will see."
+                    : "The category builder stays locked until the main menu exists."}
                 </p>
               )}
 
               <button
                 type="button"
                 onClick={() => void handleSubmitMenu()}
-                disabled={isSavingMenu}
+                disabled={isSavingMenu || !selectedMainMenu}
                 className="flex items-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-6 py-3.5 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isSavingMenu ? <span className="spinner-sm" /> : null}
@@ -1562,6 +2239,75 @@ export function RestaurantWorkspace({
     }
 
     if (activeTab === "settings") {
+      if (!isOwnerUser) {
+        return (
+          <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                Manager Share Tools
+              </p>
+              <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-on-surface">
+                Share the public menu and QR
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-on-surface-variant">
+                Managers can open the public restaurant page, copy the guest
+                link, and download the QR code for this assigned workspace.
+              </p>
+
+              <div className="mt-8 grid gap-5">
+                <div className="rounded-[1.2rem] bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
+                  <p className="font-semibold text-on-surface">Assigned role</p>
+                  <p className="mt-1">
+                    You are signed in as{" "}
+                    <span className="font-bold text-on-surface">
+                      {currentRole ? getRoleLabel(currentRole) : "Manager"}
+                    </span>
+                    . Menu and dish updates stay available in this workspace.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                    Public Slug
+                  </label>
+                  <div className="flex overflow-hidden rounded-[1.1rem] bg-surface-container-lowest ring-1 ring-outline-variant/12">
+                    <span className="border-r border-slate-100 px-4 py-3.5 text-sm font-semibold text-on-surface-variant">
+                      /r/
+                    </span>
+                    <div className="min-w-0 flex-1 px-4 py-3.5 text-sm font-medium text-on-surface">
+                      {settingsFormState.publicId}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-[1.2rem] bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
+                  <p className="font-semibold text-on-surface">Access scope</p>
+                  <p className="mt-1">
+                    Owners keep full control over restaurant identity and team
+                    permissions. Managers focus on menu operations and guest
+                    sharing tools.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+                {settingsMessage ? (
+                  <p className="text-sm font-medium text-on-surface-variant">
+                    {settingsMessage}
+                  </p>
+                ) : (
+                  <p className="text-sm font-medium text-on-surface-variant">
+                    Share tools are ready whenever guests need the live QR.
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {renderQrAccessCard()}
+          </section>
+        );
+      }
+
       return (
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
@@ -1609,7 +2355,7 @@ export function RestaurantWorkspace({
                     onChange={(event) =>
                       setSettingsFormState((current) => ({
                         ...current,
-                        publicId: event.target.value.toLowerCase(),
+                        publicId: sanitizePublicId(event.target.value),
                       }))
                     }
                     disabled={!canManageSettings}
@@ -1648,8 +2394,9 @@ export function RestaurantWorkspace({
               <div className="rounded-[1.2rem] bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
                 <p className="font-semibold text-on-surface">Permissions</p>
                 <p className="mt-1">
-                  Owners and admins can update identity settings. Editors can
-                  still use QR tools and review the current public setup.
+                  Only the top-level owner can update restaurant identity and
+                  launch settings. Managers still use the QR tools from this
+                  workspace.
                 </p>
               </div>
             </div>
@@ -1677,90 +2424,7 @@ export function RestaurantWorkspace({
             </div>
           </div>
 
-          <div className="rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-                  QR Access
-                </p>
-                <h3 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-on-surface">
-                  Guest entry tools
-                </h3>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void loadQrPayload()}
-                className="text-sm font-bold text-on-surface-variant transition-colors hover:text-primary"
-              >
-                Refresh
-              </button>
-            </div>
-
-            <div className="mt-6 overflow-hidden rounded-[1.5rem] bg-surface-container-low p-5">
-              <div className="flex min-h-64 items-center justify-center rounded-[1.25rem] bg-white p-4">
-                {isLoadingQrPreview ? (
-                  <div className="spinner-sm border-primary/30 border-t-primary" />
-                ) : qrPreview?.qrCodeDataUrl ? (
-                  <img
-                    src={qrPreview.qrCodeDataUrl}
-                    alt={`QR code for ${restaurant.name}`}
-                    className="h-52 w-52 rounded-[1rem]"
-                  />
-                ) : (
-                  <div className="text-center text-on-surface-variant">
-                    <span className="material-symbols-outlined text-5xl">
-                      qr_code_2
-                    </span>
-                    <p className="mt-3 text-sm font-medium">
-                      QR preview loads here
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 rounded-[1rem] bg-white px-4 py-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-                  Public Destination
-                </p>
-                <p className="mt-2 break-all text-sm font-semibold text-on-surface">
-                  {qrPreview?.publicUrl ?? `/r/${settingsFormState.publicId}`}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={handleCopyQr}
-                disabled={isCopyingQr}
-                className="rounded-[1rem] bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isCopyingQr ? "Copying..." : "Copy Public Link"}
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleDownloadQr("png")}
-                className="rounded-[1rem] bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container"
-              >
-                Download PNG
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleDownloadQr("svg")}
-                className="rounded-[1rem] bg-surface-container-low px-4 py-3 text-sm font-bold text-on-surface transition-colors hover:bg-surface-container"
-              >
-                Download SVG
-              </button>
-              <button
-                type="button"
-                onClick={() => void handleOpenPublicPage()}
-                className="rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5"
-              >
-                Open Public Page
-              </button>
-            </div>
-          </div>
+          {renderQrAccessCard()}
         </section>
       );
     }
@@ -1771,169 +2435,224 @@ export function RestaurantWorkspace({
           <div className="flex flex-wrap items-end justify-between gap-4 px-1">
             <div>
               <h2 className="text-2xl font-bold tracking-[-0.03em] text-on-surface">
-                Active Dishes
+                Menu Items
               </h2>
               <p className="mt-1 text-sm font-medium text-on-surface-variant">
-                Select a dish to review its current media status or edit it.
+                View one main menu at a time as category sections with dish
+                names, prices, and publish state.
               </p>
             </div>
 
             <div className="rounded-full bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant shadow-[0_8px_20px_rgba(18,28,42,0.04)]">
-              {sortedMenus.length} Menu{sortedMenus.length === 1 ? "" : "s"}
+              {dishRows.length} Item{dishRows.length === 1 ? "" : "s"}
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[1.7rem] border border-slate-100 bg-white shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
-            <div className="hidden grid-cols-[2fr_2fr_1.2fr_0.9fr_0.9fr_1fr] gap-4 bg-slate-50/65 px-6 py-4 text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant md:grid">
-              <span>Dish Asset</span>
-              <span>Description</span>
-              <span>Category</span>
-              <span>Price</span>
-              <span>Status</span>
-              <span className="text-right">Actions</span>
-            </div>
+          <div className="no-scrollbar flex gap-2 overflow-x-auto px-1 pb-1">
+            {sortedMainMenus.length === 0 ? (
+              <span className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-on-surface-variant shadow-[0_8px_20px_rgba(18,28,42,0.04)]">
+                Create a main menu first
+              </span>
+            ) : (
+              sortedMainMenus.map((menu) => (
+                <button
+                  key={menu.id}
+                  type="button"
+                  onClick={() => setSelectedMainMenuId(menu.id)}
+                  className={cn(
+                    "whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] transition-all",
+                    selectedMainMenu?.id === menu.id
+                      ? "bg-primary text-white shadow-[0_10px_20px_rgba(182,23,34,0.18)]"
+                      : "bg-white text-on-surface-variant shadow-[0_8px_20px_rgba(18,28,42,0.04)]",
+                  )}
+                >
+                  {menu.name}
+                </button>
+              ))
+            )}
+          </div>
 
-            <div className="divide-y divide-slate-50">
-              {dishRows.length === 0 ? (
-                <div className="px-6 py-10">
-                  <p className="text-sm font-semibold text-on-surface">
-                    No dishes yet.
-                  </p>
-                  <p className="mt-2 text-sm text-on-surface-variant">
-                    Create your first dish from the button in the header to
-                    start building this workspace.
-                  </p>
-                </div>
-              ) : (
-                dishRows.map((dish) => {
-                  const modelAsset = getAssetByKind(dish.assets, "MODEL_3D");
-                  const thumbnailAsset = getAssetByKind(dish.assets, "THUMBNAIL");
-
-                  return (
-                    <div
-                      key={dish.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => setSelectedDishId(dish.id)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          setSelectedDishId(dish.id);
-                        }
-                      }}
-                      className={cn(
-                        "grid w-full gap-4 px-6 py-5 text-left transition-colors md:grid-cols-[2fr_2fr_1.2fr_0.9fr_0.9fr_1fr]",
-                        selectedDish?.id === dish.id
-                          ? "bg-primary/4"
-                          : "hover:bg-slate-50/60",
-                      )}
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="h-12 w-12 overflow-hidden rounded-xl bg-surface-container-low">
-                          {thumbnailAsset?.url ? (
-                            <img
-                              src={thumbnailAsset.url}
-                              alt={dish.name}
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex h-full w-full items-center justify-center text-slate-300">
-                              <span className="material-symbols-outlined">image</span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-bold text-on-surface">
-                            {dish.name}
-                          </p>
-                          <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-on-surface-variant">
-                            <span className="material-symbols-outlined text-[0.9rem]">
-                              view_in_ar
-                            </span>
-                            {modelAsset?.status === "READY"
-                              ? "3D Model Ready"
-                              : "No 3D Model"}
-                          </div>
-                        </div>
-                      </div>
-
-                      <p className="line-clamp-2 text-sm leading-6 text-on-surface-variant">
-                        {dish.description || "No description added yet."}
-                      </p>
-
-                      <div className="self-center">
-                        <span className="inline-flex rounded-lg bg-surface-container-low px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-primary">
-                          {dish.menuName}
-                        </span>
-                      </div>
-
-                      <div className="self-center text-base font-bold text-on-surface">
-                        {formatPrice(dish.price)}
-                      </div>
-
-                      <div className="self-center">
+          <div className="space-y-4">
+            {menuSections.length === 0 ? (
+              <div className="rounded-[1.7rem] border border-slate-100 bg-white px-6 py-10 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
+                <p className="text-sm font-semibold text-on-surface">
+                  No categories or items yet.
+                </p>
+                <p className="mt-2 text-sm text-on-surface-variant">
+                  Start by creating a category like Pizza, then add menu items
+                  with names and prices.
+                </p>
+              </div>
+            ) : (
+              menuSections.map((menu) => (
+                <section
+                  key={menu.id}
+                  className="overflow-hidden rounded-[1.7rem] border border-slate-100 bg-white shadow-[0_16px_36px_rgba(18,28,42,0.05)]"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h3 className="text-xl font-bold tracking-[-0.03em] text-on-surface">
+                          {menu.name}
+                        </h3>
                         <span
                           className={cn(
-                            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]",
-                            dish.isPublished
+                            "inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]",
+                            menu.isPublished
                               ? "bg-emerald-50 text-emerald-600"
                               : "bg-slate-100 text-slate-500",
                           )}
                         >
-                          <span
-                            className={cn(
-                              "h-1.5 w-1.5 rounded-full",
-                              dish.isPublished ? "bg-emerald-500" : "bg-slate-300",
-                            )}
-                          />
-                          {dish.isPublished ? "Live" : "Draft"}
+                          {menu.isPublished ? "Published" : "Draft"}
                         </span>
                       </div>
-
-                      <div className="flex items-center justify-end gap-2 self-center">
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleStartEdit(dish);
-                          }}
-                          disabled={pendingDishActionId === `${dish.id}:delete`}
-                          className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                          title="Edit dish"
-                        >
-                          edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleToggleDishStatus(dish);
-                          }}
-                          disabled={pendingDishActionId === `${dish.id}:status`}
-                          className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                          title={dish.isPublished ? "Move dish to draft" : "Publish dish"}
-                        >
-                          published_with_changes
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleDeleteDish(dish);
-                          }}
-                          disabled={pendingDishActionId === `${dish.id}:delete`}
-                          className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-red-50 hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
-                          title="Delete dish"
-                        >
-                          delete
-                        </button>
-                      </div>
+                      <p className="mt-2 text-sm text-on-surface-variant">
+                        {menu.dishes.length} item{menu.dishes.length === 1 ? "" : "s"} inside this category
+                      </p>
                     </div>
-                  );
-                })
-              )}
-            </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedMenuId(menu.id);
+                        handleStartCreate();
+                      }}
+                      className="rounded-full bg-surface-container-low px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-on-surface transition-colors hover:bg-surface-container"
+                    >
+                      Add Item
+                    </button>
+                  </div>
+
+                  <div className="divide-y divide-slate-100">
+                    {menu.dishes.length === 0 ? (
+                      <div className="px-6 py-5 text-sm text-on-surface-variant">
+                        No items in this category yet.
+                      </div>
+                    ) : (
+                      menu.dishes.map((dish) => {
+                        const modelAsset = getAssetByKind(dish.assets, "MODEL_3D");
+
+                        return (
+                          <div
+                            key={dish.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => setSelectedDishId(dish.id)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                setSelectedDishId(dish.id);
+                              }
+                            }}
+                            className={cn(
+                              "grid gap-4 px-6 py-4 text-left transition-colors md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto_auto_auto]",
+                              selectedDish?.id === dish.id
+                                ? "bg-primary/4"
+                                : "hover:bg-slate-50/60",
+                            )}
+                          >
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-bold text-on-surface">
+                                {dish.name}
+                              </p>
+                              <p className="mt-1 line-clamp-2 text-sm leading-6 text-on-surface-variant">
+                                {dish.description || "No description added yet."}
+                              </p>
+                            </div>
+
+                            <div className="self-center text-xs font-medium text-on-surface-variant">
+                              {modelAsset?.status === "READY"
+                                ? "3D model ready"
+                                : "No 3D model"}
+                            </div>
+
+                            <div className="self-center text-base font-bold text-on-surface">
+                              {formatPrice(dish.price, dish.currency)}
+                            </div>
+
+                            <div className="self-center">
+                              <span
+                                className={cn(
+                                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]",
+                                  dish.isPublished
+                                    ? "bg-emerald-50 text-emerald-600"
+                                    : "bg-slate-100 text-slate-500",
+                                )}
+                              >
+                                <span
+                                  className={cn(
+                                    "h-1.5 w-1.5 rounded-full",
+                                    dish.isPublished ? "bg-emerald-500" : "bg-slate-300",
+                                  )}
+                                />
+                                {dish.isPublished ? "Live" : "Draft"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center justify-end gap-2 self-center">
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  handleStartEdit({
+                                    ...dish,
+                                    mainMenuId: menu.mainMenuId,
+                                    mainMenuName: menu.mainMenuName,
+                                    menuId: menu.id,
+                                    menuName: menu.name,
+                                  });
+                                }}
+                                disabled={pendingDishActionId === `${dish.id}:delete`}
+                                className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                                title="Edit dish"
+                              >
+                                edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void handleToggleDishStatus({
+                                    ...dish,
+                                    mainMenuId: menu.mainMenuId,
+                                    mainMenuName: menu.mainMenuName,
+                                    menuId: menu.id,
+                                    menuName: menu.name,
+                                  });
+                                }}
+                                disabled={pendingDishActionId === `${dish.id}:status`}
+                                className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                                title={dish.isPublished ? "Move dish to draft" : "Publish dish"}
+                              >
+                                published_with_changes
+                              </button>
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  void handleDeleteDish({
+                                    ...dish,
+                                    mainMenuId: menu.mainMenuId,
+                                    mainMenuName: menu.mainMenuName,
+                                    menuId: menu.id,
+                                    menuName: menu.name,
+                                  });
+                                }}
+                                disabled={pendingDishActionId === `${dish.id}:delete`}
+                                className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-red-50 hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
+                                title="Delete dish"
+                              >
+                                delete
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </section>
+              ))
+            )}
           </div>
         </section>
       </>
@@ -1945,24 +2664,33 @@ export function RestaurantWorkspace({
       return (
         <div className="rounded-[1.4rem] border border-slate-100 bg-white p-5 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-            Category Summary
+            Main Menu Summary
           </p>
           <h3 className="mt-2 text-xl font-bold tracking-[-0.03em] text-on-surface">
-            {selectedMenu?.name ?? "No category selected"}
+            {selectedMainMenu?.name ?? "No main menu selected"}
           </h3>
           <p className="mt-1 text-sm font-medium text-on-surface-variant">
-            {selectedMenu
-              ? `${selectedMenu.dishes.length} dish${selectedMenu.dishes.length === 1 ? "" : "es"} linked · ${selectedMenu.isPublished ? "Published" : "Draft"}`
-              : "Create a category to start organizing your dishes."}
+            {selectedMainMenu
+              ? `${menuSections.length} categor${menuSections.length === 1 ? "y" : "ies"} inside this menu`
+              : "Create a main menu to start organizing categories and items."}
           </p>
 
           <div className="mt-5 grid gap-3">
             <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                Total Main Menus
+              </p>
+              <p className="mt-1 text-sm font-semibold text-on-surface">
+                {sortedMainMenus.length}
+              </p>
+            </div>
+
+            <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
                 Total Categories
               </p>
               <p className="mt-1 text-sm font-semibold text-on-surface">
-                {sortedMenus.length}
+                {menuSections.length}
               </p>
             </div>
 
@@ -1971,7 +2699,7 @@ export function RestaurantWorkspace({
                 Published Categories
               </p>
               <p className="mt-1 text-sm font-semibold text-on-surface">
-                {sortedMenus.filter((menu) => menu.isPublished).length}
+                {menuSections.filter((menu) => menu.isPublished).length}
               </p>
             </div>
           </div>
@@ -1990,13 +2718,14 @@ export function RestaurantWorkspace({
             {restaurant.members.length === 1 ? "" : "s"}
           </h3>
           <p className="mt-1 text-sm font-medium text-on-surface-variant">
-            Current access level: {currentMembership?.role ?? "Unknown"}.
+            Current access level:{" "}
+            {currentRole ? getRoleLabel(currentRole) : "Unknown"}.
           </p>
 
           <div className="mt-5 grid gap-3">
             <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-                Admins
+                Managers
               </p>
               <p className="mt-1 text-sm font-semibold text-on-surface">
                 {restaurant.members.filter((member) => member.role === "ADMIN").length}
@@ -2023,7 +2752,11 @@ export function RestaurantWorkspace({
             Launch State
           </p>
           <h3 className="mt-2 text-xl font-bold tracking-[-0.03em] text-on-surface">
-            {restaurant.isPublished ? "Publicly live" : "Private draft"}
+            {!restaurant.isActive
+              ? "Kitchen deactivated"
+              : restaurant.isPublished
+                ? "Publicly live"
+                : "Private draft"}
           </h3>
           <p className="mt-1 text-sm font-medium text-on-surface-variant">
             Current slug: /r/{restaurant.publicId}
@@ -2046,7 +2779,11 @@ export function RestaurantWorkspace({
                 Access Level
               </p>
               <p className="mt-1 text-sm font-semibold text-on-surface">
-                {canManageSettings ? "Admin controls enabled" : "View-only"}
+                {isOwnerUser
+                  ? "Owner controls enabled"
+                  : canUseShareTools
+                    ? "Manager share tools enabled"
+                    : "View-only"}
               </p>
             </div>
           </div>
@@ -2096,6 +2833,53 @@ export function RestaurantWorkspace({
     );
   };
 
+  const actionDialogMeta = actionDialog
+    ? actionDialog.kind === "createMainMenu"
+      ? {
+          eyebrow: "Create Main Menu",
+          title: "Name your main menu",
+          description:
+            "This is the fixed top-level menu for the restaurant. Categories like Pizza or Chicken will live under it.",
+          confirmLabel: "Create Main Menu",
+          tone: "primary" as const,
+        }
+      : actionDialog.kind === "renameMainMenu"
+        ? {
+            eyebrow: "Rename Main Menu",
+            title: "Update the main menu name",
+            description:
+              "Give the top-level menu a clearer public name without changing its categories or items.",
+            confirmLabel: "Save Name",
+            tone: "primary" as const,
+          }
+        : actionDialog.kind === "deleteMainMenu"
+          ? {
+              eyebrow: "Delete Main Menu",
+              title: `Delete ${actionDialog.name}?`,
+              description:
+                "This removes the main menu permanently. Only empty main menus can be deleted.",
+              confirmLabel: "Delete Main Menu",
+              tone: "danger" as const,
+            }
+          : actionDialog.kind === "deleteCategory"
+            ? {
+                eyebrow: "Delete Category",
+                title: `Delete ${actionDialog.name}?`,
+                description:
+                  "This removes the empty category permanently from the selected main menu.",
+                confirmLabel: "Delete Category",
+                tone: "danger" as const,
+              }
+            : {
+                eyebrow: "Delete Item",
+                title: `Delete ${actionDialog.name}?`,
+                description:
+                  "This removes the item from the workspace and clears its attached asset records.",
+                confirmLabel: "Delete Item",
+                tone: "danger" as const,
+              }
+    : null;
+
   return (
     <div className="min-h-screen bg-surface">
       {toasts.length > 0 ? (
@@ -2127,7 +2911,20 @@ export function RestaurantWorkspace({
         </div>
       ) : null}
 
-      <WorkspaceSidebar ownerLabel={resolveOwnerLabel(restaurant)} />
+      <WorkspaceSidebar
+        portalVariant={effectivePortalVariant}
+        homePath={getPortalHomePath(effectivePortalVariant)}
+        profileLabel={
+          effectivePortalVariant === "owner"
+            ? resolveOwnerLabel(restaurant)
+            : session.user.email
+        }
+        profileCaption={
+          effectivePortalVariant === "owner"
+            ? "Workspace Owner"
+            : `${currentRole ? getRoleLabel(currentRole) : "Manager"} Access`
+        }
+      />
 
       <main className="min-h-screen md:ml-64">
         <WorkspaceHeader
@@ -2137,12 +2934,13 @@ export function RestaurantWorkspace({
           isCopyingQr={isCopyingQr}
           onCopyQr={handleCopyQr}
           onCreateDish={handleStartCreate}
+          portalVariant={effectivePortalVariant}
         />
 
         <div className="flex flex-col gap-8 bg-slate-50/55 px-6 py-8 md:px-8 xl:flex-row">
           <div className="min-w-0 flex-1 space-y-6">
             <div className="flex w-full flex-wrap items-center gap-2 rounded-[1.3rem] bg-surface-container-low p-1.5">
-              {workspaceTabs.map((tab) => (
+              {availableWorkspaceTabs.map((tab) => (
                 <button
                   key={tab.id}
                   type="button"
@@ -2164,11 +2962,13 @@ export function RestaurantWorkspace({
           <aside className="flex w-full shrink-0 flex-col gap-6 xl:w-[24rem]">
             <ReadinessCard
               readinessPercent={readinessPercent}
-              hasMenu={sortedMenus.length > 0}
+              hasMenu={allCategorySections.length > 0}
               publishedDishesCount={publishedDishesCount}
               readyModelCount={readyModelCount}
+              isActive={restaurant.isActive}
               isPublished={restaurant.isPublished}
               isPublishing={isPublishing}
+              canGoLive={isOwnerUser}
               onGoLive={handlePublishWorkspace}
             />
 
@@ -2182,6 +2982,83 @@ export function RestaurantWorkspace({
           </aside>
         </div>
       </main>
+
+      {actionDialog && actionDialogMeta ? (
+        <div
+          className="fixed inset-0 z-[55] flex items-center justify-center bg-[rgba(18,28,42,0.32)] p-4 backdrop-blur-md animate-modal-backdrop"
+          onClick={closeActionDialog}
+        >
+          <section
+            className="w-full max-w-xl rounded-[1.7rem] bg-white p-6 shadow-[0_30px_80px_rgba(18,28,42,0.22)] animate-modal-card"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  {actionDialogMeta.eyebrow}
+                </p>
+                <h2 className="mt-2 text-2xl font-bold tracking-[-0.04em] text-on-surface">
+                  {actionDialogMeta.title}
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-on-surface-variant">
+                  {actionDialogMeta.description}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={closeActionDialog}
+                disabled={isSubmittingActionDialog}
+                className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {actionDialog.kind === "createMainMenu" ||
+            actionDialog.kind === "renameMainMenu" ? (
+              <div className="mt-6">
+                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Main Menu Name
+                </label>
+                <input
+                  type="text"
+                  value={actionDialog.value}
+                  onChange={(event) => updateActionDialogValue(event.target.value)}
+                  disabled={isSubmittingActionDialog}
+                  autoFocus
+                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+              </div>
+            ) : null}
+
+            <div className="mt-8 flex flex-wrap items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={closeActionDialog}
+                disabled={isSubmittingActionDialog}
+                className="rounded-[1rem] border border-slate-200 px-5 py-3 text-sm font-bold text-on-surface-variant transition-colors hover:border-primary/25 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleSubmitActionDialog()}
+                disabled={isSubmittingActionDialog}
+                className={cn(
+                  "flex items-center gap-2 rounded-[1rem] px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70",
+                  actionDialogMeta.tone === "danger"
+                    ? "bg-gradient-to-br from-[#9d1321] to-[#cf2334]"
+                    : "bg-gradient-to-br from-primary to-primary-container",
+                )}
+              >
+                {isSubmittingActionDialog ? <span className="spinner-sm" /> : null}
+                {actionDialogMeta.confirmLabel}
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {isComposerVisible ? (
         <div
@@ -2242,7 +3119,7 @@ export function RestaurantWorkspace({
 
               <div>
                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-                  Menu Category
+                  Item Category
                 </label>
                 <select
                   value={selectedMenuId}
@@ -2250,7 +3127,11 @@ export function RestaurantWorkspace({
                   className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
                 >
                   {sortedMenus.length === 0 ? (
-                    <option value="">Primary Menu will be created automatically</option>
+                    <option value="">
+                      {selectedMainMenu
+                        ? "A General category will be created automatically"
+                        : "Create a main menu first"}
+                    </option>
                   ) : null}
                   {sortedMenus.map((menu) => (
                     <option key={menu.id} value={menu.id}>
@@ -2276,6 +3157,28 @@ export function RestaurantWorkspace({
                   }
                   className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
                 />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Currency
+                </label>
+                <select
+                  value={composerState.currency}
+                  onChange={(event) =>
+                    setComposerState((current) => ({
+                      ...current,
+                      currency: event.target.value as CurrencyCode,
+                    }))
+                  }
+                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                >
+                  {currencyOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <label className="flex items-center gap-3 rounded-[1.1rem] bg-surface-container-low px-4 py-3.5 md:self-end">

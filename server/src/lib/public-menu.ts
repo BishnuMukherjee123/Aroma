@@ -13,6 +13,7 @@ export type PublicDishPayload = {
   id: string;
   name: string;
   price: number;
+  currency: "USD" | "INR" | "EUR" | "GBP" | "AED";
   description: string | null;
   sortOrder: number;
   modelUrl: string | null;
@@ -20,11 +21,18 @@ export type PublicDishPayload = {
   posterUrl: string | null;
 };
 
-export type PublicMenuPayload = {
+export type PublicCategoryPayload = {
   id: string;
   name: string;
   sortOrder: number;
   dishes: PublicDishPayload[];
+};
+
+export type PublicMenuPayload = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  categories: PublicCategoryPayload[];
 };
 
 export type PublicRestaurantPayload = {
@@ -38,6 +46,8 @@ export type PublicRestaurantPayload = {
 const publicMenuCache = new ExpiringCache<PublicRestaurantPayload>(
   config.PUBLIC_MENU_CACHE_TTL_SECONDS,
 );
+
+const supportedCurrencyCodes = new Set(["USD", "INR", "EUR", "GBP", "AED"]);
 
 export const buildAssetUrl = (storageKey: string, fallbackUrl: string): string => {
   const cdnBase = config.ASSET_CDN_BASE_URL.trim().replace(/\/$/, "");
@@ -81,6 +91,7 @@ const buildSnapshot = async (
     select: {
       id: true,
       publicId: true,
+      isActive: true,
       name: true,
       menus: {
         where: { isPublished: true },
@@ -89,22 +100,32 @@ const buildSnapshot = async (
           id: true,
           name: true,
           sortOrder: true,
-          dishes: {
+          categories: {
             where: { isPublished: true },
             orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
             select: {
               id: true,
               name: true,
-              price: true,
-              description: true,
               sortOrder: true,
-              assets: {
-                where: { status: "READY" },
-                orderBy: [{ createdAt: "asc" }],
+              dishes: {
+                where: { isPublished: true },
+                orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
                 select: {
-                  kind: true,
-                  storageKey: true,
-                  url: true,
+                  id: true,
+                  name: true,
+                  price: true,
+                  currency: true,
+                  description: true,
+                  sortOrder: true,
+                  assets: {
+                    where: { status: "READY" },
+                    orderBy: [{ createdAt: "asc" }],
+                    select: {
+                      kind: true,
+                      storageKey: true,
+                      url: true,
+                    },
+                  },
                 },
               },
             },
@@ -125,19 +146,25 @@ const buildSnapshot = async (
       id: menu.id,
       name: menu.name,
       sortOrder: menu.sortOrder,
-      dishes: menu.dishes.map((dish) => {
-        const assetMap = reduceDishAssets(dish.assets);
-        return {
-          id: dish.id,
-          name: dish.name,
-          price: dish.price,
-          description: dish.description,
-          sortOrder: dish.sortOrder,
-          modelUrl: assetMap.modelUrl,
-          thumbnailUrl: assetMap.thumbnailUrl,
-          posterUrl: assetMap.posterUrl,
-        };
-      }),
+      categories: menu.categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+        sortOrder: category.sortOrder,
+        dishes: category.dishes.map((dish) => {
+          const assetMap = reduceDishAssets(dish.assets);
+          return {
+            id: dish.id,
+            name: dish.name,
+            price: dish.price,
+            currency: dish.currency,
+            description: dish.description,
+            sortOrder: dish.sortOrder,
+            modelUrl: assetMap.modelUrl,
+            thumbnailUrl: assetMap.thumbnailUrl,
+            posterUrl: assetMap.posterUrl,
+          };
+        }),
+      })),
     })),
   };
 };
@@ -159,6 +186,33 @@ export const rebuildPublicRestaurantSnapshot = async (
   return snapshot;
 };
 
+const isCurrentSnapshotShape = (
+  snapshot: unknown,
+): snapshot is PublicRestaurantPayload => {
+  if (!snapshot || typeof snapshot !== "object") {
+    return false;
+  }
+
+  const candidate = snapshot as PublicRestaurantPayload;
+  if (!Array.isArray(candidate.menus)) {
+    return false;
+  }
+
+  return candidate.menus.every(
+    (menu) =>
+      Array.isArray(menu.categories) &&
+      menu.categories.every(
+        (category) =>
+          Array.isArray(category.dishes) &&
+          category.dishes.every(
+            (dish) =>
+              typeof dish?.currency === "string" &&
+              supportedCurrencyCodes.has(dish.currency),
+          ),
+      ),
+  );
+};
+
 export const getPublicRestaurantSnapshot = async (
   publicId: string,
 ): Promise<PublicRestaurantPayload> => {
@@ -172,21 +226,20 @@ export const getPublicRestaurantSnapshot = async (
     select: {
       id: true,
       publicId: true,
+      isActive: true,
       isPublished: true,
       publicMenuSnapshot: true,
     },
   });
 
   const existingRestaurant = ensureFoundValue(restaurant, "Restaurant not found");
-  if (!existingRestaurant.isPublished) {
+  if (!existingRestaurant.isActive || !existingRestaurant.isPublished) {
     notFound("Restaurant not found");
   }
 
-  const snapshot =
-    existingRestaurant.publicMenuSnapshot &&
-    typeof existingRestaurant.publicMenuSnapshot === "object"
-      ? (existingRestaurant.publicMenuSnapshot as PublicRestaurantPayload)
-      : await rebuildPublicRestaurantSnapshot(existingRestaurant.id);
+  const snapshot = isCurrentSnapshotShape(existingRestaurant.publicMenuSnapshot)
+    ? existingRestaurant.publicMenuSnapshot
+    : await rebuildPublicRestaurantSnapshot(existingRestaurant.id);
 
   publicMenuCache.set(publicId, snapshot);
   return snapshot;

@@ -1,5 +1,5 @@
 import { prisma } from "../../db/prisma.js";
-import { ensureFoundValue } from "../../lib/errors.js";
+import { badRequest, ensureFoundValue } from "../../lib/errors.js";
 import { rebuildPublicRestaurantSnapshot } from "../../lib/public-menu.js";
 import { removeStorageObjects } from "../../lib/supabase-storage.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
@@ -8,8 +8,10 @@ export const updateDish = async (
   actorUserId: string,
   dishId: string,
   input: {
+    menuId?: string;
     name?: string;
     price?: number;
+    currency?: "USD" | "INR" | "EUR" | "GBP" | "AED";
     description?: string;
     isPublished?: boolean;
     sortOrder?: number;
@@ -26,11 +28,28 @@ export const updateDish = async (
   const existingDish = ensureFoundValue(dish, "Dish not found");
   await ensureRestaurantRole(actorUserId, existingDish.restaurantId, "EDITOR");
 
+  if (input.menuId !== undefined && input.menuId !== null) {
+    const category = await prisma.menu.findUnique({
+      where: { id: input.menuId },
+      select: {
+        id: true,
+        restaurantId: true,
+      },
+    });
+
+    const existingCategory = ensureFoundValue(category, "Category not found");
+    if (existingCategory.restaurantId !== existingDish.restaurantId) {
+      badRequest("Category not found");
+    }
+  }
+
   const updatedDish = await prisma.dish.update({
     where: { id: dishId },
     data: {
+      ...(input.menuId !== undefined ? { menuId: input.menuId } : {}),
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.price !== undefined ? { price: input.price } : {}),
+      ...(input.currency !== undefined ? { currency: input.currency } : {}),
       ...(input.description !== undefined
         ? { description: input.description }
         : {}),
@@ -43,6 +62,7 @@ export const updateDish = async (
       id: true,
       name: true,
       price: true,
+      currency: true,
       description: true,
       restaurantId: true,
       menuId: true,

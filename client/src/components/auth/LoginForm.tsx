@@ -4,11 +4,24 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
-import { loginRequest } from "@/lib/api";
-import { getStoredToken, storeToken } from "@/lib/auth-storage";
+import { fetchCurrentUser, loginRequest } from "@/lib/api";
+import { clearStoredToken, getStoredToken, storeToken } from "@/lib/auth-storage";
+import {
+  getActiveManagerMemberships,
+  getPortalDestinationForUser,
+  getPortalDestinationForVariant,
+  getPortalLoginPath,
+  hasManagerMembership,
+  hasOwnerMembership,
+  type PortalVariant,
+} from "@/lib/portal";
 import { cn } from "@/lib/utils";
 
-export function LoginForm() {
+export function LoginForm({
+  portalVariant = "owner",
+}: {
+  portalVariant?: PortalVariant;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,12 +29,89 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const alternatePortalVariant =
+    portalVariant === "owner" ? "manager" : "owner";
+  const alternatePortalHref = getPortalLoginPath(alternatePortalVariant);
+  const alternatePortalLabel =
+    portalVariant === "owner"
+      ? "Restaurant manager sign in"
+      : "Company admin sign in";
+  const portalHeading =
+    portalVariant === "owner" ? "Company Sign In" : "Manager Sign In";
+  const portalDescription =
+    portalVariant === "owner"
+      ? "Sign in to the company portal to manage every restaurant, assign managers, and oversee the full Aroma network."
+      : "Sign in to the restaurant portal to manage your assigned restaurant menu, dishes, public link, and QR access.";
+
+  const resolvePortalDestinationForVariant = (
+    user: Awaited<ReturnType<typeof fetchCurrentUser>>,
+  ) => {
+    const destination = getPortalDestinationForVariant(user, portalVariant);
+
+    if (destination) {
+      return destination;
+    }
+
+    if (portalVariant === "owner") {
+      if (hasManagerMembership(user.memberships)) {
+        throw new Error(
+          "This account belongs to a restaurant manager. Please use the manager login page.",
+        );
+      }
+
+      throw new Error(
+        "This account does not have company admin access yet.",
+      );
+    }
+
+    if (hasOwnerMembership(user.memberships)) {
+      throw new Error(
+        "This account belongs to the company admin portal. Please use the admin login page.",
+      );
+    }
+
+    if (
+      hasManagerMembership(user.memberships) &&
+      getActiveManagerMemberships(user.memberships).length === 0
+    ) {
+      throw new Error(
+        "Your restaurant access has been deactivated. Contact the owner or admin.",
+      );
+    }
+
+    throw new Error(
+      "This manager account has not been assigned to any restaurant yet.",
+    );
+  };
 
   useEffect(() => {
-    if (getStoredToken()) {
-      router.replace("/dashboard");
+    const token = getStoredToken();
+    if (!token) {
+      return;
     }
-  }, [router]);
+
+    let cancelled = false;
+
+    const redirectToPortal = async () => {
+      try {
+        const user = await fetchCurrentUser(token);
+        if (!cancelled) {
+          router.replace(getPortalDestinationForUser(user));
+        }
+      } catch {
+        clearStoredToken();
+        if (!cancelled) {
+          router.replace(getPortalLoginPath(portalVariant));
+        }
+      }
+    };
+
+    void redirectToPortal();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [portalVariant, router]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -34,8 +124,10 @@ export function LoginForm() {
         password,
       });
 
+      const user = await fetchCurrentUser(payload.token);
+      const destination = resolvePortalDestinationForVariant(user);
       storeToken(payload.token, rememberMe);
-      router.push("/dashboard");
+      router.push(destination);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Unable to sign in right now.",
@@ -49,10 +141,10 @@ export function LoginForm() {
     <div className="rounded-[1.5rem] bg-surface-container-lowest px-8 py-8 shadow-[0_16px_48px_rgba(18,28,42,0.08)] ring-1 ring-outline-variant/12 md:px-9 md:py-9">
       <header>
         <h2 className="text-[2rem] font-bold tracking-[-0.03em] text-on-surface">
-          Sign In
+          {portalHeading}
         </h2>
         <p className="mt-2 text-sm font-medium text-on-surface-variant">
-          Enter your credentials to manage your restaurant.
+          {portalDescription}
         </p>
       </header>
 
@@ -72,7 +164,11 @@ export function LoginForm() {
             autoComplete="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            placeholder="manager@aroma.com"
+            placeholder={
+              portalVariant === "owner"
+                ? "admin@aroma.com"
+                : "manager@restaurant.com"
+            }
             className="w-full rounded-[0.95rem] bg-surface-container-low px-4 py-3.5 text-[0.98rem] text-on-surface outline-none transition-all placeholder:text-outline focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
             required
           />
@@ -151,6 +247,15 @@ export function LoginForm() {
 
       <div className="mt-8 border-t border-outline-variant/16 pt-7 text-center">
         <p className="text-sm font-medium text-on-surface-variant">
+          Need a different portal?
+          <Link
+            href={alternatePortalHref}
+            className="ml-1.5 font-bold text-primary transition-colors hover:text-primary-container"
+          >
+            {alternatePortalLabel}
+          </Link>
+        </p>
+        <p className="mt-3 text-sm font-medium text-on-surface-variant">
           New restaurant?
           <Link
             href="mailto:sales@aromaar.com"

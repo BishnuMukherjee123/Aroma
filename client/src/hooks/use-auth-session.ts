@@ -5,14 +5,24 @@ import { useEffect, useState } from "react";
 
 import { fetchCurrentUser, type MeResponse } from "@/lib/api";
 import { clearStoredToken, getStoredToken } from "@/lib/auth-storage";
+import {
+  getPortalLoginPath,
+  type PortalVariant,
+} from "@/lib/portal";
 
 type SessionState =
   | { status: "loading" }
   | { status: "authenticated"; token: string; user: MeResponse }
   | { status: "unauthenticated"; message: string };
 
-export function useAuthSession() {
+export function useAuthSession(options?: {
+  portalVariant?: PortalVariant;
+  loginPath?: string;
+}) {
   const router = useRouter();
+  const loginPath =
+    options?.loginPath ??
+    getPortalLoginPath(options?.portalVariant ?? "owner");
   const [state, setState] = useState<SessionState>({ status: "loading" });
 
   useEffect(() => {
@@ -61,14 +71,14 @@ export function useAuthSession() {
   useEffect(() => {
     if (state.status === "unauthenticated") {
       const timeout = window.setTimeout(() => {
-        router.replace("/");
+        router.replace(loginPath);
       }, 1200);
 
       return () => window.clearTimeout(timeout);
     }
 
     return undefined;
-  }, [router, state]);
+  }, [loginPath, router, state]);
 
   return state;
 }

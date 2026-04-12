@@ -3,6 +3,8 @@ const rawApiBaseUrl =
 
 export const apiBaseUrl = rawApiBaseUrl.replace(/\/$/, "");
 
+export type CurrencyCode = "USD" | "INR" | "EUR" | "GBP" | "AED";
+
 type ApiErrorPayload = {
   error?: string;
   message?: string;
@@ -23,6 +25,7 @@ export type MeResponse = AuthUser & {
       id: string;
       name: string;
       publicId: string;
+      isActive: boolean;
       isPublished: boolean;
     };
   }>;
@@ -70,10 +73,20 @@ export type DishSummary = {
   id: string;
   name: string;
   price: number;
+  currency: CurrencyCode;
   description: string | null;
   isPublished: boolean;
   sortOrder: number;
   assets: AssetSummary[];
+};
+
+export type CategorySummary = {
+  id: string;
+  name: string;
+  mainMenuId: string;
+  isPublished: boolean;
+  sortOrder: number;
+  dishes: DishSummary[];
 };
 
 export type MenuSummary = {
@@ -81,7 +94,7 @@ export type MenuSummary = {
   name: string;
   isPublished: boolean;
   sortOrder: number;
-  dishes: DishSummary[];
+  categories: CategorySummary[];
 };
 
 export type RestaurantDetails = {
@@ -89,6 +102,7 @@ export type RestaurantDetails = {
   name: string;
   publicId: string;
   ownerId: string;
+  isActive: boolean;
   isPublished: boolean;
   publicMenuSnapshotUpdatedAt: string | null;
   createdAt: string;
@@ -105,6 +119,7 @@ export type PublicDishPayload = {
   id: string;
   name: string;
   price: number;
+  currency: CurrencyCode;
   description: string | null;
   sortOrder: number;
   modelUrl: string | null;
@@ -112,11 +127,18 @@ export type PublicDishPayload = {
   posterUrl: string | null;
 };
 
-export type PublicMenuPayload = {
+export type PublicCategoryPayload = {
   id: string;
   name: string;
   sortOrder: number;
   dishes: PublicDishPayload[];
+};
+
+export type PublicMenuPayload = {
+  id: string;
+  name: string;
+  sortOrder: number;
+  categories: PublicCategoryPayload[];
 };
 
 export type PublicRestaurantPayload = {
@@ -141,12 +163,45 @@ type ApiRequestOptions = {
   body?: unknown;
 };
 
+type LegacyMenuSummary = Omit<MenuSummary, "categories"> & {
+  categories?: CategorySummary[];
+  dishes?: DishSummary[];
+};
+
+type LegacyPublicMenuPayload = Omit<PublicMenuPayload, "categories"> & {
+  categories?: PublicCategoryPayload[];
+  dishes?: PublicDishPayload[];
+};
+
+const supportedCurrencyCodes: CurrencyCode[] = [
+  "USD",
+  "INR",
+  "EUR",
+  "GBP",
+  "AED",
+];
+
+const normalizeCurrencyCode = (value: unknown): CurrencyCode =>
+  typeof value === "string" &&
+  supportedCurrencyCodes.includes(value as CurrencyCode)
+    ? (value as CurrencyCode)
+    : "USD";
+
 const readErrorMessage = async (response: Response): Promise<string> => {
   try {
     const payload = (await response.json()) as ApiErrorPayload;
     return payload.error || payload.message || "Request failed";
   } catch {
-    return "Request failed";
+    try {
+      const text = await response.text();
+      const cleaned = text
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+      return cleaned || "Request failed";
+    } catch {
+      return "Request failed";
+    }
   }
 };
 
@@ -173,6 +228,111 @@ const apiRequest = async <T>(
   return (await response.json()) as T;
 };
 
+const normalizeDishSummary = (dish: DishSummary): DishSummary => ({
+  ...dish,
+  currency: normalizeCurrencyCode(dish.currency),
+  assets: Array.isArray(dish.assets) ? dish.assets : [],
+});
+
+const normalizeCategorySummary = (
+  category: CategorySummary,
+  fallbackMainMenuId: string,
+): CategorySummary => ({
+  ...category,
+  mainMenuId: category.mainMenuId || fallbackMainMenuId,
+  dishes: Array.isArray(category.dishes)
+    ? category.dishes.map(normalizeDishSummary)
+    : [],
+});
+
+const createFallbackCategory = (menu: LegacyMenuSummary): CategorySummary => ({
+  id: `${menu.id}__general`,
+  name: "General",
+  mainMenuId: menu.id,
+  isPublished: menu.isPublished,
+  sortOrder: 0,
+  dishes: Array.isArray(menu.dishes)
+    ? menu.dishes.map(normalizeDishSummary)
+    : [],
+});
+
+const normalizeMenuSummary = (menu: LegacyMenuSummary): MenuSummary => ({
+  id: menu.id,
+  name: menu.name,
+  isPublished: menu.isPublished,
+  sortOrder: menu.sortOrder,
+  categories: Array.isArray(menu.categories)
+    ? menu.categories.map((category) =>
+        normalizeCategorySummary(category, menu.id),
+      )
+    : Array.isArray(menu.dishes) && menu.dishes.length > 0
+      ? [createFallbackCategory(menu)]
+      : [],
+});
+
+const normalizeRestaurantDetails = (
+  restaurant: RestaurantDetails,
+): RestaurantDetails => ({
+  ...restaurant,
+  members: Array.isArray(restaurant.members) ? restaurant.members : [],
+  menus: Array.isArray(restaurant.menus)
+    ? restaurant.menus.map((menu) =>
+        normalizeMenuSummary(menu as LegacyMenuSummary),
+      )
+    : [],
+});
+
+const normalizePublicDishPayload = (
+  dish: PublicDishPayload,
+): PublicDishPayload => ({
+  ...dish,
+  currency: normalizeCurrencyCode(dish.currency),
+});
+
+const normalizePublicCategoryPayload = (
+  category: PublicCategoryPayload,
+): PublicCategoryPayload => ({
+  ...category,
+  dishes: Array.isArray(category.dishes)
+    ? category.dishes.map(normalizePublicDishPayload)
+    : [],
+});
+
+const createFallbackPublicCategory = (
+  menu: LegacyPublicMenuPayload,
+): PublicCategoryPayload => ({
+  id: `${menu.id}__general`,
+  name: "General",
+  sortOrder: 0,
+  dishes: Array.isArray(menu.dishes)
+    ? menu.dishes.map(normalizePublicDishPayload)
+    : [],
+});
+
+const normalizePublicMenuPayload = (
+  menu: LegacyPublicMenuPayload,
+): PublicMenuPayload => ({
+  id: menu.id,
+  name: menu.name,
+  sortOrder: menu.sortOrder,
+  categories: Array.isArray(menu.categories)
+    ? menu.categories.map(normalizePublicCategoryPayload)
+    : Array.isArray(menu.dishes) && menu.dishes.length > 0
+      ? [createFallbackPublicCategory(menu)]
+      : [],
+});
+
+const normalizePublicRestaurantPayload = (
+  restaurant: PublicRestaurantPayload,
+): PublicRestaurantPayload => ({
+  ...restaurant,
+  menus: Array.isArray(restaurant.menus)
+    ? restaurant.menus.map((menu) =>
+        normalizePublicMenuPayload(menu as LegacyPublicMenuPayload),
+      )
+    : [],
+});
+
 export const loginRequest = async (input: {
   email: string;
   password: string;
@@ -192,7 +352,10 @@ export const fetchCurrentUser = async (token: string): Promise<MeResponse> => {
 export const fetchPublicRestaurant = async (
   publicId: string,
 ): Promise<PublicRestaurantPayload> => {
-  return apiRequest<PublicRestaurantPayload>(`/api/v1/public/r/${publicId}`);
+  const payload = await apiRequest<PublicRestaurantPayload>(
+    `/api/v1/public/r/${publicId}`,
+  );
+  return normalizePublicRestaurantPayload(payload);
 };
 
 export const createRestaurant = async (
@@ -210,9 +373,13 @@ export const fetchRestaurant = async (
   token: string,
   restaurantId: string,
 ): Promise<RestaurantDetails> => {
-  return apiRequest<RestaurantDetails>(`/api/v1/restaurants/${restaurantId}`, {
-    token,
-  });
+  const payload = await apiRequest<RestaurantDetails>(
+    `/api/v1/restaurants/${restaurantId}`,
+    {
+      token,
+    },
+  );
+  return normalizeRestaurantDetails(payload);
 };
 
 export const updateRestaurant = async (
@@ -221,6 +388,7 @@ export const updateRestaurant = async (
   input: {
     name?: string;
     publicId?: string;
+    isActive?: boolean;
     isPublished?: boolean;
   },
 ): Promise<{
@@ -228,6 +396,7 @@ export const updateRestaurant = async (
   name: string;
   publicId: string;
   ownerId: string;
+  isActive: boolean;
   isPublished: boolean;
   createdAt: string;
   updatedAt: string;
@@ -236,6 +405,20 @@ export const updateRestaurant = async (
     token,
     method: "PATCH",
     body: input,
+  });
+};
+
+export const deleteRestaurant = async (
+  token: string,
+  restaurantId: string,
+): Promise<{
+  id: string;
+  name: string;
+  deleted: boolean;
+}> => {
+  return apiRequest(`/api/v1/restaurants/${restaurantId}`, {
+    token,
+    method: "DELETE",
   });
 };
 
@@ -258,6 +441,29 @@ export const addRestaurantMember = async (
   },
 ): Promise<RestaurantMemberSummary & { createdAt: string; updatedAt: string }> => {
   return apiRequest(`/api/v1/restaurants/${restaurantId}/members`, {
+    token,
+    method: "POST",
+    body: input,
+  });
+};
+
+export const createRestaurantManagerAccount = async (
+  token: string,
+  restaurantId: string,
+  input: {
+    email: string;
+    password: string;
+  },
+): Promise<
+  {
+    createdUser: boolean;
+    membership: RestaurantMemberSummary & {
+      createdAt: string;
+      updatedAt: string;
+    };
+  }
+> => {
+  return apiRequest(`/api/v1/restaurants/${restaurantId}/manager-account`, {
     token,
     method: "POST",
     body: input,
@@ -312,6 +518,69 @@ export const updateMenu = async (
   });
 };
 
+export const createCategory = async (
+  token: string,
+  menuId: string,
+  input: {
+    name: string;
+    isPublished?: boolean;
+    sortOrder?: number;
+  },
+): Promise<{
+  id: string;
+  name: string;
+  restaurantId: string;
+  mainMenuId: string;
+  isPublished: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}> => {
+  return apiRequest(`/api/v1/menus/${menuId}/categories`, {
+    token,
+    method: "POST",
+    body: input,
+  });
+};
+
+export const updateCategory = async (
+  token: string,
+  categoryId: string,
+  input: {
+    name?: string;
+    isPublished?: boolean;
+    sortOrder?: number;
+  },
+): Promise<{
+  id: string;
+  name: string;
+  restaurantId: string;
+  mainMenuId: string;
+  isPublished: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}> => {
+  return apiRequest(`/api/v1/categories/${categoryId}`, {
+    token,
+    method: "PATCH",
+    body: input,
+  });
+};
+
+export const deleteCategory = async (
+  token: string,
+  categoryId: string,
+): Promise<{
+  id: string;
+  deleted: boolean;
+}> => {
+  return apiRequest(`/api/v1/categories/${categoryId}`, {
+    token,
+    method: "DELETE",
+  });
+};
+
 export const deleteMenu = async (
   token: string,
   menuId: string,
@@ -327,10 +596,11 @@ export const deleteMenu = async (
 
 export const createDish = async (
   token: string,
-  menuId: string,
+  categoryId: string,
   input: {
     name: string;
     price: number;
+    currency: CurrencyCode;
     description?: string;
     isPublished?: boolean;
     sortOrder?: number;
@@ -339,6 +609,7 @@ export const createDish = async (
   id: string;
   name: string;
   price: number;
+  currency: CurrencyCode;
   description: string | null;
   restaurantId: string;
   menuId: string;
@@ -347,7 +618,7 @@ export const createDish = async (
   createdAt: string;
   updatedAt: string;
 }> => {
-  return apiRequest(`/api/v1/menus/${menuId}/dishes`, {
+  return apiRequest(`/api/v1/categories/${categoryId}/dishes`, {
     token,
     method: "POST",
     body: input,
@@ -358,8 +629,10 @@ export const updateDish = async (
   token: string,
   dishId: string,
   input: {
+    menuId?: string;
     name?: string;
     price?: number;
+    currency?: CurrencyCode;
     description?: string;
     isPublished?: boolean;
     sortOrder?: number;
@@ -368,6 +641,7 @@ export const updateDish = async (
   id: string;
   name: string;
   price: number;
+  currency: CurrencyCode;
   description: string | null;
   restaurantId: string;
   menuId: string;
