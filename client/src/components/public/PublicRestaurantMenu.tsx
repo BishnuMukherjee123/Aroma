@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import Script from "next/script";
-import { useDeferredValue, useEffect, useMemo, useState } from "react";
+import {
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   fetchPublicRestaurant,
@@ -394,18 +400,21 @@ function TopArCard({
   dish: ArDishView;
   publicId: string;
 }) {
+  const [cardRef, isNearViewport] = useNearViewport<HTMLDivElement>();
   const [isPreviewActivated, setIsPreviewActivated] = useState(false);
-  const hasPosterPreview = Boolean(dish.posterUrl);
+  const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const shouldMountPreview = isNearViewport || isPreviewActivated;
 
   return (
     <article className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]">
-      <div className="relative h-56 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_50%),linear-gradient(180deg,#dbe7fb_0%,#cfdcf5_100%)]">
-        {dish.modelUrl && hasPosterPreview ? (
+      <div
+        ref={cardRef}
+        className="relative h-56 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_50%),linear-gradient(180deg,#dbe7fb_0%,#cfdcf5_100%)]"
+      >
+        {dish.modelUrl && shouldMountPreview ? (
           <model-viewer
             src={dish.modelUrl}
             alt={dish.name}
-            poster={dish.posterUrl ?? undefined}
-            reveal="interaction"
             camera-controls={isPreviewActivated}
             auto-rotate={isPreviewActivated}
             shadow-intensity="1"
@@ -414,52 +423,39 @@ function TopArCard({
             loading="lazy"
             className="h-full w-full bg-transparent"
             onClick={() => setIsPreviewActivated(true)}
-          />
-        ) : dish.modelUrl && isPreviewActivated ? (
-          <model-viewer
-            src={dish.modelUrl}
-            alt={dish.name}
-            camera-controls
-            auto-rotate
-            shadow-intensity="1"
-            exposure="1"
-            touch-action="pan-y"
-            loading="lazy"
-            className="h-full w-full bg-transparent"
+            onLoad={() => setIsModelLoaded(true)}
           />
         ) : (
-          <button
-            type="button"
-            onClick={() => setIsPreviewActivated(true)}
-            className="relative flex h-full w-full items-center justify-center overflow-hidden bg-transparent text-left"
-            aria-label={`Load 3D preview for ${dish.name}`}
-          >
-            <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-on-surface-variant">
+          <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
+            <div className="flex flex-col items-center gap-3">
               <span className="material-symbols-outlined text-5xl text-primary/70">
                 view_in_ar
               </span>
               <p className="text-sm font-semibold text-on-surface">
-                3D preview ready
+                3D preview loading
               </p>
             </div>
-
-            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(18,28,42,0.24)] via-transparent to-transparent" />
-            <div className="absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.82)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
-              <p className="flex items-center gap-2 text-xs font-semibold text-white">
-                <span className="material-symbols-outlined text-base text-primary-container">
-                  view_in_ar
-                </span>
-                Tap for 3D
-              </p>
-            </div>
-          </button>
+          </div>
         )}
 
-        {!hasPosterPreview ? (
-          <div className="pointer-events-none absolute left-4 top-4 max-w-[13rem] rounded-[0.85rem] bg-white/86 px-3 py-2 text-[11px] font-semibold leading-5 text-on-surface shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
-            Add a POSTER asset for this dish to show the frozen 3D preview before loading.
-          </div>
+        {!isModelLoaded ? (
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.4),transparent_52%),linear-gradient(180deg,rgba(219,231,251,0.45)_0%,rgba(207,220,245,0.65)_100%)]" />
         ) : null}
+
+        <div className="absolute inset-0 bg-gradient-to-t from-[rgba(18,28,42,0.24)] via-transparent to-transparent" />
+        <button
+          type="button"
+          onClick={() => setIsPreviewActivated(true)}
+          className="absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.82)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm transition-transform hover:scale-[1.02]"
+          aria-label={`Load interactive 3D preview for ${dish.name}`}
+        >
+          <p className="flex items-center gap-2 text-xs font-semibold text-white">
+            <span className="material-symbols-outlined text-base text-primary-container">
+              view_in_ar
+            </span>
+            {isModelLoaded ? "Tap for 3D" : "Loading 3D"}
+          </p>
+        </button>
 
         <div className="absolute right-3 top-3 flex items-center gap-1 rounded-[0.8rem] bg-white/90 px-2.5 py-1.5 shadow-sm backdrop-blur-md">
           <span className="material-symbols-outlined text-lg text-primary">
@@ -500,6 +496,38 @@ function TopArCard({
       </div>
     </article>
   );
+}
+
+function useNearViewport<T extends Element>() {
+  const elementRef = useRef<T | null>(null);
+  const [isNearViewport, setIsNearViewport] = useState(false);
+
+  useEffect(() => {
+    const element = elementRef.current;
+    if (!element || isNearViewport) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setIsNearViewport(true);
+          observer.disconnect();
+        }
+      },
+      {
+        rootMargin: "240px 0px",
+      },
+    );
+
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [isNearViewport]);
+
+  return [elementRef, isNearViewport] as const;
 }
 
 function DishMenuRow({ dish }: { dish: PublicDishPayload }) {
