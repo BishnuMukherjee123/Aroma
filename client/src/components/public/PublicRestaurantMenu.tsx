@@ -395,12 +395,27 @@ function TopArCard({
   publicId: string;
 }) {
   const [isPreviewActivated, setIsPreviewActivated] = useState(false);
-  const previewImage = dish.posterUrl;
+  const hasPosterPreview = Boolean(dish.posterUrl);
 
   return (
     <article className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]">
       <div className="relative h-56 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_50%),linear-gradient(180deg,#dbe7fb_0%,#cfdcf5_100%)]">
-        {dish.modelUrl && isPreviewActivated ? (
+        {dish.modelUrl && hasPosterPreview ? (
+          <model-viewer
+            src={dish.modelUrl}
+            alt={dish.name}
+            poster={dish.posterUrl ?? undefined}
+            reveal="interaction"
+            camera-controls={isPreviewActivated}
+            auto-rotate={isPreviewActivated}
+            shadow-intensity="1"
+            exposure="1"
+            touch-action="pan-y"
+            loading="lazy"
+            className="h-full w-full bg-transparent"
+            onClick={() => setIsPreviewActivated(true)}
+          />
+        ) : dish.modelUrl && isPreviewActivated ? (
           <model-viewer
             src={dish.modelUrl}
             alt={dish.name}
@@ -419,22 +434,14 @@ function TopArCard({
             className="relative flex h-full w-full items-center justify-center overflow-hidden bg-transparent text-left"
             aria-label={`Load 3D preview for ${dish.name}`}
           >
-            {previewImage ? (
-              <img
-                src={previewImage}
-                alt={dish.name}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-            ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-on-surface-variant">
-                <span className="material-symbols-outlined text-5xl text-primary/70">
-                  view_in_ar
-                </span>
-                <p className="text-sm font-semibold text-on-surface">
-                  3D preview ready
-                </p>
-              </div>
-            )}
+            <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-on-surface-variant">
+              <span className="material-symbols-outlined text-5xl text-primary/70">
+                view_in_ar
+              </span>
+              <p className="text-sm font-semibold text-on-surface">
+                3D preview ready
+              </p>
+            </div>
 
             <div className="absolute inset-0 bg-gradient-to-t from-[rgba(18,28,42,0.24)] via-transparent to-transparent" />
             <div className="absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.82)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
@@ -447,6 +454,12 @@ function TopArCard({
             </div>
           </button>
         )}
+
+        {!hasPosterPreview ? (
+          <div className="pointer-events-none absolute left-4 top-4 max-w-[13rem] rounded-[0.85rem] bg-white/86 px-3 py-2 text-[11px] font-semibold leading-5 text-on-surface shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
+            Add a POSTER asset for this dish to show the frozen 3D preview before loading.
+          </div>
+        ) : null}
 
         <div className="absolute right-3 top-3 flex items-center gap-1 rounded-[0.8rem] bg-white/90 px-2.5 py-1.5 shadow-sm backdrop-blur-md">
           <span className="material-symbols-outlined text-lg text-primary">
