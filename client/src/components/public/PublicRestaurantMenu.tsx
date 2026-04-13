@@ -1,7 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import Script from "next/script";
 import {
   useDeferredValue,
   useEffect,
@@ -17,6 +17,16 @@ import {
   type PublicRestaurantPayload,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
+
+const ArPreviewCanvas = dynamic(
+  () =>
+    import("@/components/public/ArPreviewCanvas").then(
+      (module) => module.ArPreviewCanvas,
+    ),
+  {
+    ssr: false,
+  },
+);
 
 type PublicRestaurantMenuProps = {
   publicId: string;
@@ -231,12 +241,6 @@ export function PublicRestaurantMenu({
 
   return (
     <div className="min-h-screen bg-surface">
-      <Script
-        src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"
-        type="module"
-        strategy="afterInteractive"
-      />
-
       <header className="sticky top-0 z-50 border-b border-white/50 bg-white/80 px-4 py-4 backdrop-blur-xl md:px-6">
         <div className="mx-auto flex max-w-6xl items-center gap-4">
           <div className="min-w-0 flex-1">
@@ -441,18 +445,11 @@ function TopArCard({
         className="relative h-56 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_50%),linear-gradient(180deg,#dbe7fb_0%,#cfdcf5_100%)]"
       >
         {dish.modelUrl && shouldMountPreview ? (
-          <model-viewer
-            src={dish.modelUrl}
+          <ArPreviewCanvas
+            modelUrl={dish.modelUrl}
             alt={dish.name}
-            camera-controls={isPreviewActivated}
-            auto-rotate={isPreviewActivated}
-            shadow-intensity="1"
-            exposure="1"
-            touch-action="pan-y"
-            loading="lazy"
-            className="h-full w-full bg-transparent"
-            onClick={() => setIsPreviewActivated(true)}
-            onLoad={() => setIsModelLoaded(true)}
+            interactive={isPreviewActivated}
+            onLoaded={() => setIsModelLoaded(true)}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
