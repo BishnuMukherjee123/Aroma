@@ -10,6 +10,7 @@ declare module "react" {
         src?: string;
         alt?: string;
         poster?: string;
+        reveal?: "auto" | "interaction" | "manual";
         ar?: boolean;
         "ar-modes"?: string;
         "camera-controls"?: boolean;
