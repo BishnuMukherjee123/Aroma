@@ -394,10 +394,13 @@ function TopArCard({
   dish: ArDishView;
   publicId: string;
 }) {
+  const [isPreviewActivated, setIsPreviewActivated] = useState(false);
+  const previewImage = dish.posterUrl ?? dish.thumbnailUrl;
+
   return (
     <article className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]">
       <div className="relative h-56 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_50%),linear-gradient(180deg,#dbe7fb_0%,#cfdcf5_100%)]">
-        {dish.modelUrl ? (
+        {dish.modelUrl && isPreviewActivated ? (
           <model-viewer
             src={dish.modelUrl}
             alt={dish.name}
@@ -409,16 +412,37 @@ function TopArCard({
             loading="lazy"
             className="h-full w-full bg-transparent"
           />
-        ) : dish.thumbnailUrl ? (
-          <img
-            src={dish.thumbnailUrl}
-            alt={dish.name}
-            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-          />
         ) : (
-          <div className="flex h-full items-center justify-center text-on-surface-variant">
-            <span className="material-symbols-outlined text-5xl">view_in_ar</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setIsPreviewActivated(true)}
+            className="relative flex h-full w-full items-center justify-center overflow-hidden bg-transparent text-left"
+            aria-label={`Load 3D preview for ${dish.name}`}
+          >
+            {previewImage ? (
+              <img
+                src={previewImage}
+                alt={dish.name}
+                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
+                <span className="material-symbols-outlined text-5xl">
+                  view_in_ar
+                </span>
+              </div>
+            )}
+
+            <div className="absolute inset-0 bg-gradient-to-t from-[rgba(18,28,42,0.24)] via-transparent to-transparent" />
+            <div className="absolute bottom-4 left-4 rounded-[0.85rem] bg-white/92 px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
+              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                3D Preview
+              </p>
+              <p className="mt-1 text-xs font-semibold text-on-surface">
+                Tap to load model
+              </p>
+            </div>
+          </button>
         )}
 
         <div className="absolute right-3 top-3 flex items-center gap-1 rounded-[0.8rem] bg-white/90 px-2.5 py-1.5 shadow-sm backdrop-blur-md">
