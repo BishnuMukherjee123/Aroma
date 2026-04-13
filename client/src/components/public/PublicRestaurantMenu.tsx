@@ -395,7 +395,7 @@ function TopArCard({
   publicId: string;
 }) {
   const [isPreviewActivated, setIsPreviewActivated] = useState(false);
-  const previewImage = dish.posterUrl ?? dish.thumbnailUrl;
+  const previewImage = dish.posterUrl;
 
   return (
     <article className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]">
@@ -426,20 +426,23 @@ function TopArCard({
                 className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
-                <span className="material-symbols-outlined text-5xl">
+              <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-on-surface-variant">
+                <span className="material-symbols-outlined text-5xl text-primary/70">
                   view_in_ar
                 </span>
+                <p className="text-sm font-semibold text-on-surface">
+                  3D preview ready
+                </p>
               </div>
             )}
 
             <div className="absolute inset-0 bg-gradient-to-t from-[rgba(18,28,42,0.24)] via-transparent to-transparent" />
-            <div className="absolute bottom-4 left-4 rounded-[0.85rem] bg-white/92 px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
-              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
-                3D Preview
-              </p>
-              <p className="mt-1 text-xs font-semibold text-on-surface">
-                Tap to load model
+            <div className="absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.82)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
+              <p className="flex items-center gap-2 text-xs font-semibold text-white">
+                <span className="material-symbols-outlined text-base text-primary-container">
+                  view_in_ar
+                </span>
+                Tap for 3D
               </p>
             </div>
           </button>
