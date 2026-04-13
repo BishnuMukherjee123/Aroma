@@ -8,6 +8,7 @@
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc",
+    "posters:backfill": "node scripts/backfill-posters.mjs",
     "postinstall": "prisma generate",
     "prisma": "prisma"
   },
