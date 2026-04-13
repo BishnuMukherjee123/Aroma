@@ -3,6 +3,13 @@ const rawApiBaseUrl =
 
 export const apiBaseUrl = rawApiBaseUrl.replace(/\/$/, "");
 
+const getServerApiBaseUrl = () =>
+  (
+    process.env.API_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+    "http://localhost:5000"
+  ).replace(/\/$/, "");
+
 export type CurrencyCode = "USD" | "INR" | "EUR" | "GBP" | "AED";
 
 type ApiErrorPayload = {
@@ -355,6 +362,24 @@ export const fetchPublicRestaurant = async (
   const payload = await apiRequest<PublicRestaurantPayload>(
     `/api/v1/public/r/${publicId}`,
   );
+  return normalizePublicRestaurantPayload(payload);
+};
+
+export const fetchPublicRestaurantServer = async (
+  publicId: string,
+): Promise<PublicRestaurantPayload> => {
+  const response = await fetch(
+    `${getServerApiBaseUrl()}/api/v1/public/r/${publicId}`,
+    {
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await readErrorMessage(response));
+  }
+
+  const payload = (await response.json()) as PublicRestaurantPayload;
   return normalizePublicRestaurantPayload(payload);
 };
 

@@ -30,6 +30,7 @@ const ArPreviewCanvas = dynamic(
 
 type PublicRestaurantMenuProps = {
   publicId: string;
+  initialRestaurant?: PublicRestaurantPayload | null;
 };
 
 type CategoryView = PublicCategoryPayload & {
@@ -63,11 +64,12 @@ const formatPrice = (
 
 export function PublicRestaurantMenu({
   publicId,
+  initialRestaurant = null,
 }: PublicRestaurantMenuProps) {
   const [restaurant, setRestaurant] = useState<PublicRestaurantPayload | null>(
-    null,
+    initialRestaurant,
   );
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(initialRestaurant === null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [activeViewId, setActiveViewId] = useState(TOP_AR_VIEW);
@@ -77,6 +79,10 @@ export function PublicRestaurantMenu({
   const deferredSearch = useDeferredValue(search);
 
   useEffect(() => {
+    if (initialRestaurant && initialRestaurant.publicId === publicId) {
+      return;
+    }
+
     let cancelled = false;
 
     const load = async () => {
@@ -108,7 +114,7 @@ export function PublicRestaurantMenu({
     return () => {
       cancelled = true;
     };
-  }, [publicId]);
+  }, [initialRestaurant, publicId]);
 
   const categories = useMemo<CategoryView[]>(() => {
     if (!restaurant) {
