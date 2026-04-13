@@ -35,6 +35,7 @@ type ArDishView = PublicDishPayload & {
 };
 
 const TOP_AR_VIEW = "top-ar";
+const TOP_AR_BATCH_SIZE = 8;
 
 const formatPrice = (
   value: number,
@@ -61,6 +62,7 @@ export function PublicRestaurantMenu({
   const [search, setSearch] = useState("");
   const [activeViewId, setActiveViewId] = useState(TOP_AR_VIEW);
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
+  const [topArVisibleCount, setTopArVisibleCount] = useState(TOP_AR_BATCH_SIZE);
 
   const deferredSearch = useDeferredValue(search);
 
@@ -154,8 +156,17 @@ export function PublicRestaurantMenu({
           menuId: category.menuId,
           menuName: category.menuName,
         })),
-    );
+      );
   }, [categories, normalizedSearch]);
+
+  useEffect(() => {
+    setTopArVisibleCount(TOP_AR_BATCH_SIZE);
+  }, [publicId, normalizedSearch]);
+
+  const visibleTopArDishes = useMemo(
+    () => topArDishes.slice(0, topArVisibleCount),
+    [topArDishes, topArVisibleCount],
+  );
 
   const selectedCategory = useMemo(() => {
     if (activeViewId === TOP_AR_VIEW) {
@@ -341,15 +352,33 @@ export function PublicRestaurantMenu({
               </p>
             </div>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {topArDishes.map((dish) => (
-                <TopArCard
-                  key={dish.id}
-                  dish={dish}
-                  publicId={restaurant.publicId}
-                />
-              ))}
-            </div>
+            <section className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {visibleTopArDishes.map((dish) => (
+                  <TopArCard
+                    key={dish.id}
+                    dish={dish}
+                    publicId={restaurant.publicId}
+                  />
+                ))}
+              </div>
+
+              {topArVisibleCount < topArDishes.length ? (
+                <div className="flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setTopArVisibleCount((current) =>
+                        Math.min(current + TOP_AR_BATCH_SIZE, topArDishes.length),
+                      )
+                    }
+                    className="rounded-full bg-white px-5 py-3 text-sm font-bold text-on-surface shadow-[0_10px_20px_rgba(18,28,42,0.08)] transition-all hover:-translate-y-0.5"
+                  >
+                    Load more AR dishes
+                  </button>
+                </div>
+              ) : null}
+            </section>
           )
         ) : selectedCategory ? (
           <section className="rounded-[1.75rem] bg-white p-5 shadow-[0_16px_36px_rgba(18,28,42,0.05)] md:p-6">
