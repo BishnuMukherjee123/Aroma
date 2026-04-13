@@ -442,6 +442,11 @@ function TopArCard({
     <article className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]">
       <div
         ref={cardRef}
+        onClick={() => {
+          if (!isPreviewActivated) {
+            setIsPreviewActivated(true);
+          }
+        }}
         className="relative h-56 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_50%),linear-gradient(180deg,#dbe7fb_0%,#cfdcf5_100%)]"
       >
         {dish.modelUrl && shouldMountPreview ? (
@@ -468,20 +473,31 @@ function TopArCard({
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.4),transparent_52%),linear-gradient(180deg,rgba(219,231,251,0.45)_0%,rgba(207,220,245,0.65)_100%)]" />
         ) : null}
 
-        <div className="absolute inset-0 bg-gradient-to-t from-[rgba(18,28,42,0.24)] via-transparent to-transparent" />
-        <button
-          type="button"
-          onClick={() => setIsPreviewActivated(true)}
-          className="absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.82)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm transition-transform hover:scale-[1.02]"
-          aria-label={`Load interactive 3D preview for ${dish.name}`}
-        >
-          <p className="flex items-center gap-2 text-xs font-semibold text-white">
-            <span className="material-symbols-outlined text-base text-primary-container">
-              view_in_ar
-            </span>
-            {isModelLoaded ? "Tap for 3D" : "Loading 3D"}
-          </p>
-        </button>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(18,28,42,0.24)] via-transparent to-transparent" />
+
+        {!isPreviewActivated ? (
+          <div className="pointer-events-none absolute inset-0 cursor-pointer" aria-hidden="true">
+            <div className="absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.82)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
+              <p className="flex items-center gap-2 text-xs font-semibold text-white">
+                <span className="material-symbols-outlined text-base text-primary-container">
+                  view_in_ar
+                </span>
+                {isModelLoaded ? "Tap anywhere for 3D" : "Loading 3D"}
+              </p>
+            </div>
+          </div>
+        ) : null}
+
+        {isPreviewActivated ? (
+          <div className="pointer-events-none absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.72)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
+            <p className="flex items-center gap-2 text-xs font-semibold text-white">
+              <span className="material-symbols-outlined text-base text-primary-container">
+                touch_app
+              </span>
+              Drag to rotate
+            </p>
+          </div>
+        ) : null}
 
         <div className="absolute right-3 top-3 flex items-center gap-1 rounded-[0.8rem] bg-white/90 px-2.5 py-1.5 shadow-sm backdrop-blur-md">
           <span className="material-symbols-outlined text-lg text-primary">

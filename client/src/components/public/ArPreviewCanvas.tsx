@@ -86,9 +86,8 @@ function PreviewModel({
   }, [onLoaded]);
 
   return (
-    <Center position={[0, -0.32, 0]}>
+    <Center position={[0, -0.1, 0]}>
       <primitive object={normalizedScene} />
     </Center>
   );
 }
-
