@@ -440,7 +440,6 @@ function TopArCard({
 }) {
   const [isPreviewActivated, setIsPreviewActivated] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
-  const shouldMountPreview = isPreviewActivated;
 
   return (
     <article className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]">
@@ -452,42 +451,48 @@ function TopArCard({
         }}
         className="relative h-56 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_50%),linear-gradient(180deg,#dbe7fb_0%,#cfdcf5_100%)]"
       >
-        {dish.modelUrl && shouldMountPreview ? (
+        {/* 3D canvas mounts on click and starts downloading the GLB in background */}
+        {dish.modelUrl && isPreviewActivated ? (
           <ArPreviewCanvas
             modelUrl={dish.modelUrl}
             alt={dish.name}
             interactive={isPreviewActivated}
             onLoaded={() => setIsModelLoaded(true)}
           />
-        ) : (
-          <>
-            {dish.posterUrl ? (
-              <img
-                src={dish.posterUrl}
-                alt={dish.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
-                <div className="flex flex-col items-center gap-3">
-                  <span className="material-symbols-outlined text-5xl text-primary/70">
-                    view_in_ar
-                  </span>
-                  <p className="text-sm font-semibold text-on-surface">
-                    Tap to load 3D
-                  </p>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {isPreviewActivated && !isModelLoaded ? (
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.4),transparent_52%),linear-gradient(180deg,rgba(219,231,251,0.45)_0%,rgba(207,220,245,0.65)_100%)]" />
         ) : null}
+
+        {/* Poster overlay — sits on top of canvas, fades out once GLB finishes loading */}
+        <div
+          className={cn(
+            "absolute inset-0 transition-opacity duration-500",
+            isPreviewActivated && isModelLoaded
+              ? "pointer-events-none opacity-0"
+              : "opacity-100",
+          )}
+        >
+          {dish.posterUrl ? (
+            <img
+              src={dish.posterUrl}
+              alt={dish.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
+              <div className="flex flex-col items-center gap-3">
+                <span className="material-symbols-outlined text-5xl text-primary/70">
+                  view_in_ar
+                </span>
+                <p className="text-sm font-semibold text-on-surface">
+                  {isPreviewActivated ? "Loading 3D..." : "Tap to load 3D"}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
 
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(18,28,42,0.24)] via-transparent to-transparent" />
 
+        {/* Badge: before tap */}
         {!isPreviewActivated ? (
           <div className="pointer-events-none absolute inset-0 cursor-pointer" aria-hidden="true">
             <div className="absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.82)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
@@ -501,7 +506,20 @@ function TopArCard({
           </div>
         ) : null}
 
-        {isPreviewActivated ? (
+        {/* Badge: while GLB is downloading */}
+        {isPreviewActivated && !isModelLoaded ? (
+          <div className="pointer-events-none absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.72)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
+            <p className="flex items-center gap-2 text-xs font-semibold text-white">
+              <span className="material-symbols-outlined animate-spin text-base text-primary-container">
+                progress_activity
+              </span>
+              Loading 3D...
+            </p>
+          </div>
+        ) : null}
+
+        {/* Badge: after model fully loaded */}
+        {isPreviewActivated && isModelLoaded ? (
           <div className="pointer-events-none absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.72)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
             <p className="flex items-center gap-2 text-xs font-semibold text-white">
               <span className="material-symbols-outlined text-base text-primary-container">
