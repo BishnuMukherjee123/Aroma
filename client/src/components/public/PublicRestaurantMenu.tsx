@@ -19,8 +19,8 @@ import { cn } from "@/lib/utils";
 
 const ArPreviewCanvas = dynamic(
   () =>
-    import("@/components/public/ArPreviewCanvas").then(
-      (module) => module.ArPreviewCanvas,
+    import("@/components/public/ArPreviewModelViewer").then(
+      (module) => module.ArPreviewModelViewer,
     ),
   {
     ssr: false,
@@ -483,7 +483,7 @@ function TopArCard({
                   view_in_ar
                 </span>
                 <p className="text-sm font-semibold text-on-surface">
-                  {isPreviewActivated ? "Loading 3D..." : "Tap to load 3D"}
+                  {isPreviewActivated ? "" : "Tap to load 3D"}
                 </p>
               </div>
             </div>
@@ -506,17 +506,7 @@ function TopArCard({
           </div>
         ) : null}
 
-        {/* Badge: while GLB is downloading */}
-        {isPreviewActivated && !isModelLoaded ? (
-          <div className="pointer-events-none absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.72)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
-            <p className="flex items-center gap-2 text-xs font-semibold text-white">
-              <span className="material-symbols-outlined animate-spin text-base text-primary-container">
-                progress_activity
-              </span>
-              Loading 3D...
-            </p>
-          </div>
-        ) : null}
+
 
         {/* Badge: after model fully loaded */}
         {isPreviewActivated && isModelLoaded ? (

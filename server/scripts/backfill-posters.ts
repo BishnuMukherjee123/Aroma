@@ -11,7 +11,12 @@ import { getStoragePublicUrl } from "../src/lib/supabase-storage.js";
 import { rebuildPublicRestaurantSnapshot } from "../src/lib/public-menu.js";
 import { config } from "../src/utils/conf.js";
 
-const POSTER_SIZE = 768;
+// Poster dimensions must match the card image area aspect ratio (h-56 = 224px).
+// Mobile cards are typically ~375px wide → ratio 375/224 ≈ 1.67:1.
+// Using this ratio ensures object-cover display has zero cropping on mobile
+// and the dish appears at the same zoom level as the live model-viewer.
+const POSTER_WIDTH = 768;
+const POSTER_HEIGHT = 460; // 768 / 1.67 ≈ 460
 const MODEL_VIEWER_CDN =
   "https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js";
 
@@ -50,8 +55,8 @@ const createPosterHtml = (modelUrl: string, alt: string): string =>
     <script type="module" src="${MODEL_VIEWER_CDN}"></script>
     <style>
       html, body {
-        width: ${POSTER_SIZE}px;
-        height: ${POSTER_SIZE}px;
+        width: ${POSTER_WIDTH}px;
+        height: ${POSTER_HEIGHT}px;
         margin: 0;
         padding: 0;
         overflow: hidden;
@@ -66,6 +71,7 @@ const createPosterHtml = (modelUrl: string, alt: string): string =>
         width: 100%;
         height: 100%;
         --poster-color: transparent;
+        --progress-bar-height: 0px;
         background: transparent;
       }
     </style>
@@ -126,13 +132,13 @@ const renderPosterPng = async (
         "--use-angle=swiftshader",
         "--enable-webgl",
         "--ignore-gpu-blocklist",
-        `--window-size=${POSTER_SIZE},${POSTER_SIZE}`,
+        `--window-size=${POSTER_WIDTH},${POSTER_HEIGHT}`,
       ],
     });
 
     try {
       const page = await browser.newPage();
-      await page.setViewport({ width: POSTER_SIZE, height: POSTER_SIZE });
+      await page.setViewport({ width: POSTER_WIDTH, height: POSTER_HEIGHT });
 
       // Load the local HTML (model-viewer fetches the GLB from the public URL)
       await page.goto(`file:///${htmlPath.replace(/\\/g, "/")}`, {
