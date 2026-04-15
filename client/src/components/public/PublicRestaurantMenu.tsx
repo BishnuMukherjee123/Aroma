@@ -3,9 +3,11 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
+  useCallback,
   useDeferredValue,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -440,9 +442,44 @@ function TopArCard({
 }) {
   const [isPreviewActivated, setIsPreviewActivated] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const cardRef = useRef<HTMLElement>(null);
+  const prefetchedRef = useRef(false);
+
+  // Kick off a background fetch that populates the browser's HTTP cache with
+  // the GLB. When model-viewer later requests the same URL it will be served
+  // from cache, making the 3D appear nearly instantly after the user taps.
+  const prefetchModel = useCallback(() => {
+    if (prefetchedRef.current || !dish.modelUrl) return;
+    prefetchedRef.current = true;
+    fetch(dish.modelUrl, { mode: "cors", credentials: "omit" }).catch(() => {});
+  }, [dish.modelUrl]);
+
+  // Stage 1 – prefetch as soon as the card scrolls into the viewport
+  // (rootMargin 300px = start 300px before the card is actually visible).
+  useEffect(() => {
+    const card = cardRef.current;
+    if (!card || !dish.modelUrl) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          prefetchModel();
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "300px" },
+    );
+    observer.observe(card);
+    return () => observer.disconnect();
+  }, [prefetchModel, dish.modelUrl]);
 
   return (
-    <article className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]">
+    <article
+      ref={cardRef}
+      // Stage 2 – on hover/touch, bump to full-speed fetch (gives ~300ms
+      // head start before the tap event fires on mobile).
+      onPointerEnter={prefetchModel}
+      className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]"
+    >
       <div
         onClick={() => {
           if (!isPreviewActivated) {
