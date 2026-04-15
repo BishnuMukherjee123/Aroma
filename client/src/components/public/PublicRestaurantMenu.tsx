@@ -4,10 +4,10 @@ import Link from "next/link";
 import {
   useCallback,
   useDeferredValue,
-  useEffect,
   useMemo,
   useRef,
   useState,
+  useEffect
 } from "react";
 
 import {
@@ -436,32 +436,16 @@ function TopArCard({
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [arError, setArError] = useState<string | null>(null);
   const [isArLaunching, setIsArLaunching] = useState(false);
-  const cardRef = useRef<HTMLElement>(null);
   const prefetchedRef = useRef(false);
 
-  // Prefetch the GLB into the HTTP cache as soon as the card enters viewport.
-  // model-viewer will then serve it from cache — making it appear instantly.
+  // Starts the GLB download into the browser HTTP cache.
+  // Only fires once (guarded by prefetchedRef).
+  // Triggered by: touch, hover, or tap — never automatically on page load.
   const prefetchModel = useCallback(() => {
     if (prefetchedRef.current || !dish.modelUrl) return;
     prefetchedRef.current = true;
     fetch(dish.modelUrl, { mode: "cors", credentials: "omit" }).catch(() => {});
   }, [dish.modelUrl]);
-
-  useEffect(() => {
-    const card = cardRef.current;
-    if (!card || !dish.modelUrl) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          prefetchModel();
-          observer.disconnect();
-        }
-      },
-      { rootMargin: "300px" },
-    );
-    observer.observe(card);
-    return () => observer.disconnect();
-  }, [prefetchModel, dish.modelUrl]);
 
   // "View in AR" — calls launchDirectAr() which creates a hidden model-viewer
   // element and calls activateAR() on it. This directly opens Scene Viewer
@@ -488,7 +472,6 @@ function TopArCard({
 
   return (
     <article
-      ref={cardRef}
       onPointerEnter={prefetchModel}
       onTouchStart={() => {
         prefetchModel();
