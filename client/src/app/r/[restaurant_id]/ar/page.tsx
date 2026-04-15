@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 
 type PublicArPageProps = {
   params: Promise<{
@@ -7,6 +7,6 @@ type PublicArPageProps = {
 };
 
 export default async function PublicArPage({ params }: PublicArPageProps) {
-  const { restaurant_id } = await params;
-  redirect(`/r/${restaurant_id}`);
+  await params;
+  notFound();
 }
