@@ -1,14 +1,13 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import {
   useCallback,
   useDeferredValue,
+  useEffect,
   useMemo,
   useRef,
   useState,
-  useEffect
 } from "react";
 
 import {
@@ -18,16 +17,9 @@ import {
   type PublicRestaurantPayload,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { ensureModelViewerScript, launchDirectAr } from "@/lib/model-viewer";
 
-const ArPreviewCanvas = dynamic(
-  () =>
-    import("@/components/public/ArPreviewModelViewer").then(
-      (module) => module.ArPreviewModelViewer,
-    ),
-  {
-    ssr: false,
-  },
-);
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type PublicRestaurantMenuProps = {
   publicId: string;
@@ -46,8 +38,12 @@ type ArDishView = PublicDishPayload & {
   menuName: string;
 };
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const TOP_AR_VIEW = "top-ar";
 const TOP_AR_BATCH_SIZE = 8;
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatPrice = (
   value: number,
@@ -56,12 +52,13 @@ const formatPrice = (
   new Intl.NumberFormat("en-US", {
     style: "currency",
     currency:
-      currency &&
-      ["USD", "INR", "EUR", "GBP", "AED"].includes(currency)
+      currency && ["USD", "INR", "EUR", "GBP", "AED"].includes(currency)
         ? currency
         : "USD",
     minimumFractionDigits: 2,
   }).format(value);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 export function PublicRestaurantMenu({
   publicId,
@@ -79,6 +76,7 @@ export function PublicRestaurantMenu({
 
   const deferredSearch = useDeferredValue(search);
 
+  // Load restaurant data — skip fetch if SSR already provided it
   useEffect(() => {
     if (initialRestaurant && initialRestaurant.publicId === publicId) {
       return;
@@ -117,22 +115,19 @@ export function PublicRestaurantMenu({
     };
   }, [initialRestaurant, publicId]);
 
+  // Cache restaurant in sessionStorage so the AR page loads instantly
   useEffect(() => {
-    if (typeof window === "undefined" || !restaurant) {
-      return;
-    }
-
+    if (typeof window === "undefined" || !restaurant) return;
     window.sessionStorage.setItem(
       `aroma-public-restaurant:${publicId}`,
       JSON.stringify(restaurant),
     );
   }, [publicId, restaurant]);
 
-  const categories = useMemo<CategoryView[]>(() => {
-    if (!restaurant) {
-      return [];
-    }
+  // ── Derived data ────────────────────────────────────────────────────────────
 
+  const categories = useMemo<CategoryView[]>(() => {
+    if (!restaurant) return [];
     return restaurant.menus.flatMap((menu) =>
       menu.categories.map((category) => ({
         ...category,
@@ -142,22 +137,13 @@ export function PublicRestaurantMenu({
     );
   }, [restaurant]);
 
+  // Keep activeViewId valid when data changes
   useEffect(() => {
-    if (!restaurant) {
-      return;
-    }
-
+    if (!restaurant) return;
     setActiveViewId((current) => {
-      if (current === TOP_AR_VIEW) {
-        return TOP_AR_VIEW;
-      }
-
-      const categoryExists = categories.some((category) => category.id === current);
-      if (categoryExists) {
-        return current;
-      }
-
-      return categories[0]?.id ?? TOP_AR_VIEW;
+      if (current === TOP_AR_VIEW) return TOP_AR_VIEW;
+      const exists = categories.some((c) => c.id === current);
+      return exists ? current : (categories[0]?.id ?? TOP_AR_VIEW);
     });
   }, [categories, restaurant]);
 
@@ -168,10 +154,7 @@ export function PublicRestaurantMenu({
       category.dishes
         .filter((dish) => Boolean(dish.modelUrl))
         .filter((dish) => {
-          if (!normalizedSearch) {
-            return true;
-          }
-
+          if (!normalizedSearch) return true;
           return [dish.name, dish.description ?? "", category.name]
             .join(" ")
             .toLowerCase()
@@ -184,9 +167,10 @@ export function PublicRestaurantMenu({
           menuId: category.menuId,
           menuName: category.menuName,
         })),
-      );
+    );
   }, [categories, normalizedSearch]);
 
+  // Reset "load more" on search or restaurant change
   useEffect(() => {
     setTopArVisibleCount(TOP_AR_BATCH_SIZE);
   }, [publicId, normalizedSearch]);
@@ -197,23 +181,14 @@ export function PublicRestaurantMenu({
   );
 
   const selectedCategory = useMemo(() => {
-    if (activeViewId === TOP_AR_VIEW) {
-      return null;
-    }
-
-    return categories.find((category) => category.id === activeViewId) ?? null;
+    if (activeViewId === TOP_AR_VIEW) return null;
+    return categories.find((c) => c.id === activeViewId) ?? null;
   }, [activeViewId, categories]);
 
   const filteredCategoryDishes = useMemo(() => {
-    if (!selectedCategory) {
-      return [];
-    }
-
+    if (!selectedCategory) return [];
     return selectedCategory.dishes.filter((dish) => {
-      if (!normalizedSearch) {
-        return true;
-      }
-
+      if (!normalizedSearch) return true;
       return [dish.name, dish.description ?? ""]
         .join(" ")
         .toLowerCase()
@@ -225,11 +200,13 @@ export function PublicRestaurantMenu({
     (count, menu) =>
       count +
       menu.categories.reduce(
-        (categoryCount, category) => categoryCount + category.dishes.length,
+        (cc, category) => cc + category.dishes.length,
         0,
       ),
     0,
   );
+
+  // ── Render ──────────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
@@ -259,6 +236,7 @@ export function PublicRestaurantMenu({
 
   return (
     <div className="min-h-screen bg-surface">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-white/50 bg-white/80 px-4 py-4 backdrop-blur-xl md:px-6">
         <div className="mx-auto flex max-w-6xl items-center gap-4">
           <div className="min-w-0 flex-1">
@@ -267,9 +245,10 @@ export function PublicRestaurantMenu({
             </p>
           </div>
 
+          {/* Mobile search toggle */}
           <button
             type="button"
-            onClick={() => setIsMobileSearchOpen((current) => !current)}
+            onClick={() => setIsMobileSearchOpen((c) => !c)}
             aria-label={isMobileSearchOpen ? "Close search" : "Open search"}
             className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-surface-container-low text-on-surface shadow-[0_10px_22px_rgba(18,28,42,0.08)] transition-all active:scale-95 md:hidden"
           >
@@ -278,6 +257,7 @@ export function PublicRestaurantMenu({
             </span>
           </button>
 
+          {/* Desktop search */}
           <div className="relative hidden min-w-0 flex-1 md:block">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
               search
@@ -285,7 +265,7 @@ export function PublicRestaurantMenu({
             <input
               type="search"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               placeholder={
                 activeViewId === TOP_AR_VIEW
                   ? "Search AR dishes..."
@@ -296,6 +276,7 @@ export function PublicRestaurantMenu({
           </div>
         </div>
 
+        {/* Mobile search drawer */}
         {isMobileSearchOpen ? (
           <div className="mx-auto mt-4 max-w-6xl md:hidden">
             <div className="relative">
@@ -305,7 +286,7 @@ export function PublicRestaurantMenu({
               <input
                 type="search"
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(e) => setSearch(e.target.value)}
                 placeholder={
                   activeViewId === TOP_AR_VIEW
                     ? "Search AR dishes..."
@@ -318,7 +299,9 @@ export function PublicRestaurantMenu({
         ) : null}
       </header>
 
+      {/* ── Main ───────────────────────────────────────────────────────────── */}
       <main className="mx-auto max-w-6xl px-4 py-6 md:px-6">
+        {/* Restaurant title */}
         <section className="mb-6">
           <h1 className="text-3xl font-extrabold tracking-tight text-on-surface md:text-4xl">
             {restaurant.name}
@@ -327,17 +310,18 @@ export function PublicRestaurantMenu({
             <span className="material-symbols-outlined text-sm text-primary">
               menu_book
             </span>
-            {totalDishCount ?? 0} published dishes arranged under submenu
-            categories, with AR previews for selected plates
+            {totalDishCount ?? 0} published dishes, with AR previews for
+            selected plates
           </p>
         </section>
 
+        {/* Category nav */}
         <nav className="no-scrollbar mb-6 flex gap-2 overflow-x-auto py-1 md:sticky md:top-[4.85rem] md:z-40 md:bg-surface/92 md:backdrop-blur-sm">
           <button
             type="button"
             onClick={() => setActiveViewId(TOP_AR_VIEW)}
             className={cn(
-              "whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all",
+              "whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all active:scale-95",
               activeViewId === TOP_AR_VIEW
                 ? "bg-primary text-white shadow-[0_8px_18px_rgba(182,23,34,0.18)]"
                 : "bg-white text-on-surface-variant",
@@ -351,7 +335,7 @@ export function PublicRestaurantMenu({
               type="button"
               onClick={() => setActiveViewId(category.id)}
               className={cn(
-                "whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all",
+                "whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all active:scale-95",
                 activeViewId === category.id
                   ? "bg-primary text-white shadow-[0_8px_18px_rgba(182,23,34,0.18)]"
                   : "bg-white text-on-surface-variant",
@@ -362,6 +346,7 @@ export function PublicRestaurantMenu({
           ))}
         </nav>
 
+        {/* Content */}
         {activeViewId === TOP_AR_VIEW ? (
           topArDishes.length === 0 ? (
             <div className="rounded-[1.5rem] bg-white px-5 py-8 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
@@ -386,11 +371,11 @@ export function PublicRestaurantMenu({
                   <button
                     type="button"
                     onClick={() =>
-                      setTopArVisibleCount((current) =>
-                        Math.min(current + TOP_AR_BATCH_SIZE, topArDishes.length),
+                      setTopArVisibleCount((c) =>
+                        Math.min(c + TOP_AR_BATCH_SIZE, topArDishes.length),
                       )
                     }
-                    className="rounded-full bg-white px-5 py-3 text-sm font-bold text-on-surface shadow-[0_10px_20px_rgba(18,28,42,0.08)] transition-all hover:-translate-y-0.5"
+                    className="rounded-full bg-white px-5 py-3 text-sm font-bold text-on-surface shadow-[0_10px_20px_rgba(18,28,42,0.08)] transition-all active:scale-95 hover:-translate-y-0.5"
                   >
                     Load more AR dishes
                   </button>
@@ -401,11 +386,9 @@ export function PublicRestaurantMenu({
         ) : selectedCategory ? (
           <section className="rounded-[1.75rem] bg-white p-5 shadow-[0_16px_36px_rgba(18,28,42,0.05)] md:p-6">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-surface-container-low pb-4">
-              <div>
-                <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-on-surface">
-                  {selectedCategory.name}
-                </h2>
-              </div>
+              <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-on-surface">
+                {selectedCategory.name}
+              </h2>
               <span className="rounded-full bg-surface-container-low px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
                 {filteredCategoryDishes.length} items
               </span>
@@ -413,7 +396,7 @@ export function PublicRestaurantMenu({
 
             {filteredCategoryDishes.length === 0 ? (
               <div className="rounded-[1.2rem] border border-dashed border-outline/40 bg-surface-container-low px-4 py-5 text-sm text-on-surface-variant">
-                No dishes match this category right now.
+                No dishes match this search.
               </div>
             ) : (
               <div className="overflow-hidden rounded-[1.2rem] border border-surface-container-low bg-surface-container-lowest">
@@ -431,7 +414,7 @@ export function PublicRestaurantMenu({
               No submenu selected
             </p>
             <p className="mt-2 text-sm text-on-surface-variant">
-              Pick a category like Pizza or Chicken to browse dishes and prices.
+              Pick a category to browse dishes and prices.
             </p>
           </div>
         )}
@@ -439,6 +422,8 @@ export function PublicRestaurantMenu({
     </div>
   );
 }
+
+// ─── TopArCard ────────────────────────────────────────────────────────────────
 
 function TopArCard({
   dish,
@@ -449,20 +434,19 @@ function TopArCard({
 }) {
   const [isPreviewActivated, setIsPreviewActivated] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const [arError, setArError] = useState<string | null>(null);
+  const [isArLaunching, setIsArLaunching] = useState(false);
   const cardRef = useRef<HTMLElement>(null);
   const prefetchedRef = useRef(false);
 
-  // Kick off a background fetch that populates the browser's HTTP cache with
-  // the GLB. When model-viewer later requests the same URL it will be served
-  // from cache, making the 3D appear nearly instantly after the user taps.
+  // Prefetch the GLB into the HTTP cache as soon as the card enters viewport.
+  // model-viewer will then serve it from cache — making it appear instantly.
   const prefetchModel = useCallback(() => {
     if (prefetchedRef.current || !dish.modelUrl) return;
     prefetchedRef.current = true;
     fetch(dish.modelUrl, { mode: "cors", credentials: "omit" }).catch(() => {});
   }, [dish.modelUrl]);
 
-  // Stage 1 – prefetch as soon as the card scrolls into the viewport
-  // (rootMargin 300px = start 300px before the card is actually visible).
   useEffect(() => {
     const card = cardRef.current;
     if (!card || !dish.modelUrl) return;
@@ -479,33 +463,53 @@ function TopArCard({
     return () => observer.disconnect();
   }, [prefetchModel, dish.modelUrl]);
 
+  // "View in AR" — calls launchDirectAr() which creates a hidden model-viewer
+  // element and calls activateAR() on it. This directly opens Scene Viewer
+  // (Android) or Quick Look (iOS) without navigating to any intermediate page.
+  // On desktop or if AR is unsupported, falls back to the /ar page.
+  const handleViewInAr = useCallback(async () => {
+    if (!dish.modelUrl) return;
+    setArError(null);
+    setIsArLaunching(true);
+    try {
+      await launchDirectAr({
+        modelUrl: dish.modelUrl,
+        alt: dish.name,
+        posterUrl: dish.posterUrl,
+      });
+    } catch (err) {
+      // launchDirectAr throws if AR is unavailable (desktop, unsupported browser).
+      // Fall back to the /ar page which handles all edge cases gracefully.
+      window.location.href = `/r/${publicId}/ar?dish=${dish.id}`;
+    } finally {
+      setIsArLaunching(false);
+    }
+  }, [dish, publicId]);
+
   return (
     <article
       ref={cardRef}
-      // Stage 2 – on hover/touch, bump to full-speed fetch (gives ~300ms
-      // head start before the tap event fires on mobile).
       onPointerEnter={prefetchModel}
+      onTouchStart={prefetchModel}
       className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]"
     >
+      {/* ── 3D Preview Area ─────────────────────────────────────────────── */}
       <div
         onClick={() => {
-          if (!isPreviewActivated) {
-            setIsPreviewActivated(true);
-          }
+          if (!isPreviewActivated) setIsPreviewActivated(true);
         }}
-        className="relative h-56 overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_50%),linear-gradient(180deg,#dbe7fb_0%,#cfdcf5_100%)]"
+        className="relative h-56 cursor-pointer overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_50%),linear-gradient(180deg,#dbe7fb_0%,#cfdcf5_100%)]"
       >
-        {/* 3D canvas mounts on click and starts downloading the GLB in background */}
+        {/* Live 3D model — only mounts after first tap */}
         {dish.modelUrl && isPreviewActivated ? (
-          <ArPreviewCanvas
+          <ArPreviewInCard
             modelUrl={dish.modelUrl}
             alt={dish.name}
-            interactive={isPreviewActivated}
             onLoaded={() => setIsModelLoaded(true)}
           />
         ) : null}
 
-        {/* Poster overlay — sits on top of canvas, fades out once GLB finishes loading */}
+        {/* Poster overlay — fades out once GLB finishes loading */}
         <div
           className={cn(
             "absolute inset-0 transition-opacity duration-500",
@@ -521,38 +525,37 @@ function TopArCard({
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
+            <div className="flex h-full w-full items-center justify-center">
               <div className="flex flex-col items-center gap-3">
                 <span className="material-symbols-outlined text-5xl text-primary/70">
                   view_in_ar
                 </span>
-                <p className="text-sm font-semibold text-on-surface">
-                  {isPreviewActivated ? "" : "Tap to load 3D"}
-                </p>
+                {!isPreviewActivated ? (
+                  <p className="text-sm font-semibold text-on-surface">
+                    Tap to load 3D
+                  </p>
+                ) : null}
               </div>
             </div>
           )}
         </div>
 
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(18,28,42,0.24)] via-transparent to-transparent" />
+        {/* Subtle gradient at bottom for text legibility */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(18,28,42,0.22)] via-transparent to-transparent" />
 
-        {/* Badge: before tap */}
+        {/* "Tap for 3D" badge — hidden after tap */}
         {!isPreviewActivated ? (
-          <div className="pointer-events-none absolute inset-0 cursor-pointer" aria-hidden="true">
-            <div className="absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.82)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
-              <p className="flex items-center gap-2 text-xs font-semibold text-white">
-                <span className="material-symbols-outlined text-base text-primary-container">
-                  view_in_ar
-                </span>
-                {dish.posterUrl ? "Tap for 3D" : "Tap to load 3D"}
-              </p>
-            </div>
+          <div className="pointer-events-none absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.82)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
+            <p className="flex items-center gap-2 text-xs font-semibold text-white">
+              <span className="material-symbols-outlined text-base text-primary-container">
+                view_in_ar
+              </span>
+              {dish.posterUrl ? "Tap for 3D" : "Tap to load 3D"}
+            </p>
           </div>
         ) : null}
 
-
-
-        {/* Badge: after model fully loaded */}
+        {/* "Drag to rotate" badge — shown once model is loaded */}
         {isPreviewActivated && isModelLoaded ? (
           <div className="pointer-events-none absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.72)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
             <p className="flex items-center gap-2 text-xs font-semibold text-white">
@@ -564,6 +567,7 @@ function TopArCard({
           </div>
         ) : null}
 
+        {/* AR Ready badge */}
         <div className="absolute right-3 top-3 flex items-center gap-1 rounded-[0.8rem] bg-white/90 px-2.5 py-1.5 shadow-sm backdrop-blur-md">
           <span className="material-symbols-outlined text-lg text-primary">
             view_in_ar
@@ -574,6 +578,7 @@ function TopArCard({
         </div>
       </div>
 
+      {/* ── Card Info ───────────────────────────────────────────────────── */}
       <div className="p-5">
         <div className="mb-2 flex items-start justify-between gap-3">
           <div>
@@ -593,17 +598,102 @@ function TopArCard({
           {dish.description ?? "Tap to place this dish in AR on your table."}
         </p>
 
-        <Link
-          href={`/r/${publicId}/ar?dish=${dish.id}`}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-[0.95rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_10px_20px_rgba(182,23,34,0.16)] transition-all hover:-translate-y-0.5"
+        {arError ? (
+          <p className="mb-2 rounded-[0.75rem] bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+            {arError}
+          </p>
+        ) : null}
+
+        {/* "View in AR" — triggers native camera directly on mobile */}
+        <button
+          type="button"
+          onClick={() => void handleViewInAr()}
+          disabled={isArLaunching}
+          className="mt-4 flex w-full items-center justify-center gap-2 rounded-[0.95rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_10px_20px_rgba(182,23,34,0.16)] transition-all active:scale-[0.97] hover:-translate-y-0.5 disabled:opacity-70"
         >
-          <span className="material-symbols-outlined text-lg">view_in_ar</span>
-          View in AR
-        </Link>
+          {isArLaunching ? (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+              Opening AR...
+            </>
+          ) : (
+            <>
+              <span className="material-symbols-outlined text-lg">
+                view_in_ar
+              </span>
+              View in AR
+            </>
+          )}
+        </button>
       </div>
     </article>
   );
 }
+
+// ─── ArPreviewInCard ─────────────────────────────────────────────────────────
+// Thin inline wrapper — avoids the broken dynamic() self-import pattern.
+
+function ArPreviewInCard({
+  modelUrl,
+  alt,
+  onLoaded,
+}: {
+  modelUrl: string;
+  alt: string;
+  onLoaded: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const onLoadedRef = useRef(onLoaded);
+  onLoadedRef.current = onLoaded;
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let mv: HTMLElement | null = null;
+
+    // Load the model-viewer library first — without this the custom element
+    // is just an unknown HTML tag and won't render anything.
+    void ensureModelViewerScript().then(() => {
+      if (!container.isConnected) return; // unmounted while script was loading
+
+      mv = document.createElement("model-viewer");
+      mv.setAttribute("src", modelUrl);
+      mv.setAttribute("alt", alt);
+      mv.setAttribute("camera-orbit", "0deg 82deg auto");
+      mv.setAttribute("field-of-view", "28deg");
+      mv.setAttribute("environment-image", "neutral");
+      mv.setAttribute("exposure", "1");
+      mv.setAttribute("shadow-intensity", "1");
+      mv.setAttribute("camera-controls", "");
+      mv.setAttribute("auto-rotate", "");
+      mv.setAttribute("auto-rotate-delay", "0");
+      mv.setAttribute("rotation-per-second", "25deg");
+      mv.setAttribute("interaction-prompt", "none");
+      mv.setAttribute("disable-zoom", "");
+      mv.style.width = "100%";
+      mv.style.height = "100%";
+      mv.style.setProperty("--poster-color", "transparent");
+      mv.style.setProperty("--progress-bar-height", "0px");
+      mv.style.background = "transparent";
+
+      const handleLoad = () => onLoadedRef.current();
+      mv.addEventListener("load", handleLoad, { once: true });
+      container.appendChild(mv);
+    });
+
+    return () => {
+      if (mv) {
+        mv.removeEventListener("load", onLoadedRef.current);
+        if (container.contains(mv)) container.removeChild(mv);
+      }
+    };
+  }, [modelUrl, alt]);
+
+  return <div ref={containerRef} className="h-full w-full" />;
+}
+
+// ─── DishMenuRow ──────────────────────────────────────────────────────────────
 
 function DishMenuRow({ dish }: { dish: PublicDishPayload }) {
   return (

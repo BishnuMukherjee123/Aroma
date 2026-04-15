@@ -407,7 +407,9 @@ export function PublicArViewer({
         }}
       />
 
-      {selectedDish?.modelUrl && scriptState === "ready" ? (
+      {/* Hidden model-viewer element — mounted as soon as we have a model URL.
+          This ensures the GLB is always processed before the user taps. */}
+      {selectedDish?.modelUrl ? (
         <model-viewer
           ref={(node) => {
             viewerRef.current = node as ModelViewerElement | null;
@@ -430,8 +432,9 @@ export function PublicArViewer({
       {arStage === "launching" ? (
         <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
           <div className="flex flex-col items-center gap-4 text-center text-white">
+            <p className="text-[2.2rem] font-extrabold tracking-[0.1em]">AROMA AR</p>
             <div className="spinner-sm border-white/25 border-t-primary" />
-            <p className="text-base font-semibold">Preparing AR Menu...</p>
+            <p className="text-base font-semibold text-white/80">Preparing AR...</p>
           </div>
         </div>
       ) : (
@@ -453,13 +456,8 @@ export function PublicArViewer({
             <button
               type="button"
               onClick={() => void handleLaunchAr()}
-              disabled={
-                !hasModel ||
-                scriptState !== "ready" ||
-                viewerState === "error" ||
-                (deviceProfile === "desktop" && hasModel)
-              }
-              className="mt-8 inline-flex w-full items-center justify-center rounded-[1.2rem] bg-primary px-5 py-4 text-[1.05rem] font-bold text-white shadow-[0_18px_36px_rgba(182,23,34,0.28)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/55 disabled:shadow-none"
+              disabled={!hasModel || deviceProfile === "desktop"}
+              className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-[1.2rem] bg-primary px-5 py-4 text-[1.05rem] font-bold text-white shadow-[0_18px_36px_rgba(182,23,34,0.28)] transition-all active:scale-[0.97] hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/55 disabled:shadow-none"
             >
               {hasModel ? launchCopy.launchLabel : "No AR model for this dish"}
             </button>
