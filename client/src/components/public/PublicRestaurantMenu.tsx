@@ -17,7 +17,7 @@ import {
   type PublicRestaurantPayload,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { ensureModelViewerScript, launchDirectAr } from "@/lib/model-viewer";
+import { ensureModelViewerScript } from "@/lib/model-viewer";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -447,28 +447,15 @@ function TopArCard({
     fetch(dish.modelUrl, { mode: "cors", credentials: "omit" }).catch(() => {});
   }, [dish.modelUrl]);
 
-  // "View in AR" — calls launchDirectAr() which creates a hidden model-viewer
-  // element and calls activateAR() on it. This directly opens Scene Viewer
-  // (Android) or Quick Look (iOS) without navigating to any intermediate page.
-  // On desktop or if AR is unsupported, falls back to the /ar page.
-  const handleViewInAr = useCallback(async () => {
+  // "View in AR" — navigates to the dedicated AR setup page.
+  const handleViewInAr = useCallback(() => {
     if (!dish.modelUrl) return;
-    setArError(null);
     setIsArLaunching(true);
-    try {
-      await launchDirectAr({
-        modelUrl: dish.modelUrl,
-        alt: dish.name,
-        posterUrl: dish.posterUrl,
-      });
-    } catch (err) {
-      // launchDirectAr throws if AR is unavailable (desktop, unsupported browser).
-      // Fall back to the /ar page which handles all edge cases gracefully.
+    // Add a tiny delay so the button spinner shows briefly, giving the user feedback
+    setTimeout(() => {
       window.location.href = `/r/${publicId}/ar?dish=${dish.id}`;
-    } finally {
-      setIsArLaunching(false);
-    }
-  }, [dish, publicId]);
+    }, 150);
+  }, [dish.modelUrl, dish.id, publicId]);
 
   return (
     <article
