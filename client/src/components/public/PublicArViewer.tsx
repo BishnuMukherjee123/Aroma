@@ -388,23 +388,13 @@ export function PublicArViewer({
           </div>
         </div>
       ) : (
-        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
-          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/10 px-8 py-10 text-center text-white shadow-[0_22px_56px_rgba(0,0,0,0.38)] backdrop-blur-sm">
-            <p className="text-4xl font-extrabold tracking-[0.1em]">
+      <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
+          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-[rgba(255,255,255,0.08)] px-8 py-10 text-center text-white shadow-[0_22px_56px_rgba(0,0,0,0.38)] backdrop-blur-sm">
+            <p className="text-[2.2rem] font-extrabold tracking-[0.1em]">
               AROMA AR
             </p>
-            <p className="mt-5 text-base leading-8 text-white/78">
+            <p className="mt-5 text-[1.1rem] leading-9 text-white/78">
               {launchCopy.headline}
-            </p>
-
-            {selectedDish ? (
-              <div className="mt-5 inline-flex items-center rounded-full bg-white/8 px-4 py-2 text-sm font-semibold text-white/92">
-                {selectedDish.name}
-              </div>
-            ) : null}
-
-            <p className="mt-4 text-sm leading-7 text-white/60">
-              {launchCopy.helper}
             </p>
 
             {arStage === "error" && launchError ? (
@@ -422,14 +412,24 @@ export function PublicArViewer({
                 viewerState === "error" ||
                 (deviceProfile === "desktop" && hasModel)
               }
-              className="mt-8 inline-flex w-full items-center justify-center rounded-[1.2rem] bg-primary px-5 py-4 text-base font-bold text-white shadow-[0_18px_36px_rgba(182,23,34,0.28)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/55 disabled:shadow-none"
+              className="mt-8 inline-flex w-full items-center justify-center rounded-[1.2rem] bg-primary px-5 py-4 text-[1.05rem] font-bold text-white shadow-[0_18px_36px_rgba(182,23,34,0.28)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/55 disabled:shadow-none"
             >
               {hasModel ? launchCopy.launchLabel : "No AR model for this dish"}
             </button>
 
+            {selectedDish ? (
+              <div className="mt-6 inline-flex items-center rounded-full bg-white/8 px-4 py-2 text-sm font-semibold text-white/88">
+                {selectedDish.name}
+              </div>
+            ) : null}
+
+            <p className="mt-4 text-sm leading-7 text-white/58">
+              {launchCopy.helper}
+            </p>
+
             <Link
               href={`/r/${restaurant.publicId}`}
-              className="mt-4 inline-flex w-full items-center justify-center rounded-[1.2rem] border border-white/14 px-5 py-4 text-base font-semibold text-white/80 transition-colors hover:border-white/22 hover:text-white"
+              className="mt-6 inline-flex text-sm font-semibold text-white/70 transition-colors hover:text-white"
             >
               Back to menu
             </Link>
