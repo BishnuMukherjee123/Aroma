@@ -407,8 +407,9 @@ export function PublicArViewer({
         }}
       />
 
-      {/* model-viewer element — hidden using standard CSS until AR activates.
-          Using proper hidden classes prevents corrupting the WebXR fullscreen canvas. */}
+      {/* model-viewer element — sits visibly in the background of the screen.
+          By NOT hiding it with CSS, we guarantee the internal WebXR engine functions
+          perfectly and its native "Tap a surface" DOM overlay is intact. */}
       {selectedDish?.modelUrl ? (
         <model-viewer
           ref={(node) => {
@@ -424,9 +425,11 @@ export function PublicArViewer({
           ar-scale="fixed"
           ar-placement="floor"
           camera-controls
+          auto-rotate
+          rotation-per-second="20deg"
           touch-action="pan-y"
           loading="eager"
-          className="absolute inset-0 z-[-1] h-full w-full opacity-0 [model-viewer.ar-tracking_&]:z-[9999] [model-viewer.ar-tracking_&]:opacity-100"
+          className="absolute inset-0 z-0 h-full w-full"
         >
           {/* We hide the default start-AR button since we use our own styled button */}
           <div slot="ar-button" className="hidden" />
@@ -434,7 +437,7 @@ export function PublicArViewer({
       ) : null}
 
       {arStage === "launching" ? (
-        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center px-6">
+        <div className="relative z-10 flex min-h-[calc(100vh-5rem)] items-center justify-center px-6">
           <div className="flex flex-col items-center gap-5 text-center text-white">
             <p className="text-[1.8rem] font-black tracking-[0.15em] md:text-[2.2rem]">
               AROMA AR
@@ -446,7 +449,7 @@ export function PublicArViewer({
           </div>
         </div>
       ) : (
-        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center px-4">
+        <div className="relative z-10 flex min-h-[calc(100vh-5rem)] items-center justify-center px-4">
           <div className="w-full max-w-[21rem] rounded-[1.75rem] border border-white/10 bg-white/[0.04] px-6 py-8 text-center text-white shadow-[0_22px_44px_rgba(0,0,0,0.5)] backdrop-blur-xl md:max-w-md md:rounded-[2rem] md:px-8 md:py-10">
             <p className="text-[1.7rem] font-black tracking-[0.12em] text-white md:text-[2.2rem]">
               AROMA AR
