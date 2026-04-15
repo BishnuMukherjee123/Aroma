@@ -1,13 +1,14 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import {
   useCallback,
   useDeferredValue,
-  useEffect,
   useMemo,
   useRef,
   useState,
+  useEffect
 } from "react";
 
 import {
@@ -16,7 +17,6 @@ import {
   type PublicDishPayload,
   type PublicRestaurantPayload,
 } from "@/lib/api";
-import { ensureModelViewerScript, launchDirectAr } from "@/lib/model-viewer";
 import { cn } from "@/lib/utils";
 
 const ArPreviewCanvas = dynamic(
@@ -78,10 +78,6 @@ export function PublicRestaurantMenu({
   const [topArVisibleCount, setTopArVisibleCount] = useState(TOP_AR_BATCH_SIZE);
 
   const deferredSearch = useDeferredValue(search);
-
-  useEffect(() => {
-    void ensureModelViewerScript();
-  }, []);
 
   useEffect(() => {
     if (initialRestaurant && initialRestaurant.publicId === publicId) {
@@ -370,7 +366,7 @@ export function PublicRestaurantMenu({
             <section className="space-y-6">
               <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {visibleTopArDishes.map((dish) => (
-                  <TopArCard key={dish.id} dish={dish} />
+                  <TopArCard key={dish.id} dish={dish} publicId={publicId} />
                 ))}
               </div>
 
@@ -435,12 +431,13 @@ export function PublicRestaurantMenu({
 
 function TopArCard({
   dish,
+  publicId,
 }: {
   dish: ArDishView;
+  publicId: string;
 }) {
   const [isPreviewActivated, setIsPreviewActivated] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
-  const [launchError, setLaunchError] = useState<string | null>(null);
   const cardRef = useRef<HTMLElement>(null);
   const prefetchedRef = useRef(false);
 
@@ -470,30 +467,6 @@ function TopArCard({
     observer.observe(card);
     return () => observer.disconnect();
   }, [prefetchModel, dish.modelUrl]);
-
-  const handleDirectArLaunch = useCallback(async () => {
-    if (!dish.modelUrl) {
-      setLaunchError("This dish is still waiting for its AR model.");
-      return;
-    }
-
-    setLaunchError(null);
-    setIsPreviewActivated(true);
-
-    try {
-      await launchDirectAr({
-        modelUrl: dish.modelUrl,
-        alt: dish.name,
-        posterUrl: dish.posterUrl ?? dish.thumbnailUrl ?? null,
-      });
-    } catch (error) {
-      setLaunchError(
-        error instanceof Error
-          ? error.message
-          : "AR could not open on this device right now.",
-      );
-    }
-  }, [dish.modelUrl, dish.name, dish.posterUrl, dish.thumbnailUrl]);
 
   return (
     <article
@@ -609,20 +582,13 @@ function TopArCard({
           {dish.description ?? "Tap to place this dish in AR on your table."}
         </p>
 
-        <button
-          type="button"
-          onClick={() => void handleDirectArLaunch()}
+        <Link
+          href={`/r/${publicId}/ar?dish=${dish.id}`}
           className="mt-4 flex w-full items-center justify-center gap-2 rounded-[0.95rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_10px_20px_rgba(182,23,34,0.16)] transition-all hover:-translate-y-0.5"
         >
           <span className="material-symbols-outlined text-lg">view_in_ar</span>
           View in AR
-        </button>
-
-        {launchError ? (
-          <p className="mt-3 text-xs leading-5 text-on-surface-variant">
-            {launchError}
-          </p>
-        ) : null}
+        </Link>
       </div>
     </article>
   );
