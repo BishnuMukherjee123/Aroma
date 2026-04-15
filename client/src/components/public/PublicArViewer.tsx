@@ -350,15 +350,28 @@ export function PublicArViewer({
     setLaunchError(null);
     setArStage("launching");
 
+    let restoreGateTimer: number | null = null;
+
     try {
-      await viewer.activateAR();
-      // Scene Viewer takes over the screen. When the user returns by tapping the 
-      // cross icon, we want the "gate" page to be waiting for them, not the spinner.
-      setTimeout(() => {
-        // Safe to call, React handles unmounted checks in React 18+
+      // We only want the "Preparing AR..." state during the handoff itself.
+      // Once the native AR experience takes over, the user should come back to
+      // the launch gate, not to a stale spinner.
+      restoreGateTimer = window.setTimeout(() => {
         setArStage("gate");
-      }, 1000);
+      }, 900);
+
+      await viewer.activateAR();
+
+      if (restoreGateTimer !== null) {
+        window.clearTimeout(restoreGateTimer);
+      }
+
+      setArStage("gate");
     } catch {
+      if (restoreGateTimer !== null) {
+        window.clearTimeout(restoreGateTimer);
+      }
+
       setLaunchError(
         "AR could not open right now. Check camera permission and try again.",
       );
