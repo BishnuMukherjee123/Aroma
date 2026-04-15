@@ -490,7 +490,10 @@ function TopArCard({
     <article
       ref={cardRef}
       onPointerEnter={prefetchModel}
-      onTouchStart={prefetchModel}
+      onTouchStart={() => {
+        prefetchModel();
+        if (!isPreviewActivated) setIsPreviewActivated(true);
+      }}
       className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]"
     >
       {/* ── 3D Preview Area ─────────────────────────────────────────────── */}
