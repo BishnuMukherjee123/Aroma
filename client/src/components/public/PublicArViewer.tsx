@@ -407,8 +407,8 @@ export function PublicArViewer({
         }}
       />
 
-      {/* Hidden model-viewer element — mounted as soon as we have a model URL.
-          This ensures the GLB is always processed before the user taps. */}
+      {/* model-viewer element — hidden using standard CSS until AR activates.
+          Using proper hidden classes prevents corrupting the WebXR fullscreen canvas. */}
       {selectedDish?.modelUrl ? (
         <model-viewer
           ref={(node) => {
@@ -424,11 +424,13 @@ export function PublicArViewer({
           ar-scale="fixed"
           ar-placement="floor"
           camera-controls
-          interaction-prompt="none"
           touch-action="pan-y"
           loading="eager"
-          className="pointer-events-none fixed left-[-9999px] top-0 h-px w-px opacity-0"
-        />
+          className="absolute inset-0 z-[-1] h-full w-full opacity-0 [model-viewer.ar-tracking_&]:z-[9999] [model-viewer.ar-tracking_&]:opacity-100"
+        >
+          {/* We hide the default start-AR button since we use our own styled button */}
+          <div slot="ar-button" className="hidden" />
+        </model-viewer>
       ) : null}
 
       {arStage === "launching" ? (
