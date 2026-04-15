@@ -477,7 +477,7 @@ function TopArCard({
         prefetchModel();
         if (!isPreviewActivated) setIsPreviewActivated(true);
       }}
-      className="group overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]"
+      className="group flex flex-col overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]"
     >
       {/* ── 3D Preview Area ─────────────────────────────────────────────── */}
       <div
@@ -541,19 +541,8 @@ function TopArCard({
           </div>
         ) : null}
 
-        {/* "Drag to rotate" badge — shown once model is loaded */}
-        {isPreviewActivated && isModelLoaded ? (
-          <div className="pointer-events-none absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.72)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
-            <p className="flex items-center gap-2 text-xs font-semibold text-white">
-              <span className="material-symbols-outlined text-base text-primary-container">
-                touch_app
-              </span>
-              Drag to rotate
-            </p>
-          </div>
-        ) : null}
-
-        {/* AR Ready badge */}
+        {/* AR Ready badge — hidden once 3D is active */}
+        {!isPreviewActivated ? (
         <div className="absolute right-3 top-3 flex items-center gap-1 rounded-[0.8rem] bg-white/90 px-2.5 py-1.5 shadow-sm backdrop-blur-md">
           <span className="material-symbols-outlined text-lg text-primary">
             view_in_ar
@@ -562,10 +551,11 @@ function TopArCard({
             AR Ready
           </span>
         </div>
+        ) : null}
       </div>
 
       {/* ── Card Info ───────────────────────────────────────────────────── */}
-      <div className="p-5">
+      <div className="flex flex-1 flex-col p-5">
         <div className="mb-2 flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
@@ -580,7 +570,7 @@ function TopArCard({
           </span>
         </div>
 
-        <p className="min-h-12 text-sm leading-6 text-on-surface-variant">
+        <p className="line-clamp-3 text-sm leading-6 text-on-surface-variant">
           {dish.description ?? "Tap to place this dish in AR on your table."}
         </p>
 
@@ -591,26 +581,28 @@ function TopArCard({
         ) : null}
 
         {/* "View in AR" — triggers native camera directly on mobile */}
-        <button
-          type="button"
-          onClick={() => void handleViewInAr()}
-          disabled={isArLaunching}
-          className="mt-4 flex w-full items-center justify-center gap-2 rounded-[0.95rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_10px_20px_rgba(182,23,34,0.16)] transition-all active:scale-[0.97] hover:-translate-y-0.5 disabled:opacity-70"
-        >
-          {isArLaunching ? (
-            <>
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-              Opening AR...
-            </>
-          ) : (
-            <>
-              <span className="material-symbols-outlined text-lg">
-                view_in_ar
-              </span>
-              View in AR
-            </>
-          )}
-        </button>
+        <div className="mt-auto pt-2">
+          <button
+            type="button"
+            onClick={() => void handleViewInAr()}
+            disabled={isArLaunching}
+            className="flex w-full items-center justify-center gap-2 rounded-[0.95rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_10px_20px_rgba(182,23,34,0.16)] transition-all active:scale-[0.97] hover:-translate-y-0.5 disabled:opacity-70"
+          >
+            {isArLaunching ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                Opening AR...
+              </>
+            ) : (
+              <>
+                <span className="material-symbols-outlined text-lg">
+                  view_in_ar
+                </span>
+                View in AR
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </article>
   );
