@@ -437,7 +437,7 @@ export function PublicArViewer({
       ) : null}
 
       {arStage === "launching" ? (
-        <div className="relative z-10 flex min-h-[calc(100vh-5rem)] items-center justify-center px-6">
+        <div className="relative z-10 flex min-h-[calc(100vh-5rem)] w-full items-center justify-center bg-[#08090c] px-6">
           <div className="flex flex-col items-center gap-5 text-center text-white">
             <p className="text-[1.8rem] font-black tracking-[0.15em] md:text-[2.2rem]">
               AROMA AR
@@ -449,7 +449,7 @@ export function PublicArViewer({
           </div>
         </div>
       ) : (
-        <div className="relative z-10 flex min-h-[calc(100vh-5rem)] items-center justify-center px-4">
+        <div className="relative z-10 flex min-h-[calc(100vh-5rem)] w-full items-center justify-center bg-[#08090c] px-4">
           <div className="w-full max-w-[21rem] rounded-[1.75rem] border border-white/10 bg-white/[0.04] px-6 py-8 text-center text-white shadow-[0_22px_44px_rgba(0,0,0,0.5)] backdrop-blur-xl md:max-w-md md:rounded-[2rem] md:px-8 md:py-10">
             <p className="text-[1.7rem] font-black tracking-[0.12em] text-white md:text-[2.2rem]">
               AROMA AR
