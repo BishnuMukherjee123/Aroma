@@ -430,25 +430,29 @@ export function PublicArViewer({
       ) : null}
 
       {arStage === "launching" ? (
-        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
-          <div className="flex flex-col items-center gap-4 text-center text-white">
-            <p className="text-[2.2rem] font-extrabold tracking-[0.1em]">AROMA AR</p>
-            <div className="spinner-sm border-white/25 border-t-primary" />
-            <p className="text-base font-semibold text-white/80">Preparing AR...</p>
+        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center px-6">
+          <div className="flex flex-col items-center gap-5 text-center text-white">
+            <p className="text-[1.8rem] font-black tracking-[0.15em] md:text-[2.2rem]">
+              AROMA AR
+            </p>
+            <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/10 border-t-primary" />
+            <p className="text-xs font-bold uppercase tracking-[0.08em] text-white/70 md:text-sm">
+              Preparing AR Environment
+            </p>
           </div>
         </div>
       ) : (
-      <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center">
-          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-[rgba(255,255,255,0.08)] px-8 py-10 text-center text-white shadow-[0_22px_56px_rgba(0,0,0,0.38)] backdrop-blur-sm">
-            <p className="text-[2.2rem] font-extrabold tracking-[0.1em]">
+        <div className="flex min-h-[calc(100vh-5rem)] items-center justify-center px-4">
+          <div className="w-full max-w-[21rem] rounded-[1.75rem] border border-white/10 bg-white/[0.04] px-6 py-8 text-center text-white shadow-[0_22px_44px_rgba(0,0,0,0.5)] backdrop-blur-xl md:max-w-md md:rounded-[2rem] md:px-8 md:py-10">
+            <p className="text-[1.7rem] font-black tracking-[0.12em] text-white md:text-[2.2rem]">
               AROMA AR
             </p>
-            <p className="mt-5 text-[1.1rem] leading-9 text-white/78">
+            <p className="mt-3 text-[0.95rem] leading-relaxed text-white/70 md:mt-5 md:text-[1.1rem]">
               {launchCopy.headline}
             </p>
 
             {arStage === "error" && launchError ? (
-              <p className="mt-5 rounded-[1rem] border border-white/10 bg-white/8 px-4 py-3 text-sm leading-6 text-white/80">
+              <p className="mt-5 rounded-[0.85rem] border border-white/10 bg-black/30 px-4 py-3 text-sm leading-6 text-white/90 shadow-inner">
                 {launchError}
               </p>
             ) : null}
@@ -457,8 +461,11 @@ export function PublicArViewer({
               type="button"
               onClick={() => void handleLaunchAr()}
               disabled={!hasModel || deviceProfile === "desktop"}
-              className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-[1.2rem] bg-primary px-5 py-4 text-[1.05rem] font-bold text-white shadow-[0_18px_36px_rgba(182,23,34,0.28)] transition-all active:scale-[0.97] hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/15 disabled:text-white/55 disabled:shadow-none"
+              className="mt-7 flex w-full items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3.5 text-[0.95rem] font-bold text-white shadow-[0_12px_24px_rgba(182,23,34,0.22)] transition-all active:scale-[0.96] hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/10 disabled:bg-none disabled:text-white/40 disabled:shadow-none md:mt-8 md:rounded-[1.2rem] md:px-5 md:py-4 md:text-[1.05rem]"
             >
+              <span className="material-symbols-outlined text-[1.2rem] md:text-lg">
+                view_in_ar
+              </span>
               {hasModel ? launchCopy.launchLabel : "No AR model for this dish"}
             </button>
 

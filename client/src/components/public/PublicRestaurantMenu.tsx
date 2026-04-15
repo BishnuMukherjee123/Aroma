@@ -447,6 +447,18 @@ function TopArCard({
     fetch(dish.modelUrl, { mode: "cors", credentials: "omit" }).catch(() => {});
   }, [dish.modelUrl]);
 
+  // Reset launching state when returning to this page via the browser back button (BFCache)
+  useEffect(() => {
+    const handlePageShow = (event: PageTransitionEvent) => {
+      // event.persisted is true if the page was restored from the back/forward cache
+      if (event.persisted) {
+        setIsArLaunching(false);
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
+
   // "View in AR" — navigates to the dedicated AR setup page.
   const handleViewInAr = useCallback(() => {
     if (!dish.modelUrl) return;
@@ -454,6 +466,8 @@ function TopArCard({
     // Add a tiny delay so the button spinner shows briefly, giving the user feedback
     setTimeout(() => {
       window.location.href = `/r/${publicId}/ar?dish=${dish.id}`;
+      // Fallback reset in case pageshow doesn't fire on some older browsers
+      setTimeout(() => setIsArLaunching(false), 1500);
     }, 150);
   }, [dish.modelUrl, dish.id, publicId]);
 
