@@ -542,17 +542,7 @@ function TopArCard({
           </div>
         ) : null}
 
-        {/* AR Ready badge — hidden once 3D is active */}
-        {!isPreviewActivated ? (
-        <div className="absolute right-3 top-3 flex items-center gap-1 rounded-[0.8rem] bg-white/90 px-2.5 py-1.5 shadow-sm backdrop-blur-md">
-          <span className="material-symbols-outlined text-lg text-primary">
-            view_in_ar
-          </span>
-          <span className="text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface">
-            AR Ready
-          </span>
-        </div>
-        ) : null}
+
       </div>
 
       {/* ── Card Info ───────────────────────────────────────────────────── */}
