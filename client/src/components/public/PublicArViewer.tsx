@@ -352,6 +352,12 @@ export function PublicArViewer({
 
     try {
       await viewer.activateAR();
+      // Scene Viewer takes over the screen. When the user returns by tapping the 
+      // cross icon, we want the "gate" page to be waiting for them, not the spinner.
+      setTimeout(() => {
+        // Safe to call, React handles unmounted checks in React 18+
+        setArStage("gate");
+      }, 1000);
     } catch {
       setLaunchError(
         "AR could not open right now. Check camera permission and try again.",
