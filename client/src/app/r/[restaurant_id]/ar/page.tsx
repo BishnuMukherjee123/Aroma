@@ -1,7 +1,4 @@
-import { notFound } from "next/navigation";
-
 import { PublicArViewer } from "@/components/public/PublicArViewer";
-import { fetchPublicRestaurantServer } from "@/lib/api";
 
 type PublicArPageProps = {
   params: Promise<{
@@ -23,17 +20,5 @@ export default async function PublicArPage({
       ? resolvedSearchParams.dish
       : undefined;
 
-  try {
-    const restaurant = await fetchPublicRestaurantServer(restaurant_id);
-
-    return (
-      <PublicArViewer
-        publicId={restaurant_id}
-        initialDishId={initialDishId}
-        initialRestaurant={restaurant}
-      />
-    );
-  } catch {
-    notFound();
-  }
+  return <PublicArViewer publicId={restaurant_id} initialDishId={initialDishId} />;
 }

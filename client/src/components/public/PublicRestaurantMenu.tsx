@@ -117,6 +117,17 @@ export function PublicRestaurantMenu({
     };
   }, [initialRestaurant, publicId]);
 
+  useEffect(() => {
+    if (typeof window === "undefined" || !restaurant) {
+      return;
+    }
+
+    window.sessionStorage.setItem(
+      `aroma-public-restaurant:${publicId}`,
+      JSON.stringify(restaurant),
+    );
+  }, [publicId, restaurant]);
+
   const categories = useMemo<CategoryView[]>(() => {
     if (!restaurant) {
       return [];

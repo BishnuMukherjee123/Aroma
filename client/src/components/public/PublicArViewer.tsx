@@ -128,28 +128,64 @@ export function PublicArViewer({
   }, []);
 
   useEffect(() => {
-    if (initialRestaurant && initialRestaurant.publicId === publicId) {
-      return;
+    let cancelled = false;
+    const cacheKey = `aroma-public-restaurant:${publicId}`;
+
+    const seedFromCache = () => {
+      if (typeof window === "undefined") {
+        return false;
+      }
+
+      const cachedValue = window.sessionStorage.getItem(cacheKey);
+      if (!cachedValue) {
+        return false;
+      }
+
+      try {
+        const parsed = JSON.parse(cachedValue) as PublicRestaurantPayload;
+        if (parsed.publicId !== publicId) {
+          return false;
+        }
+
+        setRestaurant(parsed);
+        setPageError(null);
+        setIsPageLoading(false);
+        return true;
+      } catch {
+        window.sessionStorage.removeItem(cacheKey);
+        return false;
+      }
+    };
+
+    const seededFromInitial =
+      !!initialRestaurant && initialRestaurant.publicId === publicId;
+
+    if (seededFromInitial) {
+      setRestaurant(initialRestaurant);
+      setPageError(null);
+      setIsPageLoading(false);
+    } else if (!seedFromCache()) {
+      setIsPageLoading(true);
     }
 
-    let cancelled = false;
-
     const load = async () => {
-      setIsPageLoading(true);
-      setPageError(null);
-
       try {
         const payload = await fetchPublicRestaurant(publicId);
         if (!cancelled) {
           setRestaurant(payload);
+          setPageError(null);
         }
       } catch (loadError) {
         if (!cancelled) {
-          setPageError(
-            loadError instanceof Error
-              ? loadError.message
-              : "We could not load this AR experience right now.",
-          );
+          const seededFromStorage = seedFromCache();
+
+          if (!seededFromInitial && !seededFromStorage) {
+            setPageError(
+              loadError instanceof Error
+                ? loadError.message
+                : "We could not load this AR experience right now.",
+            );
+          }
         }
       } finally {
         if (!cancelled) {
@@ -164,6 +200,17 @@ export function PublicArViewer({
       cancelled = true;
     };
   }, [initialRestaurant, publicId]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !restaurant || restaurant.publicId !== publicId) {
+      return;
+    }
+
+    window.sessionStorage.setItem(
+      `aroma-public-restaurant:${publicId}`,
+      JSON.stringify(restaurant),
+    );
+  }, [publicId, restaurant]);
 
   const dishes = useMemo<DishWithMenu[]>(() => {
     if (!restaurant) {
@@ -313,27 +360,21 @@ export function PublicArViewer({
     }
   };
 
-  if (isPageLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[#08090c] px-6">
-        <div className="flex flex-col items-center gap-4 text-center text-white">
-          <div className="spinner-sm border-white/25 border-t-primary" />
-          <p className="text-base font-semibold">Preparing AR Menu...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (pageError || !restaurant) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#08090c] px-6">
-        <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-white/10 px-6 py-8 text-center text-white shadow-[0_18px_48px_rgba(0,0,0,0.35)] backdrop-blur-sm">
-          <p className="text-2xl font-extrabold tracking-[0.08em]">
+        <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-[rgba(255,255,255,0.08)] px-8 py-10 text-center text-white shadow-[0_18px_48px_rgba(0,0,0,0.35)] backdrop-blur-sm">
+          <p className="text-[2.2rem] font-extrabold tracking-[0.1em]">
             AROMA AR
           </p>
-          <p className="mt-4 text-sm leading-7 text-white/75">
-            {pageError ?? "This AR experience could not be loaded right now."}
+          <p className="mt-5 text-[1.1rem] leading-9 text-white/78">
+            {isPageLoading
+              ? "Preparing the AR launch..."
+              : pageError ?? "This AR experience could not be loaded right now."}
           </p>
+          {isPageLoading ? (
+            <div className="mx-auto mt-6 spinner-sm border-white/25 border-t-primary" />
+          ) : null}
           <Link
             href={`/r/${publicId}`}
             className="mt-8 inline-flex w-full items-center justify-center rounded-[1.2rem] bg-primary px-5 py-4 text-base font-bold text-white"
