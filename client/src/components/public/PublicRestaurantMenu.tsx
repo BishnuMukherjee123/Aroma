@@ -671,6 +671,7 @@ function ArPreviewInCard({
       mv.setAttribute("rotation-per-second", "25deg");
       mv.setAttribute("interaction-prompt", "none");
       mv.setAttribute("disable-zoom", "");
+      mv.setAttribute("autoplay", ""); // play any animations embedded in the GLB
       mv.style.width = "100%";
       mv.style.height = "100%";
       mv.style.setProperty("--poster-color", "transparent");
