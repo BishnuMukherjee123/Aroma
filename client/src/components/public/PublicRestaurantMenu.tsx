@@ -463,12 +463,9 @@ function TopArCard({
   const handleViewInAr = useCallback(() => {
     if (!dish.modelUrl) return;
     setIsArLaunching(true);
-    // Add a tiny delay so the button spinner shows briefly, giving the user feedback
-    setTimeout(() => {
-      window.location.href = `/r/${publicId}/ar?dish=${dish.id}`;
-      // Fallback reset in case pageshow doesn't fire on some older browsers
-      setTimeout(() => setIsArLaunching(false), 1500);
-    }, 150);
+    window.location.href = `/r/${publicId}/ar?dish=${dish.id}`;
+    // Fallback reset in case navigation is blocked or delayed
+    setTimeout(() => setIsArLaunching(false), 1500);
   }, [dish.modelUrl, dish.id, publicId]);
 
   return (

@@ -13,6 +13,9 @@ declare module "react" {
         reveal?: "auto" | "interaction" | "manual";
         ar?: boolean;
         "ar-modes"?: string;
+        "ar-scale"?: string;
+        "ar-placement"?: string;
+        "xr-environment"?: boolean;
         "camera-controls"?: boolean;
         "touch-action"?: string;
         exposure?: string;

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Script from "next/script";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   fetchPublicRestaurant,
@@ -20,7 +20,7 @@ type DeviceProfile = "desktop" | "android" | "ios" | "mobile-web";
 
 type ViewerScriptState = "loading" | "ready" | "failed";
 type ViewerState = "loading" | "ready" | "error";
-type ArStage = "gate" | "launching" | "error";
+type ArStage = "gate" | "placing" | "placed" | "error";
 
 type DishWithMenu = PublicDishPayload & {
   menuName: string;
@@ -29,6 +29,7 @@ type DishWithMenu = PublicDishPayload & {
 
 type ModelViewerElement = HTMLElement & {
   activateAR?: () => Promise<void> | void;
+  canActivateAR?: boolean;
 };
 
 const detectDeviceProfile = (): DeviceProfile => {
@@ -113,6 +114,7 @@ export function PublicArViewer({
   const [viewerState, setViewerState] = useState<ViewerState>("loading");
   const [arStage, setArStage] = useState<ArStage>("gate");
   const [launchError, setLaunchError] = useState<string | null>(null);
+  const [isLaunchPending, setIsLaunchPending] = useState(false);
 
   const viewerRef = useRef<ModelViewerElement | null>(null);
 
@@ -265,10 +267,12 @@ export function PublicArViewer({
   );
 
   const hasModel = Boolean(selectedDish?.modelUrl);
+  const showArOverlay = arStage === "placing" || arStage === "placed";
 
   useEffect(() => {
     setLaunchError(null);
     setArStage("gate");
+    setIsLaunchPending(false);
     setViewerState(hasModel ? "loading" : "error");
   }, [hasModel, selectedDish?.id]);
 
@@ -284,13 +288,56 @@ export function PublicArViewer({
 
     const handleLoad = () => setViewerState("ready");
     const handleError = () => setViewerState("error");
+    const handleArStatus = (event: Event) => {
+      const status =
+        (event as CustomEvent<{ status?: string }>).detail?.status ??
+        viewer.getAttribute("ar-status");
+
+      if (!status) {
+        return;
+      }
+
+      if (status === "session-started") {
+        setIsLaunchPending(false);
+        setLaunchError(null);
+        setArStage("placing");
+        return;
+      }
+
+      if (status === "object-placed") {
+        setIsLaunchPending(false);
+        setLaunchError(null);
+        setArStage("placed");
+        return;
+      }
+
+      if (status === "not-presenting") {
+        setIsLaunchPending(false);
+        setLaunchError(null);
+        setArStage("gate");
+        return;
+      }
+
+      if (status === "failed") {
+        setIsLaunchPending(false);
+        setLaunchError(
+          "AR could not open right now. Check camera permission and try again.",
+        );
+        setArStage("error");
+      }
+    };
 
     viewer.addEventListener("load", handleLoad);
     viewer.addEventListener("error", handleError);
+    viewer.addEventListener("ar-status", handleArStatus as EventListener);
 
     return () => {
       viewer.removeEventListener("load", handleLoad);
       viewer.removeEventListener("error", handleError);
+      viewer.removeEventListener(
+        "ar-status",
+        handleArStatus as EventListener,
+      );
     };
   }, [hasModel, scriptState, selectedDish?.id]);
 
@@ -301,11 +348,13 @@ export function PublicArViewer({
 
     const handleVisible = () => {
       if (document.visibilityState === "visible") {
+        setIsLaunchPending(false);
         setArStage("gate");
       }
     };
 
     const handlePageShow = () => {
+      setIsLaunchPending(false);
       setArStage("gate");
     };
 
@@ -318,7 +367,7 @@ export function PublicArViewer({
     };
   }, []);
 
-  const handleLaunchAr = async () => {
+  const handleLaunchAr = useCallback(async () => {
     if (!selectedDish || !selectedDish.modelUrl) {
       setLaunchError("This dish is still waiting for its 3D model.");
       setArStage("error");
@@ -348,36 +397,18 @@ export function PublicArViewer({
     }
 
     setLaunchError(null);
-    setArStage("launching");
-
-    let restoreGateTimer: number | null = null;
+    setIsLaunchPending(true);
 
     try {
-      // We only want the "Preparing AR..." state during the handoff itself.
-      // Once the native AR experience takes over, the user should come back to
-      // the launch gate, not to a stale spinner.
-      restoreGateTimer = window.setTimeout(() => {
-        setArStage("gate");
-      }, 900);
-
       await viewer.activateAR();
-
-      if (restoreGateTimer !== null) {
-        window.clearTimeout(restoreGateTimer);
-      }
-
-      setArStage("gate");
     } catch {
-      if (restoreGateTimer !== null) {
-        window.clearTimeout(restoreGateTimer);
-      }
-
+      setIsLaunchPending(false);
       setLaunchError(
         "AR could not open right now. Check camera permission and try again.",
       );
       setArStage("error");
     }
-  };
+  }, [deviceProfile, hasModel, launchCopy.error, scriptState, selectedDish]);
 
   if (pageError || !restaurant) {
     return (
@@ -437,6 +468,7 @@ export function PublicArViewer({
           ar-modes="webxr scene-viewer quick-look"
           ar-scale="fixed"
           ar-placement="floor"
+          xr-environment
           camera-controls
           auto-rotate
           rotation-per-second="20deg"
@@ -453,17 +485,22 @@ export function PublicArViewer({
           behind the UI padding. This sibling is safely discarded by WebXR when AR opens. */}
       <div className="pointer-events-none absolute inset-0 z-10 bg-[#08090c]" />
 
-      {arStage === "launching" ? (
-        <div className="relative z-20 flex min-h-[calc(100vh-5rem)] w-full items-center justify-center px-6">
-          <div className="flex flex-col items-center gap-5 text-center text-white">
-            <p className="text-[1.8rem] font-black tracking-[0.15em] md:text-[2.2rem]">
-              AROMA AR
-            </p>
-            <div className="h-10 w-10 animate-spin rounded-full border-4 border-white/10 border-t-primary" />
-            <p className="text-xs font-bold uppercase tracking-[0.08em] text-white/70 md:text-sm">
-              Preparing AR Environment
-            </p>
-          </div>
+      {showArOverlay ? (
+        <div className="pointer-events-none fixed inset-0 z-30">
+          {selectedDish ? (
+            <div className="absolute right-5 top-5 rounded-full bg-[rgba(18,20,25,0.78)] px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(0,0,0,0.25)] backdrop-blur-sm">
+              {selectedDish.name}
+            </div>
+          ) : null}
+
+          {arStage === "placing" ? (
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 rounded-full bg-[rgba(18,20,25,0.82)] px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(0,0,0,0.3)] backdrop-blur-sm">
+              <span className="inline-flex items-center gap-2">
+                <span className="text-lg">☝️</span>
+                Tap a surface to place the dish
+              </span>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="relative z-20 flex min-h-[calc(100vh-5rem)] w-full items-center justify-center px-4">
@@ -484,13 +521,26 @@ export function PublicArViewer({
             <button
               type="button"
               onClick={() => void handleLaunchAr()}
-              disabled={!hasModel || deviceProfile === "desktop"}
+              disabled={
+                !hasModel || deviceProfile === "desktop" || isLaunchPending
+              }
               className="mt-7 flex w-full items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3.5 text-[0.95rem] font-bold text-white shadow-[0_12px_24px_rgba(182,23,34,0.22)] transition-all active:scale-[0.96] hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/10 disabled:bg-none disabled:text-white/40 disabled:shadow-none md:mt-8 md:rounded-[1.2rem] md:px-5 md:py-4 md:text-[1.05rem]"
             >
-              <span className="material-symbols-outlined text-[1.2rem] md:text-lg">
-                view_in_ar
-              </span>
-              {hasModel ? launchCopy.launchLabel : "No AR model for this dish"}
+              {isLaunchPending ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Preparing AR Menu...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-[1.2rem] md:text-lg">
+                    view_in_ar
+                  </span>
+                  {hasModel
+                    ? launchCopy.launchLabel
+                    : "No AR model for this dish"}
+                </>
+              )}
             </button>
 
             {selectedDish ? (
