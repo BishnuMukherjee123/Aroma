@@ -17,9 +17,7 @@ type PublicArViewerProps = {
 };
 
 type DeviceProfile = "desktop" | "android" | "ios" | "mobile-web";
-
 type ViewerScriptState = "loading" | "ready" | "failed";
-type ViewerState = "loading" | "ready" | "error";
 type ArStage = "gate" | "placing" | "placed" | "error";
 
 type DishWithMenu = PublicDishPayload & {
@@ -60,16 +58,18 @@ const getLaunchCopy = (profile: DeviceProfile) => {
   switch (profile) {
     case "android":
       return {
-        headline: "We need access to your camera and motion sensors to display dishes on your table.",
+        headline:
+          "We need access to your camera and motion sensors to display dishes on your table.",
         helper:
-          "Chrome on Android will open Scene Viewer or WebXR after you launch the AR experience.",
+          "Chrome on Android will keep this AR flow inside the browser when WebXR is available.",
         launchLabel: "Launch AR Experience",
         error:
           "Chrome on Android gives the best AR result. Check camera permission and try again.",
       };
     case "ios":
       return {
-        headline: "We need access to your camera to open the dish in Quick Look and place it in your space.",
+        headline:
+          "We need access to your camera to open the dish in Quick Look and place it in your space.",
         helper:
           "Safari on iPhone or iPad gives the best result for Quick Look AR.",
         launchLabel: "Launch AR Experience",
@@ -78,9 +78,10 @@ const getLaunchCopy = (profile: DeviceProfile) => {
       };
     case "mobile-web":
       return {
-        headline: "This phone can try the AR handoff, but Chrome on Android and Safari on iPhone are the most reliable.",
+        headline:
+          "This phone can try browser AR, but Chrome on Android and Safari on iPhone are still the most reliable.",
         helper:
-          "If the camera does not open, switch to a supported browser and try again.",
+          "If the camera does not open here, switch to a supported browser and try again.",
         launchLabel: "Try AR Experience",
         error:
           "This browser could not launch AR directly. Try Chrome on Android or Safari on iPhone.",
@@ -111,7 +112,6 @@ export function PublicArViewer({
   const [selectedDishId, setSelectedDishId] = useState(initialDishId ?? "");
   const [deviceProfile, setDeviceProfile] = useState<DeviceProfile>("desktop");
   const [scriptState, setScriptState] = useState<ViewerScriptState>("loading");
-  const [viewerState, setViewerState] = useState<ViewerState>("loading");
   const [arStage, setArStage] = useState<ArStage>("gate");
   const [launchError, setLaunchError] = useState<string | null>(null);
   const [isLaunchPending, setIsLaunchPending] = useState(false);
@@ -204,7 +204,11 @@ export function PublicArViewer({
   }, [initialRestaurant, publicId]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !restaurant || restaurant.publicId !== publicId) {
+    if (
+      typeof window === "undefined" ||
+      !restaurant ||
+      restaurant.publicId !== publicId
+    ) {
       return;
     }
 
@@ -266,14 +270,25 @@ export function PublicArViewer({
     [deviceProfile],
   );
 
+  const arModes = useMemo(() => {
+    switch (deviceProfile) {
+      case "android":
+      case "mobile-web":
+        return "webxr";
+      case "ios":
+        return "quick-look";
+      default:
+        return "webxr";
+    }
+  }, [deviceProfile]);
+
   const hasModel = Boolean(selectedDish?.modelUrl);
-  const showArOverlay = arStage === "placing" || arStage === "placed";
+  const showGateScreen = arStage === "gate" || arStage === "error";
 
   useEffect(() => {
     setLaunchError(null);
     setArStage("gate");
     setIsLaunchPending(false);
-    setViewerState(hasModel ? "loading" : "error");
   }, [hasModel, selectedDish?.id]);
 
   useEffect(() => {
@@ -286,8 +301,6 @@ export function PublicArViewer({
       return;
     }
 
-    const handleLoad = () => setViewerState("ready");
-    const handleError = () => setViewerState("error");
     const handleArStatus = (event: Event) => {
       const status =
         (event as CustomEvent<{ status?: string }>).detail?.status ??
@@ -327,13 +340,9 @@ export function PublicArViewer({
       }
     };
 
-    viewer.addEventListener("load", handleLoad);
-    viewer.addEventListener("error", handleError);
     viewer.addEventListener("ar-status", handleArStatus as EventListener);
 
     return () => {
-      viewer.removeEventListener("load", handleLoad);
-      viewer.removeEventListener("error", handleError);
       viewer.removeEventListener(
         "ar-status",
         handleArStatus as EventListener,
@@ -368,7 +377,7 @@ export function PublicArViewer({
   }, []);
 
   const handleLaunchAr = useCallback(async () => {
-    if (!selectedDish || !selectedDish.modelUrl) {
+    if (!selectedDish?.modelUrl) {
       setLaunchError("This dish is still waiting for its 3D model.");
       setArStage("error");
       return;
@@ -389,7 +398,6 @@ export function PublicArViewer({
     }
 
     const viewer = viewerRef.current;
-
     if (!viewer?.activateAR) {
       setLaunchError(launchCopy.error);
       setArStage("error");
@@ -408,7 +416,7 @@ export function PublicArViewer({
       );
       setArStage("error");
     }
-  }, [deviceProfile, hasModel, launchCopy.error, scriptState, selectedDish]);
+  }, [deviceProfile, launchCopy.error, scriptState, selectedDish]);
 
   if (pageError || !restaurant) {
     return (
@@ -437,7 +445,7 @@ export function PublicArViewer({
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#08090c] px-6 py-10">
+    <div className="relative min-h-screen overflow-hidden bg-[#08090c] px-6 py-10 public-ar-viewer">
       <Script
         src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"
         type="module"
@@ -445,15 +453,11 @@ export function PublicArViewer({
         onLoad={() => setScriptState("ready")}
         onError={() => {
           setScriptState("failed");
-          setViewerState("error");
           setLaunchError("The AR engine could not load. Refresh and try again.");
           setArStage("error");
         }}
       />
 
-      {/* model-viewer element — sits visibly in the background of the screen.
-          By NOT hiding it with CSS, we guarantee the internal WebXR engine functions
-          perfectly and its native "Tap a surface" DOM overlay is intact. */}
       {selectedDish?.modelUrl ? (
         <model-viewer
           ref={(node) => {
@@ -465,7 +469,7 @@ export function PublicArViewer({
             selectedDish.posterUrl ?? selectedDish.thumbnailUrl ?? undefined
           }
           ar
-          ar-modes="webxr scene-viewer quick-look"
+          ar-modes={arModes}
           ar-scale="fixed"
           ar-placement="floor"
           xr-environment
@@ -476,35 +480,21 @@ export function PublicArViewer({
           loading="eager"
           className="absolute inset-0 z-0 h-full w-full"
         >
-          {/* We hide the default start-AR button since we use our own styled button */}
           <div slot="ar-button" className="hidden" />
+          <div slot="ar-prompt" className="ar-prompt-chip">
+            <span className="text-lg">☝️</span>
+            <span>Tap a surface to place the dish</span>
+          </div>
+          {selectedDish ? (
+            <div className="ar-dish-badge">{selectedDish.name}</div>
+          ) : null}
         </model-viewer>
       ) : null}
 
-      {/* Solid Black Blocker Layer — Guarantees the 3D model is 100% invisible
-          behind the UI padding. This sibling is safely discarded by WebXR when AR opens. */}
-      <div className="pointer-events-none absolute inset-0 z-10 bg-[#08090c]" />
-
-      {showArOverlay ? (
-        <div className="pointer-events-none fixed inset-0 z-30">
-          {selectedDish ? (
-            <div className="absolute right-5 top-5 rounded-full bg-[rgba(18,20,25,0.78)] px-4 py-2 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-              {selectedDish.name}
-            </div>
-          ) : null}
-
-          {arStage === "placing" ? (
-            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 rounded-full bg-[rgba(18,20,25,0.82)] px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_rgba(0,0,0,0.3)] backdrop-blur-sm">
-              <span className="inline-flex items-center gap-2">
-                <span className="text-lg">☝️</span>
-                Tap a surface to place the dish
-              </span>
-            </div>
-          ) : null}
-        </div>
-      ) : (
+      {showGateScreen ? (
         <div className="relative z-20 flex min-h-[calc(100vh-5rem)] w-full items-center justify-center px-4">
-          <div className="w-full max-w-[21rem] rounded-[1.75rem] border border-white/10 bg-white/[0.04] px-6 py-8 text-center text-white shadow-[0_22px_44px_rgba(0,0,0,0.5)] backdrop-blur-xl md:max-w-md md:rounded-[2rem] md:px-8 md:py-10">
+          <div className="pointer-events-none absolute inset-0 z-10 bg-[#08090c]" />
+          <div className="relative z-20 w-full max-w-[21rem] rounded-[1.75rem] border border-white/10 bg-white/[0.04] px-6 py-8 text-center text-white shadow-[0_22px_44px_rgba(0,0,0,0.5)] backdrop-blur-xl md:max-w-md md:rounded-[2rem] md:px-8 md:py-10">
             <p className="text-[1.7rem] font-black tracking-[0.12em] text-white md:text-[2.2rem]">
               AROMA AR
             </p>
@@ -561,7 +551,49 @@ export function PublicArViewer({
             </Link>
           </div>
         </div>
-      )}
+      ) : null}
+
+      <style jsx global>{`
+        .public-ar-viewer .ar-prompt-chip {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.65rem;
+          border-radius: 999px;
+          background: rgba(18, 20, 25, 0.82);
+          color: white;
+          padding: 0.85rem 1.2rem;
+          font-size: 0.95rem;
+          font-weight: 600;
+          box-shadow: 0 12px 26px rgba(0, 0, 0, 0.3);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+        }
+
+        .public-ar-viewer .ar-dish-badge {
+          position: absolute;
+          top: 1.25rem;
+          right: 1.25rem;
+          display: none;
+          align-items: center;
+          justify-content: center;
+          min-width: 7rem;
+          border-radius: 999px;
+          background: rgba(18, 20, 25, 0.78);
+          color: white;
+          padding: 0.7rem 1rem;
+          font-size: 0.92rem;
+          font-weight: 600;
+          text-align: center;
+          box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+        }
+
+        .public-ar-viewer model-viewer[ar-status="session-started"] .ar-dish-badge,
+        .public-ar-viewer model-viewer[ar-status="object-placed"] .ar-dish-badge {
+          display: inline-flex;
+        }
+      `}</style>
     </div>
   );
 }
