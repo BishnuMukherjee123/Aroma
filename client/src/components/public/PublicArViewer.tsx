@@ -421,6 +421,8 @@ export function PublicArViewer({
           }
           ar
           ar-modes="webxr scene-viewer quick-look"
+          ar-scale="fixed"
+          ar-placement="floor"
           camera-controls
           interaction-prompt="none"
           touch-action="pan-y"
