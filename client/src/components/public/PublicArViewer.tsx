@@ -490,6 +490,27 @@ export function PublicArViewer({
             <span className="text-lg">☝️</span>
             <span>Tap a surface to place the dish</span>
           </div>
+          <button
+            slot="ar-button"
+            className="hidden"
+          />
+          <div className="ar-controls-overlay">
+            <button 
+              type="button"
+              className="ar-reset-btn"
+              onClick={() => {
+                const viewer = viewerRef.current;
+                if (viewer) {
+                  // Briefly toggle reveal to reset placement if possible, 
+                  // or just re-trigger the AR activation
+                  viewer.activateAR();
+                }
+              }}
+            >
+              <span className="material-symbols-outlined">refresh</span>
+              Reset
+            </button>
+          </div>
           {selectedDish ? (
             <div className="ar-dish-badge">{selectedDish.name}</div>
           ) : null}
@@ -596,6 +617,48 @@ export function PublicArViewer({
         .public-ar-viewer model-viewer[ar-status="session-started"] .ar-dish-badge,
         .public-ar-viewer model-viewer[ar-status="object-placed"] .ar-dish-badge {
           display: inline-flex;
+        }
+
+        /* ── AR Control Overlay (Reset Button) ────────────────────────── */
+        .public-ar-viewer .ar-controls-overlay {
+          position: absolute;
+          bottom: 2rem;
+          left: 50%;
+          transform: translateX(-50%);
+          z-index: 100;
+          display: none;
+        }
+
+        .public-ar-viewer model-viewer[ar-status="session-started"] .ar-controls-overlay,
+        .public-ar-viewer model-viewer[ar-status="object-placed"] .ar-controls-overlay {
+          display: block;
+        }
+
+        .public-ar-viewer .ar-reset-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.8rem 1.4rem;
+          background: rgba(18, 20, 25, 0.85);
+          color: white;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          border-radius: 999px;
+          font-size: 0.95rem;
+          font-weight: 600;
+          box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .public-ar-viewer .ar-reset-btn:active {
+          scale: 0.95;
+          background: rgba(18, 20, 25, 0.95);
+        }
+
+        .public-ar-viewer .ar-reset-btn span {
+          font-size: 1.2rem;
         }
       `}</style>
     </div>
