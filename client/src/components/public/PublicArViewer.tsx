@@ -501,9 +501,8 @@ export function PublicArViewer({
               onClick={() => {
                 const viewer = viewerRef.current;
                 if (viewer) {
-                  // Briefly toggle reveal to reset placement if possible, 
-                  // or just re-trigger the AR activation
-                  viewer.activateAR();
+                  // Re-trigger the AR activation safely
+                  viewer.activateAR?.();
                 }
               }}
             >
