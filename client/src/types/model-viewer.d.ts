@@ -15,6 +15,7 @@ declare module "react" {
         "ar-modes"?: string;
         "ar-scale"?: string;
         "ar-placement"?: string;
+        scale?: string;
         "xr-environment"?: boolean;
         "camera-controls"?: boolean;
         "touch-action"?: string;
