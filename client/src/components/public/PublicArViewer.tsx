@@ -477,7 +477,7 @@ export function PublicArViewer({
           rotation-per-second="20deg"
           touch-action="pan-y"
           loading="eager"
-          style={{ position: "fixed", left: "-9999px", top: "0", width: "1px", height: "1px" }}
+          className="fixed inset-0 z-0 h-full w-full"
         >
           <div slot="ar-button" className="hidden" />
           <div slot="ar-prompt" className="ar-prompt-chip">
@@ -490,10 +490,13 @@ export function PublicArViewer({
         </model-viewer>
       ) : null}
 
+      {/* This solid black layer covers the model-viewer completely on the gate screen.
+          It has no pointer-events so WebXR can still receive interaction once launched. */}
+      <div className="pointer-events-none fixed inset-0 z-10 bg-[#08090c]" />
+
       {showGateScreen ? (
         <div className="relative z-20 flex min-h-[calc(100vh-5rem)] w-full items-center justify-center px-4">
-          <div className="pointer-events-none absolute inset-0 z-10 bg-[#08090c]" />
-          <div className="relative z-20 w-full max-w-[21rem] rounded-[1.75rem] border border-white/10 bg-white/[0.04] px-6 py-8 text-center text-white shadow-[0_22px_44px_rgba(0,0,0,0.5)] backdrop-blur-xl md:max-w-md md:rounded-[2rem] md:px-8 md:py-10">
+          <div className="w-full max-w-[21rem] rounded-[1.75rem] border border-white/10 bg-white/[0.04] px-6 py-8 text-center text-white shadow-[0_22px_44px_rgba(0,0,0,0.5)] backdrop-blur-xl md:max-w-md md:rounded-[2rem] md:px-8 md:py-10">
             <p className="text-[1.7rem] font-black tracking-[0.12em] text-white md:text-[2.2rem]">
               AROMA AR
             </p>
