@@ -52,6 +52,10 @@ const createPosterHtml = (modelUrl: string, alt: string): string =>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <title>${htmlEscape(alt)} poster</title>
+    <script>
+      self.ModelViewerElement = self.ModelViewerElement || {};
+      self.ModelViewerElement.dracoDecoderLocation = "https://www.gstatic.com/draco/versioned/decoders/1.5.7/";
+    </script>
     <script type="module" src="${MODEL_VIEWER_CDN}"></script>
     <style>
       html, body {
@@ -127,6 +131,8 @@ const renderPosterPng = async (
       args: [
         "--no-sandbox",
         "--disable-setuid-sandbox",
+        "--disable-web-security",
+        "--allow-file-access-from-files",
         // SwiftShader gives software WebGL — model-viewer needs this
         "--use-gl=angle",
         "--use-angle=swiftshader",

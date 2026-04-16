@@ -58,7 +58,10 @@ function PreviewModel({
   alt: string;
   onLoaded: () => void;
 }) {
-  const { scene } = useGLTF(url);
+  const { scene } = useGLTF(
+    url,
+    "https://www.gstatic.com/draco/versioned/decoders/1.5.7/"
+  );
 
   const clonedScene = useMemo(() => {
     const clone = scene.clone(true);

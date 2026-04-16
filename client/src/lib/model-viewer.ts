@@ -17,6 +17,12 @@ export async function ensureModelViewerScript(): Promise<void> {
   }
 
   if (!modelViewerLoadPromise) {
+    // Ensure the Draco decoder location is set BEFORE model-viewer is ever instantiated.
+    const mvWindow = window as any;
+    mvWindow.ModelViewerElement = mvWindow.ModelViewerElement || {};
+    mvWindow.ModelViewerElement.dracoDecoderLocation =
+      "https://www.gstatic.com/draco/versioned/decoders/1.5.7/";
+
     modelViewerLoadPromise = new Promise<void>((resolve, reject) => {
       const finish = async () => {
         try {

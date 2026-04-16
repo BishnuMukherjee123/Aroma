@@ -13,6 +13,17 @@ import {
   WebGLRenderer,
 } from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader.js";
+
+const createLoaderWithDraco = () => {
+  const loader = new GLTFLoader();
+  const dracoLoader = new DRACOLoader();
+  dracoLoader.setDecoderPath(
+    "https://www.gstatic.com/draco/versioned/decoders/1.5.7/",
+  );
+  loader.setDRACOLoader(dracoLoader);
+  return loader;
+};
 
 const POSTER_SIZE = 768;
 
@@ -92,7 +103,7 @@ export const generateModelPosterFromFile = async (
   const fileUrl = URL.createObjectURL(modelFile);
 
   try {
-    const loader = new GLTFLoader();
+    const loader = createLoaderWithDraco();
     const gltf = await loader.loadAsync(fileUrl);
     return createPosterFileFromThreeScene(gltf.scene, modelFile.name);
   } finally {
@@ -104,7 +115,7 @@ export const generateModelPosterFromUrl = async (
   modelUrl: string,
   fileName: string,
 ): Promise<File> => {
-  const loader = new GLTFLoader();
+  const loader = createLoaderWithDraco();
   const gltf = await loader.loadAsync(modelUrl);
   return createPosterFileFromThreeScene(gltf.scene, fileName);
 };
