@@ -444,7 +444,7 @@ export function PublicArViewer({
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#08090c] px-6 py-10 public-ar-viewer">
+    <div className="relative min-h-screen overflow-hidden bg-[#08090c] public-ar-viewer">
       <Script
         src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"
         type="module"
@@ -457,6 +457,9 @@ export function PublicArViewer({
         }}
       />
 
+      {/* model-viewer — full-screen, reveal="manual" means only the poster (thumbnail)
+          shows as background. The 3D canvas never renders on the gate screen.
+          No blocking overlays needed, so Chrome can correctly detect WebXR support. */}
       {selectedDish?.modelUrl ? (
         <model-viewer
           ref={(node) => {
@@ -467,35 +470,33 @@ export function PublicArViewer({
           poster={
             selectedDish.posterUrl ?? selectedDish.thumbnailUrl ?? undefined
           }
+          reveal="manual"
           ar
-          ar-modes={arModes}
-          ar-scale="fixed"
+          ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
           xr-environment
-          camera-controls
-          auto-rotate
-          rotation-per-second="20deg"
           touch-action="pan-y"
           loading="eager"
           className="fixed inset-0 z-0 h-full w-full"
         >
+          {/* Hide native AR button — we use our custom button via activateAR() */}
           <div slot="ar-button" className="hidden" />
+          {/* "Tap a surface" prompt — shown by model-viewer during WebXR placement */}
           <div slot="ar-prompt" className="ar-prompt-chip">
             <span className="text-lg">☝️</span>
             <span>Tap a surface to place the dish</span>
           </div>
+          {/* Dish name badge — shown during AR session */}
           {selectedDish ? (
             <div className="ar-dish-badge">{selectedDish.name}</div>
           ) : null}
         </model-viewer>
       ) : null}
 
-      {/* This solid black layer covers the model-viewer completely on the gate screen.
-          It has no pointer-events so WebXR can still receive interaction once launched. */}
-      <div className="pointer-events-none fixed inset-0 z-10 bg-[#08090c]" />
-
+      {/* Gate / Error screen — dark translucent overlay over the poster thumbnail.
+          No z-index tricks blocking WebXR. */}
       {showGateScreen ? (
-        <div className="relative z-20 flex min-h-[calc(100vh-5rem)] w-full items-center justify-center px-4">
+        <div className="fixed inset-0 z-10 flex items-center justify-center bg-gradient-to-b from-black/85 via-black/70 to-black/85 px-4">
           <div className="w-full max-w-[21rem] rounded-[1.75rem] border border-white/10 bg-white/[0.04] px-6 py-8 text-center text-white shadow-[0_22px_44px_rgba(0,0,0,0.5)] backdrop-blur-xl md:max-w-md md:rounded-[2rem] md:px-8 md:py-10">
             <p className="text-[1.7rem] font-black tracking-[0.12em] text-white md:text-[2.2rem]">
               AROMA AR
@@ -521,7 +522,7 @@ export function PublicArViewer({
               {isLaunchPending ? (
                 <>
                   <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Preparing AR Menu...
+                  Preparing AR...
                 </>
               ) : (
                 <>
@@ -599,3 +600,4 @@ export function PublicArViewer({
     </div>
   );
 }
+
