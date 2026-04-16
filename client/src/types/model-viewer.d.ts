@@ -16,6 +16,7 @@ declare module "react" {
         "ar-scale"?: string;
         "ar-placement"?: string;
         scale?: string;
+        "disable-zoom"?: boolean;
         "xr-environment"?: boolean;
         "camera-controls"?: boolean;
         "touch-action"?: string;
