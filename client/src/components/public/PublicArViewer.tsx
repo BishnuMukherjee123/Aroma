@@ -475,7 +475,7 @@ export function PublicArViewer({
           poster={undefined}
           reveal="auto"
           ar
-          ar-modes="webxr scene-viewer quick-look"
+          ar-modes="webxr quick-look"
           ar-placement="floor"
           ar-scale="fixed"
           scale="2.5 2.5 2.5"
