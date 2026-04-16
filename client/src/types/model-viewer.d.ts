@@ -23,6 +23,9 @@ declare module "react" {
         "min-field-of-view"?: string;
         "max-field-of-view"?: string;
         "interpolation-decay"?: number;
+        "camera-orbit"?: string;
+        "min-camera-orbit"?: string;
+        "max-camera-orbit"?: string;
         "touch-action"?: string;
         exposure?: string;
         shadowIntensity?: string;

@@ -477,9 +477,12 @@ export function PublicArViewer({
           ar
           ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
-          ar-scale="auto"
+          ar-scale="fixed"
           scale="3 3 3"
           shadow-intensity="1.5"
+          camera-orbit="0deg 75deg 100%"
+          min-camera-orbit="auto auto 100%"
+          max-camera-orbit="auto auto 100%"
           field-of-view="45deg"
           min-field-of-view="45deg"
           max-field-of-view="45deg"
