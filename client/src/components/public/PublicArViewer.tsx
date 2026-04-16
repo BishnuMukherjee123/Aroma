@@ -478,7 +478,7 @@ export function PublicArViewer({
           ar-modes="webxr quick-look"
           ar-placement="floor"
           ar-scale="auto"
-          scale="2 2 2"
+          scale="3 3 3"
           disable-zoom
           xr-environment
           touch-action="pan-y"
