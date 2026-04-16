@@ -479,6 +479,7 @@ export function PublicArViewer({
           ar-placement="floor"
           ar-scale="auto"
           scale="2 2 2"
+          disable-zoom
           xr-environment
           touch-action="pan-y"
           loading="eager"
