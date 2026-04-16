@@ -19,6 +19,10 @@ declare module "react" {
         "disable-zoom"?: boolean;
         "xr-environment"?: boolean;
         "camera-controls"?: boolean;
+        "field-of-view"?: string;
+        "min-field-of-view"?: string;
+        "max-field-of-view"?: string;
+        "interpolation-decay"?: number;
         "touch-action"?: string;
         exposure?: string;
         shadowIntensity?: string;
