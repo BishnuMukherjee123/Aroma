@@ -473,14 +473,14 @@ export function PublicArViewer({
           src={selectedDish.modelUrl}
           alt={selectedDish.name}
           poster={undefined}
-          reveal="manual"
+          reveal="auto"
           ar
           ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
           xr-environment
           touch-action="pan-y"
           loading="eager"
-          className="fixed inset-0 z-0 h-full w-full"
+          className={`fixed inset-0 z-0 h-full w-full pointer-events-none ${showGateScreen ? "opacity-0" : "opacity-100"}`}
         >
           <div slot="ar-button" className="hidden" />
           <div slot="ar-prompt" className="ar-prompt-chip">
