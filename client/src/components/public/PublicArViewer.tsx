@@ -59,9 +59,9 @@ const getLaunchCopy = (profile: DeviceProfile) => {
     case "android":
       return {
         headline:
-          "We need access to your camera and motion sensors to display dishes on your table.",
+          "See how your food looks on your table before you order.",
         helper:
-          "Chrome on Android will keep this AR flow inside the browser when WebXR is available.",
+          "Scan the floor slowly and look for textures like rugs or patterns for the best stability.",
         launchLabel: "Launch AR Experience",
         error:
           "Chrome on Android gives the best AR result. Check camera permission and try again.",
@@ -69,9 +69,9 @@ const getLaunchCopy = (profile: DeviceProfile) => {
     case "ios":
       return {
         headline:
-          "We need access to your camera to open the dish in Quick Look and place it in your space.",
+          "See how your favorite dishes look on your table in 3D.",
         helper:
-          "Safari on iPhone or iPad gives the best result for Quick Look AR.",
+          "Aim at a well-lit floor and keep your phone steady to anchor the dish.",
         launchLabel: "Launch AR Experience",
         error:
           "Quick Look did not open. Try Safari on iPhone or iPad and allow camera access.",
@@ -475,10 +475,11 @@ export function PublicArViewer({
           poster={undefined}
           reveal="auto"
           ar
-          ar-modes="webxr quick-look"
+          ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
           ar-scale="auto"
           scale="3 3 3"
+          shadow-intensity="1.5"
           disable-zoom
           xr-environment
           touch-action="pan-y"
