@@ -478,7 +478,7 @@ export function PublicArViewer({
           ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
           ar-scale="auto"
-          scale="1.5 1.5 1.5"
+          scale="2 2 2"
           xr-environment
           touch-action="pan-y"
           loading="eager"
