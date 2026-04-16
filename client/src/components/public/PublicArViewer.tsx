@@ -375,7 +375,7 @@ export function PublicArViewer({
     };
   }, []);
 
-  const handleLaunchAr = useCallback(async () => {
+  const handleLaunchAr = useCallback(() => {
     if (!selectedDish?.modelUrl) {
       setLaunchError("This dish is still waiting for its 3D model.");
       setArStage("error");
@@ -403,18 +403,22 @@ export function PublicArViewer({
       return;
     }
 
+    // THE FIX FOR WEBXR:
+    // activateAR() MUST be called synchronously in the click handler!
+    // If we trigger React states/awaits before calling it, Chrome loses the 
+    // "user gesture" context and silently falls back to Scene Viewer.
+    try {
+      void viewer.activateAR();
+    } catch {
+      setLaunchError("AR could not open right now. Check camera permissions.");
+      setArStage("error");
+      setIsLaunchPending(false);
+      return;
+    }
+
+    // Update state only after the synchronous call
     setLaunchError(null);
     setIsLaunchPending(true);
-
-    try {
-      await viewer.activateAR();
-    } catch {
-      setIsLaunchPending(false);
-      setLaunchError(
-        "AR could not open right now. Check camera permission and try again.",
-      );
-      setArStage("error");
-    }
   }, [deviceProfile, launchCopy.error, scriptState, selectedDish]);
 
   if (pageError || !restaurant) {
@@ -444,7 +448,7 @@ export function PublicArViewer({
   }
 
   return (
-    <div className="relative min-h-screen bg-[#08090c] public-ar-viewer">
+    <div className="relative min-h-screen overflow-hidden bg-[#08090c] public-ar-viewer">
       <Script
         src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js"
         type="module"
@@ -457,13 +461,9 @@ export function PublicArViewer({
         }}
       />
 
-      {/*
-        THE KEY FIX: model-viewer is full-screen with reveal="manual" (shows only poster).
-        We use the native slot="ar-button" — NOT programmatic activateAR().
-        WebXR requires a DIRECT user gesture (touch → camera permission).
-        Calling activateAR() from a React callback chain breaks the gesture chain,
-        causing Chrome to silently fall back to Scene Viewer (native app).
-        With the native button, the gesture flows directly: tap → WebXR session → in-browser camera.
+      {/* 
+        This is fully transparent because poster is undefined.
+        It sits full-screen so WebXR can detect it, but it doesn't block the UI or show the 3D model.
       */}
       {selectedDish?.modelUrl ? (
         <model-viewer
@@ -472,122 +472,89 @@ export function PublicArViewer({
           }}
           src={selectedDish.modelUrl}
           alt={selectedDish.name}
-          poster={
-            selectedDish.posterUrl ?? selectedDish.thumbnailUrl ?? undefined
-          }
+          poster={undefined}
           reveal="manual"
           ar
           ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
           xr-environment
+          touch-action="pan-y"
           loading="eager"
           className="fixed inset-0 z-0 h-full w-full"
         >
-          {/* Native AR button — direct user gesture, no JS indirection */}
-          <button
-            slot="ar-button"
-            disabled={!hasModel || deviceProfile === "desktop"}
-            className="ar-launch-btn"
-          >
-            <span className="ar-launch-icon">view_in_ar</span>
-            {hasModel ? launchCopy.launchLabel : "No AR model for this dish"}
-          </button>
-
-          {/* "Tap a surface" prompt shown by model-viewer while scanning for surfaces */}
+          <div slot="ar-button" className="hidden" />
           <div slot="ar-prompt" className="ar-prompt-chip">
-            <span>☝️</span>
+            <span className="text-lg">☝️</span>
             <span>Tap a surface to place the dish</span>
           </div>
-
-          {/* Dish name badge shown during active AR session */}
           {selectedDish ? (
             <div className="ar-dish-badge">{selectedDish.name}</div>
           ) : null}
         </model-viewer>
       ) : null}
 
-      {/* AROMA AR info card — sits at top of screen, leaves bottom clear for Launch button.
-          Hides automatically when AR session is active (arStage changes to "placing"). */}
       {showGateScreen ? (
-        <div className="pointer-events-none fixed inset-x-0 top-0 z-10 flex flex-col items-center px-4 pt-14">
-          <div className="pointer-events-auto w-full max-w-[21rem] rounded-[1.75rem] border border-white/10 bg-black/75 px-6 py-6 text-center text-white shadow-[0_22px_44px_rgba(0,0,0,0.6)] backdrop-blur-xl">
-            <p className="text-[1.7rem] font-black tracking-[0.12em] md:text-[2.2rem]">
+        <div className="relative z-20 flex min-h-[calc(100vh-5rem)] w-full items-center justify-center px-4">
+          <div className="w-full max-w-[21rem] rounded-[1.75rem] border border-white/10 bg-white/[0.04] px-6 py-8 text-center text-white shadow-[0_22px_44px_rgba(0,0,0,0.5)] backdrop-blur-xl md:max-w-md md:rounded-[2rem] md:px-8 md:py-10">
+            <p className="text-[1.7rem] font-black tracking-[0.12em] text-white md:text-[2.2rem]">
               AROMA AR
             </p>
-            <p className="mt-2 text-[0.9rem] leading-relaxed text-white/70">
+            <p className="mt-3 text-[0.95rem] leading-relaxed text-white/70 md:mt-5 md:text-[1.1rem]">
               {launchCopy.headline}
             </p>
 
             {arStage === "error" && launchError ? (
-              <p className="mt-3 rounded-[0.85rem] border border-white/10 bg-black/30 px-4 py-2.5 text-sm leading-6 text-white/90">
+              <p className="mt-5 rounded-[0.85rem] border border-white/10 bg-black/30 px-4 py-3 text-sm leading-6 text-white/90 shadow-inner">
                 {launchError}
               </p>
             ) : null}
 
+            <button
+              type="button"
+              onClick={handleLaunchAr}
+              disabled={
+                !hasModel || deviceProfile === "desktop" || isLaunchPending
+              }
+              className="mt-7 flex w-full items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3.5 text-[0.95rem] font-bold text-white shadow-[0_12px_24px_rgba(182,23,34,0.22)] transition-all active:scale-[0.96] hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:bg-white/10 disabled:bg-none disabled:text-white/40 disabled:shadow-none md:mt-8 md:rounded-[1.2rem] md:px-5 md:py-4 md:text-[1.05rem]"
+            >
+              {isLaunchPending ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Preparing AR Menu...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined text-[1.2rem] md:text-lg">
+                    view_in_ar
+                  </span>
+                  {hasModel
+                    ? launchCopy.launchLabel
+                    : "No AR model for this dish"}
+                </>
+              )}
+            </button>
+
             {selectedDish ? (
-              <div className="mt-4 inline-flex items-center rounded-full bg-white/10 px-3 py-1.5 text-sm font-semibold text-white/90">
+              <div className="mt-6 inline-flex items-center rounded-full bg-white/8 px-4 py-2 text-sm font-semibold text-white/88">
                 {selectedDish.name}
               </div>
             ) : null}
 
-            <p className="mt-3 text-xs leading-5 text-white/50">
+            <p className="mt-4 text-sm leading-7 text-white/58">
               {launchCopy.helper}
             </p>
-          </div>
 
-          <Link
-            href={`/r/${restaurant.publicId}`}
-            className="pointer-events-auto mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-black/50 px-4 py-2 text-sm font-semibold text-white/80 backdrop-blur-sm transition-colors hover:text-white"
-          >
-            ← Back to menu
-          </Link>
+            <Link
+              href={`/r/${restaurant.publicId}`}
+              className="mt-6 inline-flex text-sm font-semibold text-white/70 transition-colors hover:text-white"
+            >
+              Back to menu
+            </Link>
+          </div>
         </div>
       ) : null}
 
       <style jsx global>{`
-        /* ── Native AR launch button ────────────────────────────────────── */
-        .public-ar-viewer .ar-launch-btn {
-          position: absolute;
-          bottom: 40px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: calc(100% - 48px);
-          max-width: 320px;
-          background: linear-gradient(135deg, #b61722 0%, #8c141f 100%);
-          color: white;
-          font-weight: 800;
-          font-size: 0.95rem;
-          padding: 14px 20px;
-          border-radius: 16px;
-          border: none;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          gap: 8px;
-          box-shadow: 0 12px 28px rgba(182, 23, 34, 0.32);
-          font-family: inherit;
-          letter-spacing: 0.02em;
-          transition: transform 0.15s, box-shadow 0.15s;
-        }
-        .public-ar-viewer .ar-launch-btn:active {
-          transform: translateX(-50%) scale(0.96);
-          box-shadow: 0 6px 14px rgba(182, 23, 34, 0.22);
-        }
-        .public-ar-viewer .ar-launch-btn:disabled {
-          background: rgba(255, 255, 255, 0.1);
-          color: rgba(255, 255, 255, 0.4);
-          box-shadow: none;
-          cursor: not-allowed;
-        }
-        .public-ar-viewer .ar-launch-icon {
-          font-family: "Material Symbols Outlined";
-          font-size: 1.2rem;
-          font-weight: 400;
-          font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-        }
-
-        /* ── "Tap a surface" prompt ─────────────────────────────────────── */
         .public-ar-viewer .ar-prompt-chip {
           display: inline-flex;
           align-items: center;
