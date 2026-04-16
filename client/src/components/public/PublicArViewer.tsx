@@ -274,9 +274,8 @@ export function PublicArViewer({
     switch (deviceProfile) {
       case "android":
       case "mobile-web":
-        return "webxr";
       case "ios":
-        return "quick-look";
+        return "webxr";
       default:
         return "webxr";
     }
@@ -478,7 +477,7 @@ export function PublicArViewer({
           rotation-per-second="20deg"
           touch-action="pan-y"
           loading="eager"
-          className="absolute inset-0 z-0 h-full w-full"
+          style={{ position: "fixed", left: "-9999px", top: "0", width: "1px", height: "1px" }}
         >
           <div slot="ar-button" className="hidden" />
           <div slot="ar-prompt" className="ar-prompt-chip">
