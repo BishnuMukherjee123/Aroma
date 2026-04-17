@@ -444,7 +444,13 @@ function TopArCard({
   const prefetchModel = useCallback(() => {
     if (prefetchedRef.current || !dish.modelUrl) return;
     prefetchedRef.current = true;
-    fetch(dish.modelUrl, { mode: "cors", credentials: "omit" }).catch(() => {});
+    
+    const link = document.createElement("link");
+    link.rel = "prefetch";
+    link.as = "fetch";
+    link.crossOrigin = "anonymous";
+    link.href = dish.modelUrl;
+    document.head.appendChild(link);
   }, [dish.modelUrl]);
 
   // Reset launching state when returning to this page via the browser back button (BFCache)
@@ -645,7 +651,7 @@ function ArPreviewInCard({
       mv.style.background = "transparent";
       mv.setAttribute("reveal", "auto"); // Ensure it renders immediately
 
-      const handleLoad = () => setTimeout(() => onLoadedRef.current(), 1500);
+      const handleLoad = () => onLoadedRef.current();
       mv.addEventListener("load", handleLoad, { once: true });
       container.appendChild(mv);
     });
