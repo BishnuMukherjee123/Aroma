@@ -436,6 +436,7 @@ function TopArCard({
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [arError, setArError] = useState<string | null>(null);
   const [isArLaunching, setIsArLaunching] = useState(false);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const prefetchedRef = useRef(false);
 
   // Starts the GLB download into the browser HTTP cache.
@@ -445,12 +446,13 @@ function TopArCard({
     if (prefetchedRef.current || !dish.modelUrl) return;
     prefetchedRef.current = true;
     
-    const link = document.createElement("link");
-    link.rel = "prefetch";
-    link.as = "fetch";
-    link.crossOrigin = "anonymous";
-    link.href = dish.modelUrl;
-    document.head.appendChild(link);
+    // Download into RAM bypassing any 304 network round-trips
+    fetch(dish.modelUrl)
+      .then((res) => res.blob())
+      .then((blob) => {
+        setBlobUrl(URL.createObjectURL(blob));
+      })
+      .catch(() => {});
   }, [dish.modelUrl]);
 
   // Reset launching state when returning to this page via the browser back button (BFCache)
@@ -493,7 +495,7 @@ function TopArCard({
         {/* Live 3D model — only mounts after first tap */}
         {dish.modelUrl && isPreviewActivated ? (
           <ArPreviewInCard
-            modelUrl={dish.modelUrl}
+            modelUrl={blobUrl || dish.modelUrl}
             alt={dish.name}
             onLoaded={() => setIsModelLoaded(true)}
           />
