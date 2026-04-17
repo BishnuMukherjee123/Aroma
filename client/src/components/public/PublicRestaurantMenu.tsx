@@ -631,7 +631,6 @@ function ArPreviewInCard({
       mv.setAttribute("environment-image", "neutral");
       mv.setAttribute("exposure", "1");
       mv.setAttribute("shadow-intensity", "1");
-      mv.setAttribute("shadow-softness", "1");
       mv.setAttribute("camera-controls", "");
       mv.setAttribute("auto-rotate", "");
       mv.setAttribute("auto-rotate-delay", "0");
