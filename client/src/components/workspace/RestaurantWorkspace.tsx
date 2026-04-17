@@ -35,10 +35,6 @@ import {
   getWorkspacePath,
   type PortalVariant,
 } from "@/lib/portal";
-import {
-  generateModelPosterFromFile,
-  generateModelPosterFromUrl,
-} from "@/lib/model-poster";
 import { cn } from "@/lib/utils";
 import { ReadinessCard } from "./ReadinessCard";
 import { WorkspaceHeader } from "./WorkspaceHeader";
@@ -228,9 +224,6 @@ const getMimeTypeForModel = (file: File) =>
     ? "model/gltf+json"
     : "model/gltf-binary");
 
-const getPosterFileName = (sourceName: string) =>
-  `${sourceName.replace(/\.(glb|gltf)$/i, "").trim() || "dish-model"}-poster.webp`;
-
 export function RestaurantWorkspace({
   restaurantId,
   portalVariant = "owner",
@@ -290,10 +283,6 @@ export function RestaurantWorkspace({
     null,
   );
   const [isSubmittingActionDialog, setIsSubmittingActionDialog] = useState(false);
-  const [isBackfillingPoster, setIsBackfillingPoster] = useState(false);
-  const [isGeneratingMissingPosters, setIsGeneratingMissingPosters] =
-    useState(false);
-  const posterBackfillAttemptsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (session.status !== "authenticated") {
@@ -407,15 +396,6 @@ export function RestaurantWorkspace({
   );
 
   const dishRows = useMemo(() => flattenDishes(allCategorySections), [allCategorySections]);
-  const dishesMissingPoster = useMemo(
-    () =>
-      dishRows.filter((dish) => {
-        const modelAsset = getAssetByKind(dish.assets, "MODEL_3D");
-        const posterAsset = getAssetByKind(dish.assets, "POSTER");
-        return modelAsset?.status === "READY" && !posterAsset;
-      }),
-    [dishRows],
-  );
 
   const selectedDish =
     dishRows.find((dish) => dish.id === selectedDishId) ?? dishRows[0] ?? null;
@@ -574,67 +554,6 @@ export function RestaurantWorkspace({
       window.removeEventListener("keydown", handleEscape);
     };
   }, [actionDialog, isComposerVisible, isSubmittingActionDialog]);
-
-  useEffect(() => {
-    if (
-      session.status !== "authenticated" ||
-      !restaurant ||
-      isBackfillingPoster ||
-      isGeneratingMissingPosters
-    ) {
-      return;
-    }
-
-    const dishesToBackfill = dishesMissingPoster.filter(
-      (dish) => !posterBackfillAttemptsRef.current.has(dish.id),
-    );
-
-    if (dishesToBackfill.length === 0) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const backfillPoster = async () => {
-      setIsBackfillingPoster(true);
-
-      try {
-        for (const dish of dishesToBackfill) {
-          if (cancelled) {
-            return;
-          }
-
-          posterBackfillAttemptsRef.current.add(dish.id);
-        }
-
-        await generateMissingPosters(dishesToBackfill, { silent: true });
-      } catch (error) {
-        if (!cancelled) {
-          console.warn(
-            error instanceof Error
-              ? error.message
-              : "Unable to auto-generate missing posters.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsBackfillingPoster(false);
-        }
-      }
-    };
-
-    void backfillPoster();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    dishesMissingPoster,
-    isBackfillingPoster,
-    isGeneratingMissingPosters,
-    restaurant,
-    session,
-  ]);
 
   const currentMembership =
     session.status === "authenticated"
@@ -806,95 +725,9 @@ export function RestaurantWorkspace({
     dishes: DishRow[],
     options: { silent?: boolean } = {},
   ): Promise<void> {
-    if (session.status !== "authenticated" || dishes.length === 0) {
-      return;
-    }
-
-    const { silent = false } = options;
-
-    if (!silent) {
-      setIsGeneratingMissingPosters(true);
-      setComposerProgress("Generating missing posters...");
-    }
-
-    try {
-      for (const dish of dishes) {
-        const latestDetails =
-          restaurant?.id === restaurantId
-            ? restaurant
-            : await fetchRestaurant(session.token, restaurantId);
-
-        const latestDish = latestDetails
-          ? flattenDishes(
-              latestDetails.menus.flatMap((menu) =>
-                [...getMainMenuCategories(menu)]
-                  .sort(
-                    (left, right) =>
-                      left.sortOrder - right.sortOrder ||
-                      left.name.localeCompare(right.name),
-                  )
-                  .map((category) => ({
-                    ...category,
-                    mainMenuId: menu.id,
-                    mainMenuName: menu.name,
-                    dishes: [...category.dishes].sort(
-                      (left, right) =>
-                        left.sortOrder - right.sortOrder ||
-                        left.name.localeCompare(right.name),
-                    ),
-                  })),
-              ),
-            ).find((entry) => entry.id === dish.id)
-          : null;
-
-        const modelAsset = latestDish
-          ? getAssetByKind(latestDish.assets, "MODEL_3D")
-          : getAssetByKind(dish.assets, "MODEL_3D");
-        const posterAsset = latestDish
-          ? getAssetByKind(latestDish.assets, "POSTER")
-          : getAssetByKind(dish.assets, "POSTER");
-
-        if (posterAsset || modelAsset?.status !== "READY" || !modelAsset.url) {
-          continue;
-        }
-
-        if (!silent) {
-          setComposerProgress(`Generating poster for ${dish.name}...`);
-        }
-
-        const posterFile = await generateModelPosterFromUrl(
-          modelAsset.url,
-          getPosterFileName(modelAsset.storageKey || `${dish.name}.glb`),
-        );
-
-        await uploadPosterAssetForDish(dish.id, posterFile);
-        posterBackfillAttemptsRef.current.add(dish.id);
-
-        const refreshed = await fetchRestaurant(session.token, restaurantId);
-        setRestaurant(refreshed);
-      }
-
-      if (!silent) {
-        pushToast("Missing posters generated successfully.", "success");
-      }
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to generate missing posters.";
-
-      if (!silent) {
-        setComposerMessage(message);
-        pushToast(message, "error");
-      } else {
-        console.warn(message);
-      }
-    } finally {
-      if (!silent) {
-        setIsGeneratingMissingPosters(false);
-        setComposerProgress(null);
-      }
-    }
+    // Feature disabled — poster generation is now strictly server-side
+    // or through the npm run posters:backfill command script.
+    return;
   }
 
   const closeActionDialog = () => {
@@ -2662,21 +2495,6 @@ export function RestaurantWorkspace({
             </div>
 
             <div className="flex flex-wrap items-center gap-3">
-              {dishesMissingPoster.length > 0 ? (
-                <button
-                  type="button"
-                  onClick={() => void generateMissingPosters(dishesMissingPoster)}
-                  disabled={isGeneratingMissingPosters}
-                  className="inline-flex items-center gap-2 rounded-full bg-surface-container-low px-4 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface shadow-[0_8px_20px_rgba(18,28,42,0.04)] transition-colors hover:bg-surface-container disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {isGeneratingMissingPosters ? (
-                    <span className="spinner-sm border-primary/25 border-t-primary" />
-                  ) : null}
-                  Generate {dishesMissingPoster.length} missing poster
-                  {dishesMissingPoster.length === 1 ? "" : "s"}
-                </button>
-              ) : null}
-
               <div className="rounded-full bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant shadow-[0_8px_20px_rgba(18,28,42,0.04)]">
                 {dishRows.length} Item{dishRows.length === 1 ? "" : "s"}
               </div>
