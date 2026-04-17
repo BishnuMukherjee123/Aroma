@@ -631,6 +631,7 @@ function ArPreviewInCard({
       mv.setAttribute("environment-image", "neutral");
       mv.setAttribute("exposure", "1");
       mv.setAttribute("shadow-intensity", "1");
+      mv.setAttribute("shadow-softness", "1");
       mv.setAttribute("camera-controls", "");
       mv.setAttribute("auto-rotate", "");
       mv.setAttribute("auto-rotate-delay", "0");
@@ -643,8 +644,9 @@ function ArPreviewInCard({
       mv.style.setProperty("--poster-color", "transparent");
       mv.style.setProperty("--progress-bar-height", "0px");
       mv.style.background = "transparent";
+      mv.setAttribute("reveal", "auto"); // Ensure it renders immediately
 
-      const handleLoad = () => onLoadedRef.current();
+      const handleLoad = () => setTimeout(() => onLoadedRef.current(), 1500);
       mv.addEventListener("load", handleLoad, { once: true });
       container.appendChild(mv);
     });

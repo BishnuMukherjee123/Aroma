@@ -90,6 +90,7 @@ const createPosterHtml = (modelUrl: string, alt: string): string =>
       environment-image="neutral"
       exposure="1"
       shadow-intensity="1"
+      shadow-softness="1"
       camera-orbit="0deg 82deg auto"
       field-of-view="28deg"
       min-camera-orbit="auto auto auto"

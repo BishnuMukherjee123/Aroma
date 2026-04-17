@@ -1099,10 +1099,6 @@ export function RestaurantWorkspace({
         mimeType: modelUpload.upload.headers["Content-Type"],
       });
       await completeAssetUpload(session.token, modelUpload.asset.id);
-
-      setComposerProgress("Generating 3D poster...");
-      const posterFile = await generateModelPosterFromFile(composerModelFile);
-      await uploadPosterAssetForDish(dishId, posterFile);
     }
 
     if (composerThumbnailFile) {
