@@ -502,6 +502,16 @@ export function PublicArViewer({
             className="hidden"
           />
           <div className="ar-controls-overlay">
+            <button
+              type="button"
+              className="ar-back-btn"
+              onClick={() => {
+                window.location.href = `/r/${publicId}`;
+              }}
+            >
+              <span className="material-symbols-outlined">arrow_back</span>
+              Main Menu
+            </button>
             <button 
               type="button"
               className="ar-reset-btn"
@@ -625,7 +635,7 @@ export function PublicArViewer({
           display: inline-flex;
         }
 
-        /* ── AR Control Overlay (Reset Button) ────────────────────────── */
+        /* ── AR Control Overlay (Back + Reset Buttons) ──────────────────── */
         .public-ar-viewer .ar-controls-overlay {
           position: absolute;
           bottom: 2rem;
@@ -633,13 +643,17 @@ export function PublicArViewer({
           transform: translateX(-50%);
           z-index: 100;
           display: none;
+          flex-direction: row;
+          align-items: center;
+          gap: 0.75rem;
         }
 
         .public-ar-viewer model-viewer[ar-status="session-started"] .ar-controls-overlay,
         .public-ar-viewer model-viewer[ar-status="object-placed"] .ar-controls-overlay {
-          display: block;
+          display: flex;
         }
 
+        .public-ar-viewer .ar-back-btn,
         .public-ar-viewer .ar-reset-btn {
           display: flex;
           align-items: center;
@@ -656,13 +670,16 @@ export function PublicArViewer({
           -webkit-backdrop-filter: blur(12px);
           cursor: pointer;
           transition: all 0.2s ease;
+          white-space: nowrap;
         }
 
+        .public-ar-viewer .ar-back-btn:active,
         .public-ar-viewer .ar-reset-btn:active {
           scale: 0.95;
           background: rgba(18, 20, 25, 0.95);
         }
 
+        .public-ar-viewer .ar-back-btn span,
         .public-ar-viewer .ar-reset-btn span {
           font-size: 1.2rem;
         }
