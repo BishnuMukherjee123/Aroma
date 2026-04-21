@@ -509,8 +509,8 @@ export function PublicArViewer({
                 window.location.href = `/r/${publicId}`;
               }}
             >
-              <span className="material-symbols-outlined">arrow_back</span>
-              Main Menu
+              <span className="material-symbols-outlined">list_alt</span>
+              Menu
             </button>
             <button 
               type="button"
