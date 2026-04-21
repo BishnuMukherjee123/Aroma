@@ -502,16 +502,6 @@ export function PublicArViewer({
             className="hidden"
           />
           <div className="ar-controls-overlay">
-            <button
-              type="button"
-              className="ar-back-btn"
-              onClick={() => {
-                window.location.href = `/r/${publicId}`;
-              }}
-            >
-              <span className="material-symbols-outlined">list_alt</span>
-              Menu
-            </button>
             <button 
               type="button"
               className="ar-reset-btn"
@@ -525,6 +515,16 @@ export function PublicArViewer({
             >
               <span className="material-symbols-outlined">refresh</span>
               Reset
+            </button>
+            <button
+              type="button"
+              className="ar-back-btn"
+              onClick={() => {
+                window.location.href = `/r/${publicId}`;
+              }}
+            >
+              <span className="material-symbols-outlined">list_alt</span>
+              Menu
             </button>
           </div>
           {selectedDish ? (
@@ -682,6 +682,15 @@ export function PublicArViewer({
         .public-ar-viewer .ar-back-btn span,
         .public-ar-viewer .ar-reset-btn span {
           font-size: 1.2rem;
+        }
+
+        .public-ar-viewer .ar-reset-btn {
+          background: rgba(185, 28, 28, 0.88);
+          border-color: rgba(255, 255, 255, 0.18);
+        }
+
+        .public-ar-viewer .ar-reset-btn:active {
+          background: rgba(153, 20, 20, 0.97);
         }
       `}</style>
     </div>
