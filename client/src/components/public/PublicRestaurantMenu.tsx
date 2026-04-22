@@ -20,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ensureModelViewerScript } from "@/lib/model-viewer";
 import Lenis from 'lenis';
+import { useGLTF } from "@react-three/drei";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -434,25 +435,34 @@ const TopArCard = memo(function TopArCard({
 }) {
   const [isPreviewActivated, setIsPreviewActivated] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
-  const [arError, setArError] = useState<string | null>(null);
   const [isArLaunching, setIsArLaunching] = useState(false);
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [isIntersecting, setIsIntersecting] = useState(false);
   const prefetchedRef = useRef(false);
+  const cardRef = useRef<HTMLElement>(null);
 
-  // Starts the GLB download into the browser HTTP cache.
-  // Only fires once (guarded by prefetchedRef).
-  // Triggered by: touch, hover, or tap — never automatically on page load.
+  // Intersection Observer to completely deactivate WebGL when off-screen
+  useEffect(() => {
+    if (!cardRef.current) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      setIsIntersecting(entry.isIntersecting);
+      
+      // If the card is completely off-screen, reset the 3D preview.
+      // This forces it to show the poster picture again, requiring another tap to load 3D.
+      if (!entry.isIntersecting) {
+        setIsPreviewActivated(false);
+        setIsModelLoaded(false);
+      }
+    }, { rootMargin: "0px" }); // Trigger the exact moment it leaves the screen
+    observer.observe(cardRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Highly optimized WebWorker-based prefetching
+  // Bypasses main thread entirely and uses Draco/ThreeJS native caching
   const prefetchModel = useCallback(() => {
     if (prefetchedRef.current || !dish.modelUrl) return;
     prefetchedRef.current = true;
-    
-    // Download into RAM bypassing any 304 network round-trips
-    fetch(dish.modelUrl)
-      .then((res) => res.blob())
-      .then((blob) => {
-        setBlobUrl(URL.createObjectURL(blob));
-      })
-      .catch(() => {});
+    useGLTF.preload(dish.modelUrl, "https://www.gstatic.com/draco/versioned/decoders/1.5.7/");
   }, [dish.modelUrl]);
 
   // Reset launching state when returning to this page via the browser back button (BFCache)
@@ -478,6 +488,7 @@ const TopArCard = memo(function TopArCard({
 
   return (
     <article
+      ref={cardRef}
       onPointerEnter={prefetchModel}
       onTouchStart={() => {
         prefetchModel();
@@ -491,10 +502,10 @@ const TopArCard = memo(function TopArCard({
       {/* ── 3D Preview / Image Area (Inset Framed) ─────────────────────────────── */}
       <div className="pt-[2.3%] px-[2.3%] md:pt-[4%] md:px-[4%] w-full">
         <div className="relative aspect-square md:aspect-auto md:h-64 w-full overflow-hidden bg-surface-container-lowest rounded-2xl">
-        {/* Live 3D model — only mounts after first tap */}
-        {dish.modelUrl && isPreviewActivated ? (
+        {/* Live 3D model — only mounts if tapped AND visible on screen */}
+        {dish.modelUrl && isPreviewActivated && isIntersecting ? (
           <ArPreviewInCard
-            modelUrl={blobUrl || dish.modelUrl}
+            modelUrl={dish.modelUrl}
             alt={dish.name}
             onLoaded={() => setIsModelLoaded(true)}
           />
@@ -583,12 +594,6 @@ const TopArCard = memo(function TopArCard({
           {dish.description || "Experience this dish in your own space before you order."}
         </p>
         
-        {arError ? (
-          <p className="mb-4 rounded-[0.75rem] border border-error/20 bg-error/10 px-3 py-2 text-xs font-medium text-error">
-            {arError}
-          </p>
-        ) : null}
-
         <div className="flex flex-col gap-5 mt-auto">
           <span className="text-2xl font-bold text-on-surface font-sans">
             {formatPrice(dish.price, dish.currency).replace('.00', '')}
