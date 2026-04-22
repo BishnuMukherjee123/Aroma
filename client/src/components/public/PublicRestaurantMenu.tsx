@@ -225,42 +225,49 @@ export function PublicRestaurantMenu({
 
     rafId = requestAnimationFrame(raf);
 
-    // Header Height Measurement
+    // Performance Optimization: Cache measurements so we don't recalculate on every scroll frame
+    let cachedThreshold = 0;
+    let isHidden = false; // local sync to avoid React re-render overhead on every frame
+
     const updateMeasurements = () => {
       if (headerRef.current) {
-        setHeaderHeight(headerRef.current.offsetHeight);
+        const navHeight = headerRef.current.offsetHeight;
+        setHeaderHeight(navHeight);
+        
+        if (titleRef.current) {
+          const rect = titleRef.current.getBoundingClientRect();
+          // Absolute midpoint from the very top of the document
+          const absoluteMidpoint = rect.top + window.scrollY + (rect.height / 2);
+          cachedThreshold = absoluteMidpoint - navHeight;
+        }
       }
     };
+    
+    // Initial measurement
     updateMeasurements();
     const resizeObserver = new ResizeObserver(updateMeasurements);
     if (headerRef.current) resizeObserver.observe(headerRef.current);
 
-    // Auto-animate navbar: hide on scroll down (only past title), show on scroll up
+    // Auto-animate navbar: highly optimized scroll loop
     lenis.on('scroll', ({ scroll, direction }) => {
-      let threshold = 20;
-      
-      if (headerRef.current && titleRef.current) {
-        const navbarHeight = headerRef.current.offsetHeight;
-        const titleRect = titleRef.current.getBoundingClientRect();
-        
-        // We know we've crossed the threshold when the title's midpoint 
-        // moves higher up the screen than the bottom of the navbar.
-        // titleRect.top is the distance from the top of the viewport.
-        const titleMidpointRelativeToViewport = titleRect.top + (titleRect.height / 2);
-        const hasCrossedMidpoint = titleMidpointRelativeToViewport < navbarHeight;
-        
-        // If we haven't crossed the midpoint yet, ALWAYS show the navbar
-        if (!hasCrossedMidpoint) {
+      if (scroll <= cachedThreshold) {
+        // ALWAYS show if we are above the threshold
+        if (isHidden) {
+          isHidden = false;
           setNavbarHidden(false);
-          return;
         }
-      }
-
-      // If we are past the threshold, use scroll direction to hide/show
-      if (direction === 1) {
-        setNavbarHidden(true); // scrolling down
+      } else if (direction === 1) {
+        // Scrolling DOWN past threshold -> HIDE
+        if (!isHidden) {
+          isHidden = true;
+          setNavbarHidden(true);
+        }
       } else if (direction === -1) {
-        setNavbarHidden(false); // scrolling up
+        // Scrolling UP past threshold -> SHOW
+        if (isHidden) {
+          isHidden = false;
+          setNavbarHidden(false);
+        }
       }
     });
 
