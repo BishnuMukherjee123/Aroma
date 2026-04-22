@@ -235,19 +235,33 @@ export function PublicRestaurantMenu({
     const resizeObserver = new ResizeObserver(updateMeasurements);
     if (headerRef.current) resizeObserver.observe(headerRef.current);
 
-    // Auto-animate navbar: slide it out once title midpoint crosses navbar bottom
-    lenis.on('scroll', ({ scroll }) => {
-      if (!headerRef.current || !titleRef.current) return;
+    // Auto-animate navbar: hide on scroll down (only past title), show on scroll up
+    lenis.on('scroll', ({ scroll, direction }) => {
+      let threshold = 20;
+      
+      if (headerRef.current && titleRef.current) {
+        const navbarHeight = headerRef.current.offsetHeight;
+        const titleRect = titleRef.current.getBoundingClientRect();
+        
+        // We know we've crossed the threshold when the title's midpoint 
+        // moves higher up the screen than the bottom of the navbar.
+        // titleRect.top is the distance from the top of the viewport.
+        const titleMidpointRelativeToViewport = titleRect.top + (titleRect.height / 2);
+        const hasCrossedMidpoint = titleMidpointRelativeToViewport < navbarHeight;
+        
+        // If we haven't crossed the midpoint yet, ALWAYS show the navbar
+        if (!hasCrossedMidpoint) {
+          setNavbarHidden(false);
+          return;
+        }
+      }
 
-      const currentNavbarHeight = headerRef.current.offsetHeight;
-      const rect = titleRef.current.getBoundingClientRect();
-      const titleHeight = rect.height;
-      const titleAbsoluteTop = rect.top + scroll;
-
-      // Threshold: when the midpoint of the title crosses the navbar's bottom
-      const threshold = titleAbsoluteTop + (titleHeight / 2) - currentNavbarHeight;
-
-      setNavbarHidden(scroll > threshold);
+      // If we are past the threshold, use scroll direction to hide/show
+      if (direction === 1) {
+        setNavbarHidden(true); // scrolling down
+      } else if (direction === -1) {
+        setNavbarHidden(false); // scrolling up
+      }
     });
 
     return () => {
@@ -298,7 +312,7 @@ export function PublicRestaurantMenu({
             
             <div className="flex items-center justify-between">
               <div className="font-sans text-sm md:text-2xl font-black tracking-[0.2em] text-white">
-                {restaurant.name.toUpperCase()}
+                {restaurant.name.toUpperCase().replace(/ PRIME$/, "")}
               </div>
                 
                 <div className="relative flex-grow max-w-[200px] ml-4">
@@ -342,7 +356,7 @@ export function PublicRestaurantMenu({
 
           {/* ── Main Content Canvas ───────────────────────────────────────────── */}
           <main 
-            className="w-full max-w-screen-2xl mx-auto px-6 md:px-[4%] lg:px-[7%] 2xl:px-[9%] pb-8 md:pb-16"
+            className="w-full max-w-screen-2xl mx-auto px-[2vw] md:px-[4%] lg:px-[7%] 2xl:px-[9%] pb-8 md:pb-16"
             style={{ paddingTop: `${headerHeight + 20}px` }}
           >
             
@@ -468,7 +482,7 @@ const TopArCard = memo(function TopArCard({
       }}
     >
       {/* ── 3D Preview / Image Area (Inset Framed) ─────────────────────────────── */}
-      <div className="pt-[4%] px-[4%] w-full">
+      <div className="pt-[2.3%] px-[2.3%] md:pt-[4%] md:px-[4%] w-full">
         <div className="relative aspect-square md:aspect-auto md:h-64 w-full overflow-hidden bg-surface-container-lowest rounded-2xl">
         {/* Live 3D model — only mounts after first tap */}
         {dish.modelUrl && isPreviewActivated ? (
@@ -523,7 +537,7 @@ const TopArCard = memo(function TopArCard({
       </div>
 
       {/* ── Content Area ──────────────────────────────────────────────────────── */}
-      <div className="p-6 flex flex-col flex-grow">
+      <div className="p-4 md:p-6 flex flex-col flex-grow">
         <div className="flex justify-between items-start mb-3">
           <h2 className="text-2xl font-bold tracking-wide text-on-surface">
             {dish.name}
