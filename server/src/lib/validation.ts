@@ -170,3 +170,16 @@ export const optionalCurrencyCode = (
 
   return requireCurrencyCode(value, fieldName);
 };
+
+const dietaryCodes = ["VEG", "NON_VEG", "BOTH"] as const;
+
+export const optionalDietaryType = (
+  value: unknown,
+  fieldName = "dietaryType",
+): (typeof dietaryCodes)[number] | undefined => {
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  return requireEnumValue(value, fieldName, dietaryCodes);
+};

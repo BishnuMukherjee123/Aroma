@@ -7,7 +7,8 @@ import {
   useMemo,
   useRef,
   useState,
-  useEffect
+  useEffect,
+  memo
 } from "react";
 
 import {
@@ -18,6 +19,7 @@ import {
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { ensureModelViewerScript } from "@/lib/model-viewer";
+import Lenis from 'lenis';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,7 +43,6 @@ type ArDishView = PublicDishPayload & {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const TOP_AR_VIEW = "top-ar";
-const TOP_AR_BATCH_SIZE = 8;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -70,9 +71,14 @@ export function PublicRestaurantMenu({
   const [isLoading, setIsLoading] = useState(initialRestaurant === null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [activeViewId, setActiveViewId] = useState(TOP_AR_VIEW);
+  const [activeViewId, setActiveViewId] = useState<string>("");
+  const [currentMainTab, setCurrentMainTab] = useState<"special" | "menu">("special");
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [topArVisibleCount, setTopArVisibleCount] = useState(TOP_AR_BATCH_SIZE);
+  const [headerHeight, setHeaderHeight] = useState(118);
+  const [navbarHidden, setNavbarHidden] = useState(false);
+  
+  const headerRef = useRef<HTMLElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
 
   const deferredSearch = useDeferredValue(search);
 
@@ -139,11 +145,10 @@ export function PublicRestaurantMenu({
 
   // Keep activeViewId valid when data changes
   useEffect(() => {
-    if (!restaurant) return;
+    if (!restaurant || categories.length === 0) return;
     setActiveViewId((current) => {
-      if (current === TOP_AR_VIEW) return TOP_AR_VIEW;
       const exists = categories.some((c) => c.id === current);
-      return exists ? current : (categories[0]?.id ?? TOP_AR_VIEW);
+      return exists ? current : categories[0].id;
     });
   }, [categories, restaurant]);
 
@@ -170,31 +175,28 @@ export function PublicRestaurantMenu({
     );
   }, [categories, normalizedSearch]);
 
-  // Reset "load more" on search or restaurant change
-  useEffect(() => {
-    setTopArVisibleCount(TOP_AR_BATCH_SIZE);
-  }, [publicId, normalizedSearch]);
 
-  const visibleTopArDishes = useMemo(
-    () => topArDishes.slice(0, topArVisibleCount),
-    [topArDishes, topArVisibleCount],
-  );
+
+
 
   const selectedCategory = useMemo(() => {
     if (activeViewId === TOP_AR_VIEW) return null;
     return categories.find((c) => c.id === activeViewId) ?? null;
   }, [activeViewId, categories]);
 
-  const filteredCategoryDishes = useMemo(() => {
-    if (!selectedCategory) return [];
-    return selectedCategory.dishes.filter((dish) => {
-      if (!normalizedSearch) return true;
-      return [dish.name, dish.description ?? ""]
-        .join(" ")
-        .toLowerCase()
-        .includes(normalizedSearch);
-    });
-  }, [normalizedSearch, selectedCategory]);
+  const filteredMenuCategories = useMemo(() => {
+    if (!categories) return [];
+    return categories.map(category => ({
+      ...category,
+      filteredDishes: category.dishes.filter(dish => {
+        if (!normalizedSearch) return true;
+        return [dish.name, dish.description ?? ""]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedSearch);
+      })
+    })).filter(category => category.filteredDishes.length > 0);
+  }, [categories, normalizedSearch]);
 
   const totalDishCount = restaurant?.menus.reduce(
     (count, menu) =>
@@ -206,226 +208,203 @@ export function PublicRestaurantMenu({
     0,
   );
 
+  // Smooth Scroll Initialization (Slow & Cinematic)
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.5,
+      lerp: 0.05,
+      smoothWheel: true,
+      wheelMultiplier: 1,
+    });
+
+    let rafId: number;
+    function raf(time: number) {
+      lenis.raf(time);
+      rafId = requestAnimationFrame(raf);
+    }
+
+    rafId = requestAnimationFrame(raf);
+
+    // Header Height Measurement
+    const updateMeasurements = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+    updateMeasurements();
+    const resizeObserver = new ResizeObserver(updateMeasurements);
+    if (headerRef.current) resizeObserver.observe(headerRef.current);
+
+    // Auto-animate navbar: slide it out once title midpoint crosses navbar bottom
+    lenis.on('scroll', ({ scroll }) => {
+      if (!headerRef.current || !titleRef.current) return;
+
+      const currentNavbarHeight = headerRef.current.offsetHeight;
+      const rect = titleRef.current.getBoundingClientRect();
+      const titleHeight = rect.height;
+      const titleAbsoluteTop = rect.top + scroll;
+
+      // Threshold: when the midpoint of the title crosses the navbar's bottom
+      const threshold = titleAbsoluteTop + (titleHeight / 2) - currentNavbarHeight;
+
+      setNavbarHidden(scroll > threshold);
+    });
+
+    return () => {
+      lenis.destroy();
+      resizeObserver.disconnect();
+      cancelAnimationFrame(rafId);
+    };
+  }, []);
+
   // ── Render ──────────────────────────────────────────────────────────────────
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-surface px-4 py-10">
-        <div className="mx-auto max-w-md rounded-[2rem] bg-white/90 px-6 py-12 text-center shadow-[0_18px_40px_rgba(18,28,42,0.08)]">
-          <div className="mx-auto spinner-sm border-primary/30 border-t-primary" />
-          <p className="mt-4 text-sm font-semibold text-on-surface-variant">
-            Preparing the digital menu...
-          </p>
-        </div>
+      <div className="min-h-screen bg-background px-4 py-10 flex flex-col items-center justify-center">
+        <div className="mx-auto spinner-sm border-primary/30 border-t-primary" />
+        <p className="mt-4 text-sm font-semibold text-on-surface-variant">
+          Preparing the digital menu...
+        </p>
       </div>
     );
   }
 
   if (error || !restaurant) {
     return (
-      <div className="min-h-screen bg-surface px-4 py-10">
-        <div className="mx-auto max-w-md rounded-[2rem] bg-white/90 px-6 py-10 text-center shadow-[0_18px_40px_rgba(18,28,42,0.08)]">
-          <p className="text-lg font-bold text-on-surface">Menu unavailable</p>
-          <p className="mt-3 text-sm leading-6 text-on-surface-variant">
-            {error ?? "This restaurant menu could not be loaded right now."}
-          </p>
-        </div>
+      <div className="min-h-screen bg-background px-4 py-10 flex flex-col items-center justify-center text-center">
+        <p className="text-lg font-bold text-on-surface">Menu unavailable</p>
+        <p className="mt-3 text-sm leading-6 text-on-surface-variant max-w-sm">
+          {error ?? "This restaurant menu could not be loaded right now."}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-surface">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-white/50 bg-white/80 px-4 py-4 backdrop-blur-xl md:px-6">
-        <div className="mx-auto flex max-w-6xl items-center gap-4">
-          <div className="min-w-0 flex-1">
-            <p className="text-lg font-extrabold tracking-tight text-on-surface">
-              Aroma AR
-            </p>
-          </div>
-
-          {/* Mobile search toggle */}
-          <button
-            type="button"
-            onClick={() => setIsMobileSearchOpen((c) => !c)}
-            aria-label={isMobileSearchOpen ? "Close search" : "Open search"}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-surface-container-low text-on-surface shadow-[0_10px_22px_rgba(18,28,42,0.08)] transition-all active:scale-95 md:hidden"
-          >
-            <span className="material-symbols-outlined text-[22px]">
-              {isMobileSearchOpen ? "close" : "search"}
-            </span>
-          </button>
-
-          {/* Desktop search */}
-          <div className="relative hidden min-w-0 flex-1 md:block">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
-              search
-            </span>
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={
-                activeViewId === TOP_AR_VIEW
-                  ? "Search AR dishes..."
-                  : "Search dishes..."
-              }
-              className="w-full rounded-[1rem] bg-surface-container-low py-2.5 pl-10 pr-4 text-sm font-medium text-on-surface outline-none ring-1 ring-transparent transition-all focus:ring-primary/15"
-            />
-          </div>
-        </div>
-
-        {/* Mobile search drawer */}
-        {isMobileSearchOpen ? (
-          <div className="mx-auto mt-4 max-w-6xl md:hidden">
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline">
-                search
-              </span>
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={
-                  activeViewId === TOP_AR_VIEW
-                    ? "Search AR dishes..."
-                    : "Search dishes..."
-                }
-                className="w-full rounded-[1rem] bg-surface-container-low py-3 pl-10 pr-4 text-sm font-medium text-on-surface outline-none ring-1 ring-transparent transition-all focus:ring-primary/15"
-              />
-            </div>
-          </div>
-        ) : null}
-      </header>
-
-      {/* ── Main ───────────────────────────────────────────────────────────── */}
-      <main className="mx-auto max-w-6xl px-4 py-6 md:px-6">
-        {/* Restaurant title */}
-        <section className="mb-6">
-          <h1 className="text-3xl font-extrabold tracking-tight text-on-surface md:text-4xl">
-            {restaurant.name}
-          </h1>
-          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-on-surface-variant">
-            <span className="material-symbols-outlined text-sm text-primary">
-              menu_book
-            </span>
-            {totalDishCount ?? 0} published dishes, with AR previews for
-            selected plates
-          </p>
-        </section>
-
-        {/* Category nav */}
-        <nav className="no-scrollbar mb-6 flex gap-2 overflow-x-auto py-1 md:sticky md:top-[4.85rem] md:z-40 md:bg-surface/92 md:backdrop-blur-sm">
-          <button
-            type="button"
-            onClick={() => setActiveViewId(TOP_AR_VIEW)}
-            className={cn(
-              "whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all active:scale-95",
-              activeViewId === TOP_AR_VIEW
-                ? "bg-primary text-white shadow-[0_8px_18px_rgba(182,23,34,0.18)]"
-                : "bg-white text-on-surface-variant",
-            )}
-          >
-            Top AR
-          </button>
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              type="button"
-              onClick={() => setActiveViewId(category.id)}
-              className={cn(
-                "whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold transition-all active:scale-95",
-                activeViewId === category.id
-                  ? "bg-primary text-white shadow-[0_8px_18px_rgba(182,23,34,0.18)]"
-                  : "bg-white text-on-surface-variant",
-              )}
-            >
-              {category.name}
-            </button>
-          ))}
-        </nav>
-
-        {/* Content */}
-        {activeViewId === TOP_AR_VIEW ? (
-          topArDishes.length === 0 ? (
-            <div className="rounded-[1.5rem] bg-white px-5 py-8 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
-              <p className="text-lg font-bold text-on-surface">
-                No AR dishes ready yet
-              </p>
-              <p className="mt-2 text-sm text-on-surface-variant">
-                Upload a 3D model to a dish and it will appear here as a quick
-                launch AR card.
-              </p>
-            </div>
-          ) : (
-            <section className="space-y-6">
-              <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-                {visibleTopArDishes.map((dish) => (
-                  <TopArCard key={dish.id} dish={dish} publicId={publicId} />
-                ))}
+    <div className="min-h-screen bg-[#0f0f0f] text-on-background flex flex-col">
+      <div className="flex-grow">
+        {/* ── TopNavBar ──────────────────────────────────────────────────────── */}
+        <header 
+          ref={headerRef}
+          className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 backdrop-blur-xl"
+          style={{
+            backgroundColor: "rgba(15, 15, 15, 0.85)",
+            transform: navbarHidden ? `translateY(-100%)` : `translateY(0)`,
+            transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+          }}
+        >
+          <div className="max-w-4xl mx-auto px-6 py-4 flex flex-col gap-4">
+            
+            <div className="flex items-center justify-between">
+              <div className="font-sans text-sm md:text-2xl font-black tracking-[0.2em] text-white">
+                {restaurant.name.toUpperCase()}
               </div>
-
-              {topArVisibleCount < topArDishes.length ? (
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setTopArVisibleCount((c) =>
-                        Math.min(c + TOP_AR_BATCH_SIZE, topArDishes.length),
-                      )
-                    }
-                    className="rounded-full bg-white px-5 py-3 text-sm font-bold text-on-surface shadow-[0_10px_20px_rgba(18,28,42,0.08)] transition-all active:scale-95 hover:-translate-y-0.5"
-                  >
-                    Load more AR dishes
-                  </button>
+                
+                <div className="relative flex-grow max-w-[200px] ml-4">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">search</span>
+                  <input
+                    type="text"
+                    placeholder="Find dish..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-9 pr-4 text-xs text-white focus:outline-none focus:border-white/20 transition-all"
+                  />
                 </div>
-              ) : null}
-            </section>
-          )
-        ) : selectedCategory ? (
-          <section className="rounded-[1.75rem] bg-white p-5 shadow-[0_16px_36px_rgba(18,28,42,0.05)] md:p-6">
-            <div className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-surface-container-low pb-4">
-              <h2 className="text-2xl font-extrabold tracking-[-0.03em] text-on-surface">
-                {selectedCategory.name}
-              </h2>
-              <span className="rounded-full bg-surface-container-low px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
-                {filteredCategoryDishes.length} items
-              </span>
+              </div>
+
+              <div className="flex items-center justify-center gap-8 overflow-x-auto scrollbar-hide">
+                <button
+                  onClick={() => setCurrentMainTab("special")}
+                  className={cn(
+                    "text-[10px] tracking-[0.2em] font-medium uppercase pb-1 transition-all",
+                    currentMainTab === "special"
+                      ? "text-white border-b border-white"
+                      : "text-white/40 border-b border-transparent hover:text-white/60"
+                  )}
+                >
+                  Chef's Special
+                </button>
+                <button
+                  onClick={() => setCurrentMainTab("menu")}
+                  className={cn(
+                    "text-[10px] tracking-[0.2em] font-medium uppercase pb-1 transition-all",
+                    currentMainTab === "menu"
+                      ? "text-white border-b border-white"
+                      : "text-white/40 border-b border-transparent hover:text-white/60"
+                  )}
+                >
+                  MENU
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* ── Main Content Canvas ───────────────────────────────────────────── */}
+          <main 
+            className="w-full max-w-screen-2xl mx-auto px-6 md:px-[4%] lg:px-[7%] 2xl:px-[9%] pb-8 md:pb-16"
+            style={{ paddingTop: `${headerHeight + 20}px` }}
+          >
+            
+            {/* Section Header */}
+            <div ref={titleRef} className="text-center mb-10 md:mb-16">
+              <h1 className="text-[2.6rem] md:text-[3.5rem] text-white leading-tight font-normal" style={{ fontFamily: "'Great Vibes', cursive", letterSpacing: "1px" }}>
+                {currentMainTab === "special" ? "Chef's Special" : "The Menu"}
+              </h1>
             </div>
 
-            {filteredCategoryDishes.length === 0 ? (
-              <div className="rounded-[1.2rem] border border-dashed border-outline/40 bg-surface-container-low px-4 py-5 text-sm text-on-surface-variant">
-                No dishes match this search.
-              </div>
+            {/* Content Tabs */}
+            {currentMainTab === "special" ? (
+              topArDishes.length === 0 ? (
+                <div className="text-center bg-surface-container-low rounded-xl p-8 border border-outline-variant/10">
+                  <p className="text-lg font-bold text-on-surface">No AR dishes ready yet</p>
+                  <p className="mt-2 text-sm text-on-surface-variant">Check back later for immersive 3D plates.</p>
+                </div>
+              ) : (
+                <section className="space-y-10">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 md:gap-5">
+                    {topArDishes.map((dish) => (
+                      <TopArCard key={dish.id} dish={dish} publicId={publicId} />
+                    ))}
+                  </div>
+                </section>
+              )
             ) : (
-              <div className="overflow-hidden rounded-[1.2rem] border border-surface-container-low bg-surface-container-lowest">
-                <div className="divide-y divide-surface-container-low">
-                  {filteredCategoryDishes.map((dish) => (
-                    <DishMenuRow key={dish.id} dish={dish} />
-                  ))}
-                </div>
+              // Menu Tab Layout
+              <div className="space-y-16">
+                {filteredMenuCategories.length === 0 ? (
+                   <div className="text-center py-10 text-on-surface-variant font-serif italic tracking-wider">
+                     No dishes found.
+                   </div>
+                ) : (
+                  filteredMenuCategories.map(category => (
+                    <section key={category.id}>
+                      <div className="flex items-center justify-center mb-8">
+                        <div className="h-[1px] w-8 md:w-16 bg-white/10" />
+                        <span className="mx-4 text-on-surface-variant/50 tracking-[0.4em] text-[10px] md:text-[12px] font-serif italic uppercase">
+                          • &nbsp; {category.name} &nbsp; •
+                        </span>
+                        <div className="h-[1px] w-8 md:w-16 bg-white/10" />
+                      </div>
+                      <div className="flex flex-col gap-8 md:gap-10">
+                        {category.filteredDishes.map((dish) => (
+                          <DishMenuRow key={dish.id} dish={dish} />
+                        ))}
+                      </div>
+                    </section>
+                  ))
+                )}
               </div>
             )}
-          </section>
-        ) : (
-          <div className="rounded-[1.5rem] bg-white px-5 py-8 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
-            <p className="text-lg font-bold text-on-surface">
-              No submenu selected
-            </p>
-            <p className="mt-2 text-sm text-on-surface-variant">
-              Pick a category to browse dishes and prices.
-            </p>
-          </div>
-        )}
-      </main>
-    </div>
+          </main>
+        </div>
+      </div>
   );
 }
 
 // ─── TopArCard ────────────────────────────────────────────────────────────────
 
-function TopArCard({
+const TopArCard = memo(function TopArCard({
   dish,
   publicId,
 }: {
@@ -483,15 +462,14 @@ function TopArCard({
         prefetchModel();
         if (!isPreviewActivated) setIsPreviewActivated(true);
       }}
-      className="group flex flex-col overflow-hidden rounded-[1.25rem] bg-surface-container-lowest shadow-[0_12px_28px_rgba(18,28,42,0.05)] transition-all hover:-translate-y-1 hover:shadow-[0_18px_36px_rgba(18,28,42,0.08)]"
+      className="group relative flex flex-col bg-surface-container-high rounded-2xl transition-all duration-500 hover:bg-surface-bright cursor-pointer"
+      onClick={() => {
+        if (!isPreviewActivated) setIsPreviewActivated(true);
+      }}
     >
-      {/* ── 3D Preview Area ─────────────────────────────────────────────── */}
-      <div
-        onClick={() => {
-          if (!isPreviewActivated) setIsPreviewActivated(true);
-        }}
-        className="relative h-56 cursor-pointer overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.72),transparent_50%),linear-gradient(180deg,#dbe7fb_0%,#cfdcf5_100%)]"
-      >
+      {/* ── 3D Preview / Image Area (Inset Framed) ─────────────────────────────── */}
+      <div className="pt-[4%] px-[4%] w-full">
+        <div className="relative aspect-square md:aspect-auto md:h-64 w-full overflow-hidden bg-surface-container-lowest rounded-2xl">
         {/* Live 3D model — only mounts after first tap */}
         {dish.modelUrl && isPreviewActivated ? (
           <ArPreviewInCard
@@ -514,7 +492,9 @@ function TopArCard({
             <img
               src={dish.posterUrl}
               alt={dish.name}
-              className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
+              className="object-cover w-full h-full transform transition-transform duration-700 group-hover:scale-105 opacity-90"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
@@ -532,77 +512,87 @@ function TopArCard({
           )}
         </div>
 
-        {/* Subtle gradient at bottom for text legibility */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[rgba(18,28,42,0.22)] via-transparent to-transparent" />
-
-        {/* "Tap for 3D" badge — hidden after tap */}
-        {!isPreviewActivated ? (
-          <div className="pointer-events-none absolute bottom-4 right-4 rounded-[0.85rem] bg-[rgba(15,20,26,0.82)] px-3 py-2 shadow-[0_8px_18px_rgba(18,28,42,0.12)] backdrop-blur-sm">
-            <p className="flex items-center gap-2 text-xs font-semibold text-white">
-              <span className="material-symbols-outlined text-base text-primary-container">
-                view_in_ar
-              </span>
-              {dish.posterUrl ? "Tap for 3D" : "Tap to load 3D"}
-            </p>
+        {/* AR Badge */}
+        {!isPreviewActivated && dish.posterUrl ? (
+          <div className="absolute top-4 right-4 bg-surface-container-highest/60 backdrop-blur-[24px] px-3 py-1.5 rounded-full flex items-center gap-2 border border-outline-variant/15 shadow-sm">
+            <span className="material-symbols-outlined text-primary text-[16px]">view_in_ar</span>
+            <span className="text-xs font-bold uppercase tracking-wider text-on-surface">Tap for 3D</span>
           </div>
         ) : null}
-
-
+      </div>
       </div>
 
-      {/* ── Card Info ───────────────────────────────────────────────────── */}
-      <div className="flex flex-1 flex-col p-5">
-        <div className="mb-2 flex items-start justify-between gap-3">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-primary">
-              {dish.categoryName}
-            </p>
-            <h3 className="mt-1 text-lg font-extrabold leading-tight text-on-surface">
-              {dish.name}
-            </h3>
-          </div>
-          <span className="text-base font-extrabold text-primary">
-            {formatPrice(dish.price, dish.currency)}
-          </span>
+      {/* ── Content Area ──────────────────────────────────────────────────────── */}
+      <div className="p-6 flex flex-col flex-grow">
+        <div className="flex justify-between items-start mb-3">
+          <h2 className="text-2xl font-bold tracking-wide text-on-surface">
+            {dish.name}
+          </h2>
+          {/* Dietary Badge - reference site style */}
+          {dish.dietaryType === "VEG" && (
+            <div className="flex items-center gap-1.5 bg-emerald-500 text-white text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full">
+              <span className="flex items-center justify-center w-[11px] h-[11px] border-[1.5px] border-white rounded-[2px]">
+                <span className="w-[4px] h-[4px] bg-white rounded-full" />
+              </span>
+              VEG
+            </div>
+          )}
+          {dish.dietaryType === "NON_VEG" && (
+            <div className="flex items-center gap-1.5 bg-red-500 text-white text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full">
+              <span className="flex items-center justify-center w-[11px] h-[11px] border-[1.5px] border-white rounded-[2px]">
+                <span className="w-[4px] h-[4px] bg-white rounded-full" />
+              </span>
+              NON-VEG
+            </div>
+          )}
+          {dish.dietaryType === "BOTH" && (
+            <div className="flex items-center gap-1.5 bg-white/10 text-white text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full border border-white/20">
+              <span className="flex items-center justify-center w-[11px] h-[11px] border-[1.5px] border-emerald-400 rounded-[2px]">
+                <span className="w-[4px] h-[4px] bg-emerald-400 rounded-full" />
+              </span>
+              <span className="flex items-center justify-center w-[11px] h-[11px] border-[1.5px] border-red-400 rounded-[2px]">
+                <span className="w-[4px] h-[4px] bg-red-400 rounded-full" />
+              </span>
+              VEG & NON-VEG
+            </div>
+          )}
         </div>
-
-        <p className="line-clamp-3 text-sm leading-6 text-on-surface-variant">
-          {dish.description ?? "Tap to place this dish in AR on your table."}
+        
+        <p className="text-sm text-[#a3a3a3] uppercase tracking-wide leading-relaxed mb-6 flex-grow">
+          {dish.description || "Experience this dish in your own space before you order."}
         </p>
-
+        
         {arError ? (
-          <p className="mb-2 rounded-[0.75rem] bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
+          <p className="mb-4 rounded-[0.75rem] border border-error/20 bg-error/10 px-3 py-2 text-xs font-medium text-error">
             {arError}
           </p>
         ) : null}
 
-        {/* "View in AR" — triggers native camera directly on mobile */}
-        <div className="mt-auto pt-2">
+        <div className="flex flex-col gap-5 mt-auto">
+          <span className="text-2xl font-bold text-on-surface font-sans">
+            {formatPrice(dish.price, dish.currency).replace('.00', '')}
+          </span>
           <button
             type="button"
-            onClick={() => void handleViewInAr()}
+            onClick={(e) => {
+              e.stopPropagation();
+              void handleViewInAr();
+            }}
             disabled={isArLaunching}
-            className="flex w-full items-center justify-center gap-2 rounded-[0.95rem] bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_10px_20px_rgba(182,23,34,0.16)] transition-all active:scale-[0.97] hover:-translate-y-0.5 disabled:opacity-70"
+            className="w-full bg-[#fa5555] text-white px-6 py-3.5 rounded-xl font-bold text-base transition-all duration-300 hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isArLaunching ? (
-              <>
+              <span className="flex items-center justify-center gap-2">
                 <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Opening AR...
-              </>
-            ) : (
-              <>
-                <span className="material-symbols-outlined text-lg">
-                  view_in_ar
-                </span>
-                View in AR
-              </>
-            )}
+                Wait...
+              </span>
+            ) : "View on Table"}
           </button>
         </div>
       </div>
     </article>
   );
-}
+});
 
 // ─── ArPreviewInCard ─────────────────────────────────────────────────────────
 // Thin inline wrapper — avoids the broken dynamic() self-import pattern.
@@ -669,46 +659,60 @@ function ArPreviewInCard({
   return <div ref={containerRef} className="h-full w-full" />;
 }
 
-// ─── DishMenuRow ──────────────────────────────────────────────────────────────
+const DishMenuRow = memo(function DishMenuRow({ dish }: { dish: PublicDishPayload }) {
+  const dietaryType = dish.dietaryType;
 
-function DishMenuRow({ dish }: { dish: PublicDishPayload }) {
+  const DietaryIcon = () => {
+    if (dietaryType === "VEG") return (
+      <span className="inline-flex items-center gap-1 ml-2 bg-emerald-500 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full">
+        <span className="flex items-center justify-center w-[9px] h-[9px] border border-white rounded-[1px]">
+          <span className="w-[4px] h-[4px] bg-white rounded-full" />
+        </span>
+        VEG
+      </span>
+    );
+    if (dietaryType === "NON_VEG") return (
+      <span className="inline-flex items-center gap-1 ml-2 bg-red-500 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full">
+        <span className="flex items-center justify-center w-[9px] h-[9px] border border-white rounded-[1px]">
+          <span className="w-[4px] h-[4px] bg-white rounded-full" />
+        </span>
+        NON-VEG
+      </span>
+    );
+    if (dietaryType === "BOTH") return (
+      <span className="inline-flex items-center gap-1 ml-2 bg-white/10 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full border border-white/20">
+        <span className="flex items-center justify-center w-[9px] h-[9px] border border-emerald-400 rounded-[1px]">
+          <span className="w-[4px] h-[4px] bg-emerald-400 rounded-full" />
+        </span>
+        <span className="flex items-center justify-center w-[9px] h-[9px] border border-red-400 rounded-[1px]">
+          <span className="w-[4px] h-[4px] bg-red-400 rounded-full" />
+        </span>
+        VEG & NON-VEG
+      </span>
+    );
+    return null;
+  };
+
   return (
-    <article className="px-4 py-4 md:px-5">
-      <div className="flex items-start gap-4">
-        <div className="min-w-0 flex-1">
-          <h4 className="text-lg font-bold leading-tight text-on-surface md:text-xl">
-            {dish.name}
-          </h4>
-
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <span className="text-base font-extrabold text-primary md:text-lg">
-              {formatPrice(dish.price, dish.currency)}
-            </span>
-          </div>
-
-          {dish.description ? (
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-on-surface-variant">
-              {dish.description}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="h-22 w-22 shrink-0 overflow-hidden rounded-[1.15rem] bg-surface-container-high shadow-[0_8px_18px_rgba(18,28,42,0.06)] md:h-24 md:w-24">
-          {dish.thumbnailUrl ? (
-            <img
-              src={dish.thumbnailUrl}
-              alt={dish.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-on-surface-variant">
-              <span className="material-symbols-outlined text-3xl">
-                restaurant
-              </span>
-            </div>
-          )}
-        </div>
+    <article className="group cursor-pointer max-w-3xl mx-auto w-full">
+      <div className="flex items-baseline justify-between w-full">
+        <h4 className="text-[17px] md:text-[20px] font-bold text-white tracking-wide font-sans flex items-center flex-wrap gap-0">
+          {dish.name}
+          <DietaryIcon />
+        </h4>
+        
+        <div className="flex-grow mx-3 md:mx-6 border-b border-dashed border-white/20 relative top-[-4px]" />
+        
+        <span className="text-[17px] md:text-[20px] font-bold text-white whitespace-nowrap font-sans">
+          {formatPrice(dish.price, dish.currency).replace('.00', '')}
+        </span>
       </div>
+      
+      {dish.description && (
+        <p className="mt-2 text-[10px] md:text-[11px] uppercase tracking-widest text-on-surface-variant italic leading-relaxed max-w-[85%] font-serif">
+          {dish.description}
+        </p>
+      )}
     </article>
   );
-}
+});

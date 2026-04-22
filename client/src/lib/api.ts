@@ -84,6 +84,7 @@ export type DishSummary = {
   description: string | null;
   isPublished: boolean;
   sortOrder: number;
+  dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
   assets: AssetSummary[];
 };
 
@@ -129,6 +130,7 @@ export type PublicDishPayload = {
   currency: CurrencyCode;
   description: string | null;
   sortOrder: number;
+  dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
   modelUrl: string | null;
   thumbnailUrl: string | null;
   posterUrl: string | null;
@@ -661,6 +663,7 @@ export const updateDish = async (
     description?: string;
     isPublished?: boolean;
     sortOrder?: number;
+    dietaryType?: "VEG" | "NON_VEG" | "BOTH" | null;
   },
 ): Promise<{
   id: string;
@@ -672,6 +675,7 @@ export const updateDish = async (
   menuId: string;
   isPublished: boolean;
   sortOrder: number;
+  dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
   createdAt: string;
   updatedAt: string;
 }> => {

@@ -33,6 +33,12 @@ enum CurrencyCode {
   AED
 }
 
+enum DietaryType {
+  VEG
+  NON_VEG
+  BOTH
+}
+
 model User {
   id               String             @id @default(uuid())
   email            String             @unique
@@ -128,6 +134,7 @@ model Dish {
   description  String?
   restaurantId String
   menuId       String
+  dietaryType  DietaryType?
   isPublished  Boolean  @default(false)
   sortOrder    Int      @default(0)
   createdAt    DateTime @default(now())

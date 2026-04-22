@@ -16,6 +16,7 @@ export type PublicDishPayload = {
   currency: "USD" | "INR" | "EUR" | "GBP" | "AED";
   description: string | null;
   sortOrder: number;
+  dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
   modelUrl: string | null;
   thumbnailUrl: string | null;
   posterUrl: string | null;
@@ -117,6 +118,7 @@ const buildSnapshot = async (
                   currency: true,
                   description: true,
                   sortOrder: true,
+                  dietaryType: true,
                   assets: {
                     where: { status: "READY" },
                     orderBy: [{ createdAt: "asc" }],
@@ -159,6 +161,7 @@ const buildSnapshot = async (
             currency: dish.currency,
             description: dish.description,
             sortOrder: dish.sortOrder,
+            dietaryType: (dish.dietaryType as "VEG" | "NON_VEG" | "BOTH" | null) ?? null,
             modelUrl: assetMap.modelUrl,
             thumbnailUrl: assetMap.thumbnailUrl,
             posterUrl: assetMap.posterUrl,
@@ -207,7 +210,8 @@ const isCurrentSnapshotShape = (
           category.dishes.every(
             (dish) =>
               typeof dish?.currency === "string" &&
-              supportedCurrencyCodes.has(dish.currency),
+              supportedCurrencyCodes.has(dish.currency) &&
+              "dietaryType" in dish, // invalidate snapshots built before this field was added
           ),
       ),
   );

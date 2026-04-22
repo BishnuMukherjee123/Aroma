@@ -6,6 +6,7 @@ import {
   optionalBoolean,
   optionalInteger,
   optionalString,
+  optionalDietaryType,
   requireInteger,
   requireString,
 } from "../../lib/validation.js";
@@ -27,6 +28,7 @@ export const update = async (req: Request, res: Response): Promise<void> => {
       description: optionalString(req.body.description, "description"),
       isPublished: optionalBoolean(req.body.isPublished, "isPublished"),
       sortOrder: optionalInteger(req.body.sortOrder, "sortOrder", { min: 0 }),
+      dietaryType: optionalDietaryType(req.body.dietaryType),
     },
   );
 

@@ -55,6 +55,7 @@ type ComposerState = {
   currency: CurrencyCode;
   description: string;
   isPublished: boolean;
+  dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
 };
 
 type DishRow = DishSummary & {
@@ -125,6 +126,7 @@ const emptyComposerState: ComposerState = {
   currency: "USD",
   description: "",
   isPublished: false,
+  dietaryType: null,
 };
 
 const emptyMenuComposerState: MenuComposerState = {
@@ -903,6 +905,7 @@ export function RestaurantWorkspace({
       currency: dish.currency,
       description: dish.description ?? "",
       isPublished: dish.isPublished,
+      dietaryType: dish.dietaryType ?? null,
     });
     setComposerMessage(null);
     setComposerModelFile(null);
@@ -1002,6 +1005,7 @@ export function RestaurantWorkspace({
           currency: composerState.currency,
           description: composerState.description.trim() || undefined,
           isPublished: composerState.isPublished,
+          dietaryType: composerState.dietaryType,
         });
         setSelectedDishId(composerState.dishId);
       } else {
@@ -3266,6 +3270,43 @@ export function RestaurantWorkspace({
                   }
                   className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
                 />
+              </div>
+
+              {/* Dietary Type Selector */}
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Dietary Type
+                </label>
+                <div className="flex gap-3 flex-wrap">
+                  {(["VEG", "NON_VEG", "BOTH"] as const).map((type) => {
+                    const labels: Record<string, string> = { VEG: "🟢 Veg", NON_VEG: "🔴 Non-Veg", BOTH: "🟢🔴 Both" };
+                    const active = composerState.dietaryType === type;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setComposerState((c) => ({ ...c, dietaryType: active ? null : type }))}
+                        className={cn(
+                          "rounded-full px-4 py-2 text-xs font-bold tracking-wide border transition-all",
+                          active
+                            ? "bg-primary text-white border-primary"
+                            : "bg-surface-container-lowest text-on-surface-variant border-outline-variant/20 hover:border-primary/30"
+                        )}
+                      >
+                        {labels[type]}
+                      </button>
+                    );
+                  })}
+                  {composerState.dietaryType && (
+                    <button
+                      type="button"
+                      onClick={() => setComposerState((c) => ({ ...c, dietaryType: null }))}
+                      className="text-xs text-on-surface-variant hover:text-on-surface transition-colors self-center"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="md:col-span-2 grid gap-5 lg:grid-cols-2">

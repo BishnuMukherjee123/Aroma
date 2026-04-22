@@ -15,6 +15,7 @@ export const updateDish = async (
     description?: string;
     isPublished?: boolean;
     sortOrder?: number;
+    dietaryType?: "VEG" | "NON_VEG" | "BOTH";
   },
 ) => {
   const dish = await prisma.dish.findUnique({
@@ -57,6 +58,7 @@ export const updateDish = async (
         ? { isPublished: input.isPublished }
         : {}),
       ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+      ...(input.dietaryType !== undefined ? { dietaryType: input.dietaryType } : {}),
     },
     select: {
       id: true,
@@ -68,6 +70,7 @@ export const updateDish = async (
       menuId: true,
       isPublished: true,
       sortOrder: true,
+      dietaryType: true,
       createdAt: true,
       updatedAt: true,
     },

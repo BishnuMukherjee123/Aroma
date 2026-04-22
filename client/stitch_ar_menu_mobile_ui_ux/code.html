@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Spiegel AR Menu - Chef's Special</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&amp;family=Outfit:wght@300;400;500;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "tertiary-container": "#909191",
+                        "surface-dim": "#131313",
+                        "outline": "#ab8986",
+                        "on-secondary-container": "#b6b5b4",
+                        "secondary-fixed-dim": "#c8c6c5",
+                        "on-secondary-fixed-variant": "#474746",
+                        "surface-container-highest": "#353534",
+                        "inverse-primary": "#b91a24",
+                        "surface-tint": "#ffb3ad",
+                        "surface-container-high": "#2a2a2a",
+                        "secondary": "#c8c6c5",
+                        "on-tertiary-fixed-variant": "#454747",
+                        "on-error": "#690005",
+                        "secondary-fixed": "#e4e2e1",
+                        "inverse-surface": "#e5e2e1",
+                        "on-tertiary-fixed": "#1a1c1c",
+                        "on-primary-fixed": "#410004",
+                        "on-surface": "#e5e2e1",
+                        "on-error-container": "#ffdad6",
+                        "background": "#131313",
+                        "primary-container": "#ff5451",
+                        "on-background": "#e5e2e1",
+                        "surface-container-low": "#1c1b1b",
+                        "surface-container": "#201f1f",
+                        "on-primary": "#68000a",
+                        "inverse-on-surface": "#313030",
+                        "surface-variant": "#353534",
+                        "primary": "#ffb3ad",
+                        "on-secondary-fixed": "#1b1c1c",
+                        "surface-container-lowest": "#0e0e0e",
+                        "secondary-container": "#474746",
+                        "tertiary-fixed-dim": "#c6c6c7",
+                        "tertiary-fixed": "#e2e2e2",
+                        "on-primary-container": "#5c0008",
+                        "surface-bright": "#3a3939",
+                        "on-tertiary-container": "#282a2a",
+                        "on-surface-variant": "#e4beba",
+                        "on-primary-fixed-variant": "#930013",
+                        "surface": "#131313",
+                        "error-container": "#93000a",
+                        "outline-variant": "#5b403e",
+                        "primary-fixed-dim": "#ffb3ad",
+                        "on-tertiary": "#2f3131",
+                        "on-secondary": "#303030",
+                        "error": "#ffb4ab",
+                        "tertiary": "#c6c6c7",
+                        "primary-fixed": "#ffdad7"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    fontFamily: {
+                        "signature": ["'Great Vibes'", "cursive"],
+                        "sans": ["'Outfit'", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Outfit', sans-serif; }
+        .font-signature { font-family: 'Great Vibes', cursive; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-[#131313]/60 backdrop-blur-lg docked full-width top-0 sticky z-50">
+<div class="relative flex justify-between items-start px-6 pt-6 h-24 w-full max-w-screen-2xl mx-auto border-b-0 border-transparent shadow-none" style="border-bottom: none;">
+<!-- Brand Logo -->
+<div class="font-sans text-2xl font-black tracking-[0.2em] text-[#e5e2e1]">
+                SPIEGEL
+            </div>
+<!-- Navigation Links -->
+<nav class="hidden md:flex gap-8 items-center absolute bottom-0 left-1/2 -translate-x-1/2">
+<a class="font-sans uppercase tracking-[0.05em] font-bold text-sm text-[#EF4444] border-b-2 border-[#EF4444] pb-3 hover:opacity-80 transition-all duration-300 scale-95 active:scale-90 transition-transform" href="#">
+                    CHEF'S SPECIAL
+                </a>
+<a class="font-sans uppercase tracking-[0.05em] font-bold text-sm text-[#e5e2e1] hover:text-[#EF4444] transition-colors pb-3 hover:opacity-80 transition-all duration-300 scale-95 active:scale-90 transition-transform" href="#">
+                    MENU
+                </a>
+</nav>
+<!-- Trailing Icons / Search -->
+<div class="flex items-center gap-4">
+<div class="hidden md:flex items-center bg-surface-container-low rounded-full px-4 py-2 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-on-surface-variant text-sm mr-2">search</span>
+<input class="bg-transparent border-none text-sm text-on-surface focus:ring-0 w-32 placeholder:text-on-surface-variant/50" placeholder="Search menu..." type="text"/>
+</div>
+<button class="text-on-surface hover:text-[#EF4444] transition-colors scale-95 active:scale-90 mt-1">
+<span class="material-symbols-outlined">shopping_bag</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow w-full max-w-screen-2xl mx-auto px-6 py-12 md:py-24">
+<!-- Section Header -->
+<div class="text-center mb-16">
+<h1 class="font-signature text-6xl md:text-8xl text-primary mb-4 leading-tight">Chef's Special</h1>
+<p class="text-on-surface-variant text-lg tracking-wide font-light max-w-2xl mx-auto">Curated culinary masterpieces ready to be experienced in your space.</p>
+</div>
+<!-- Bento Grid / Card Layout -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+<!-- Dish Card 1 -->
+<article class="group relative flex flex-col bg-surface-container-high rounded-xl overflow-hidden transition-all duration-500 hover:bg-surface-bright">
+<!-- Image Area -->
+<div class="relative h-64 md:h-80 w-full overflow-hidden bg-surface-container-lowest">
+<img alt="Gourmet dish presentation" class="object-cover w-full h-full transform transition-transform duration-700 group-hover:scale-105 opacity-90" data-alt="High-end culinary photography of a dark moody scene showing a beautifully plated dish with smoke or dry ice effect, warm directional lighting on a slate plate" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCedMhc2sodIh7mYOS-dt-ygIvI_GBoQEa19Q4TdRZeXNxR3cMTDNR5Momeu0FRhZ3gHOPCrFrtZpUBhoCEaAtMIkPwPAFvRno4-tTQpqkbCNXrNTohg3s6eMT6SZ0Gzto8msXPaHcHCEpCNITqKz_JZ80DHGSzkamkZx-Zhg9M-SCvTZKKPUdycF7XotODCVC1vQoA_ZznI9cUxcSkGpdMpSjqM7zVLvlQqp7Y8mzfhCRMgSYkHMdMRFL-4Ic6Vpr4leEdlgfmV-Y"/>
+<!-- AR Badge -->
+<div class="absolute top-4 right-4 bg-surface-container-highest/60 backdrop-blur-[24px] px-3 py-1.5 rounded-full flex items-center gap-2 border border-outline-variant/15">
+<span class="material-symbols-outlined text-primary text-[16px]">view_in_ar</span>
+<span class="text-xs font-bold uppercase tracking-wider text-on-surface">Tap for 3D</span>
+</div>
+</div>
+<!-- Content Area -->
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-3">
+<h2 class="text-2xl font-bold tracking-wide text-on-surface">Bong Kebab</h2>
+<div class="bg-surface-container-lowest px-2 py-1 rounded-sm border border-outline-variant/15">
+<span class="text-[10px] uppercase font-bold text-error tracking-widest">Non-Veg</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-6 flex-grow">
+                        Slow-cooked lamb infused with regional spices, smoked over charcoal for an authentic, rich flavor profile.
+                    </p>
+<div class="flex items-end justify-between mt-auto pt-6 border-t border-transparent" style="border-top-color: rgba(91, 64, 62, 0.15);">
+<span class="text-2xl font-bold text-primary font-sans">₹ 650</span>
+<button class="bg-gradient-to-r from-primary to-primary-container text-on-primary-container px-6 py-3 rounded-lg font-bold uppercase tracking-widest text-xs transition-all duration-300 hover:opacity-90 shadow-[0_4px_14px_rgba(255,84,81,0.2)]">
+                            View on Table
+                        </button>
+</div>
+</div>
+</article>
+<!-- Dish Card 2 -->
+<article class="group relative flex flex-col bg-surface-container-high rounded-xl overflow-hidden transition-all duration-500 hover:bg-surface-bright">
+<div class="relative h-64 md:h-80 w-full overflow-hidden bg-surface-container-lowest">
+<img alt="Gourmet dish presentation" class="object-cover w-full h-full transform transition-transform duration-700 group-hover:scale-105 opacity-90" data-alt="Editorial food photo of grilled meat dish elegantly plated on dark ceramic with vibrant herb garnish and rich sauce glaze, moody restaurant lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRlzr2dLGJzO3p0ubilYDk0OMfGeDAzuhCB3djK1CsEHQTyjUJYvs4C_YrLTGH89ea3ci18vNLvifAV-JNWyJ6h-zwlRGMESoWJSqFW3qifN3tW8Ygp1UrlOfJ7fevBG7yQGqb-z4wsCo2AjmEvzy5WniplWSNybrjwBm6pvFlEy9uCinmwzLm6_YzFvp_kDtjWeGUXKPrWnbacqXbkNP4YvNRwHphNfoGeDNDtuwo69NoIpqgUrrJul1saAzDFa-dqLeVWXw_KY4"/>
+<div class="absolute top-4 right-4 bg-surface-container-highest/60 backdrop-blur-[24px] px-3 py-1.5 rounded-full flex items-center gap-2 border border-outline-variant/15">
+<span class="material-symbols-outlined text-primary text-[16px]">view_in_ar</span>
+<span class="text-xs font-bold uppercase tracking-wider text-on-surface">Tap for 3D</span>
+</div>
+</div>
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-3">
+<h2 class="text-2xl font-bold tracking-wide text-on-surface">Pahadi Tikka</h2>
+<div class="bg-surface-container-lowest px-2 py-1 rounded-sm border border-outline-variant/15">
+<span class="text-[10px] uppercase font-bold text-error tracking-widest">Non-Veg</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-6 flex-grow">
+                        Tender chicken chunks marinated in a vibrant green paste of mint, coriander, and mountain spices, roasted to perfection.
+                    </p>
+<div class="flex items-end justify-between mt-auto pt-6 border-t border-transparent" style="border-top-color: rgba(91, 64, 62, 0.15);">
+<span class="text-2xl font-bold text-primary font-sans">₹ 520</span>
+<button class="bg-gradient-to-r from-primary to-primary-container text-on-primary-container px-6 py-3 rounded-lg font-bold uppercase tracking-widest text-xs transition-all duration-300 hover:opacity-90 shadow-[0_4px_14px_rgba(255,84,81,0.2)]">
+                            View on Table
+                        </button>
+</div>
+</div>
+</article>
+<!-- Dish Card 3 -->
+<article class="group relative flex flex-col bg-surface-container-high rounded-xl overflow-hidden transition-all duration-500 hover:bg-surface-bright">
+<div class="relative h-64 md:h-80 w-full overflow-hidden bg-surface-container-lowest">
+<img alt="Gourmet dish presentation" class="object-cover w-full h-full transform transition-transform duration-700 group-hover:scale-105 opacity-90" data-alt="Close up food photography of a vegetarian kebab platter on rustic wooden board with dramatic shadows and vibrant dipping sauce" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKfztGcrL-kKoIDF9KbOB6TvVKxphwCtO_sij4B8qk1UsAX-sYTamZEnfH7ntJFxei4NnkI1an-Hxmccb_tvhjTpBHg-k-ehTNxcbPsOFZbWtVnekgjyt8QPw2bkXACLzYdjr-oNKcsclxnFnMXfNUki0hZEHvVvL1jfISj3PI-XOZK_xfxGHaGh_-m_fvpYzYYt8jE2SzmnHE9njUimSfsAjf_K_HrS6Fv-WNVxJ2AAb0uKnGTtC04W_OeVm8BMHtl0AwlpJDVS0"/>
+<div class="absolute top-4 right-4 bg-surface-container-highest/60 backdrop-blur-[24px] px-3 py-1.5 rounded-full flex items-center gap-2 border border-outline-variant/15">
+<span class="material-symbols-outlined text-primary text-[16px]">view_in_ar</span>
+<span class="text-xs font-bold uppercase tracking-wider text-on-surface">Tap for 3D</span>
+</div>
+</div>
+<div class="p-6 flex flex-col flex-grow">
+<div class="flex justify-between items-start mb-3">
+<h2 class="text-2xl font-bold tracking-wide text-on-surface">Hara Bhara</h2>
+<div class="bg-surface-container-lowest px-2 py-1 rounded-sm border border-outline-variant/15">
+<span class="text-[10px] uppercase font-bold text-emerald-500 tracking-widest">Veg</span>
+</div>
+</div>
+<p class="text-sm text-on-surface-variant leading-relaxed mb-6 flex-grow">
+                        A delicate melange of spinach, green peas, and potatoes, lightly spiced and pan-fried to a crisp exterior.
+                    </p>
+<div class="flex items-end justify-between mt-auto pt-6 border-t border-transparent" style="border-top-color: rgba(91, 64, 62, 0.15);">
+<span class="text-2xl font-bold text-primary font-sans">₹ 450</span>
+<button class="bg-gradient-to-r from-primary to-primary-container text-on-primary-container px-6 py-3 rounded-lg font-bold uppercase tracking-widest text-xs transition-all duration-300 hover:opacity-90 shadow-[0_4px_14px_rgba(255,84,81,0.2)]">
+                            View on Table
+                        </button>
+</div>
+</div>
+</article>
+</div>
+</main>
+<!-- BottomNavBar (Mobile Only) -->
+<nav class="md:hidden bg-[#1c1b1b]/80 backdrop-blur-2xl fixed bottom-0 w-full z-50 rounded-t-none border-t border-[#5b403e]/15 shadow-[0_-4px_20px_rgba(0,0,0,0.4)] fixed bottom-0 left-0 w-full flex justify-around items-center py-3 px-4">
+<a class="flex flex-col items-center justify-center text-[#EF4444] scale-110 hover:text-[#EF4444] transition-colors Active: scale-90 duration-200 ease-out" href="#">
+<span class="material-symbols-outlined mb-1 text-xl" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-sans text-[10px] font-bold uppercase">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e5e2e1]/60 hover:text-[#EF4444] transition-colors" href="#">
+<span class="material-symbols-outlined mb-1 text-xl">search</span>
+<span class="font-sans text-[10px] font-bold uppercase">Explore</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e5e2e1]/60 hover:text-[#EF4444] transition-colors" href="#">
+<span class="material-symbols-outlined mb-1 text-xl">restaurant_menu</span>
+<span class="font-sans text-[10px] font-bold uppercase">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-[#e5e2e1]/60 hover:text-[#EF4444] transition-colors" href="#">
+<span class="material-symbols-outlined mb-1 text-xl">shopping_cart</span>
+<span class="font-sans text-[10px] font-bold uppercase">Cart</span>
+</a>
+</nav>
+<!-- Bottom padding for mobile to account for fixed nav -->
+<div class="h-20 md:hidden w-full"></div>
+</body></html>
