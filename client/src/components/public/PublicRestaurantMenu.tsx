@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  useCallback,
   useDeferredValue,
   useMemo,
   useRef,
@@ -18,9 +17,7 @@ import {
   type PublicRestaurantPayload,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { ensureModelViewerScript } from "@/lib/model-viewer";
 import Lenis from 'lenis';
-import { useGLTF } from "@react-three/drei";
 import { MenuCard } from "./MenuCard/MenuCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -42,9 +39,6 @@ type ArDishView = PublicDishPayload & {
   menuName: string;
 };
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const TOP_AR_VIEW = "top-ar";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -75,7 +69,6 @@ export function PublicRestaurantMenu({
   const [search, setSearch] = useState("");
   const [activeViewId, setActiveViewId] = useState<string>("");
   const [currentMainTab, setCurrentMainTab] = useState<"special" | "menu">("special");
-  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   
   // Use refs instead of state for layout values that change on every scroll/resize frame.
   // This prevents React re-renders during scroll, which is the primary cause of jitter.
@@ -180,14 +173,6 @@ export function PublicRestaurantMenu({
     );
   }, [categories, normalizedSearch]);
 
-
-
-
-
-  const selectedCategory = useMemo(() => {
-    if (activeViewId === TOP_AR_VIEW) return null;
-    return categories.find((c) => c.id === activeViewId) ?? null;
-  }, [activeViewId, categories]);
 
   const filteredMenuCategories = useMemo(() => {
     if (!categories) return [];
@@ -299,7 +284,6 @@ export function PublicRestaurantMenu({
       };
     }
   }, []);
-
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -449,267 +433,7 @@ export function PublicRestaurantMenu({
         </div>
       </div>
   );
-}
 
-// ─── TopArCard ────────────────────────────────────────────────────────────────
-
-const TopArCard = memo(function TopArCard({
-  dish,
-  publicId,
-}: {
-  dish: ArDishView;
-  publicId: string;
-}) {
-  const [isPreviewActivated, setIsPreviewActivated] = useState(false);
-  const [isModelLoaded, setIsModelLoaded] = useState(false);
-  const [isArLaunching, setIsArLaunching] = useState(false);
-  const [isIntersecting, setIsIntersecting] = useState(false);
-  const prefetchedRef = useRef(false);
-  const cardRef = useRef<HTMLElement>(null);
-
-  // Intersection Observer to completely deactivate WebGL when off-screen
-  useEffect(() => {
-    if (!cardRef.current) return;
-    const observer = new IntersectionObserver(([entry]) => {
-      setIsIntersecting(entry.isIntersecting);
-      
-      // If the card is completely off-screen, reset the 3D preview.
-      // This forces it to show the poster picture again, requiring another tap to load 3D.
-      if (!entry.isIntersecting) {
-        setIsPreviewActivated(false);
-        setIsModelLoaded(false);
-      }
-    }, { rootMargin: "0px" }); // Trigger the exact moment it leaves the screen
-    observer.observe(cardRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  // Highly optimized WebWorker-based prefetching
-  // Bypasses main thread entirely and uses Draco/ThreeJS native caching
-  const prefetchModel = useCallback(() => {
-    if (prefetchedRef.current || !dish.modelUrl) return;
-    prefetchedRef.current = true;
-    useGLTF.preload(dish.modelUrl, "https://www.gstatic.com/draco/versioned/decoders/1.5.7/");
-  }, [dish.modelUrl]);
-
-  // Reset launching state when returning to this page via the browser back button (BFCache)
-  useEffect(() => {
-    const handlePageShow = (event: PageTransitionEvent) => {
-      // event.persisted is true if the page was restored from the back/forward cache
-      if (event.persisted) {
-        setIsArLaunching(false);
-      }
-    };
-    window.addEventListener("pageshow", handlePageShow);
-    return () => window.removeEventListener("pageshow", handlePageShow);
-  }, []);
-
-  // "View in AR" — navigates to the dedicated AR setup page.
-  const handleViewInAr = useCallback(() => {
-    if (!dish.modelUrl) return;
-    setIsArLaunching(true);
-    window.location.href = `/r/${publicId}/ar?dish=${dish.id}`;
-    // Fallback reset in case navigation is blocked or delayed
-    setTimeout(() => setIsArLaunching(false), 1500);
-  }, [dish.modelUrl, dish.id, publicId]);
-
-  return (
-    <article
-      ref={cardRef}
-      onPointerEnter={prefetchModel}
-      onTouchStart={() => {
-        prefetchModel();
-        if (!isPreviewActivated) setIsPreviewActivated(true);
-      }}
-      className="group relative flex flex-col bg-surface-container-high rounded-2xl transition-all duration-500 hover:bg-surface-bright cursor-pointer"
-      onClick={() => {
-        if (!isPreviewActivated) setIsPreviewActivated(true);
-      }}
-    >
-      {/* ── 3D Preview / Image Area (Inset Framed) ─────────────────────────────── */}
-      <div className="pt-[2.3%] px-[2.3%] md:pt-[4%] md:px-[4%] w-full">
-        <div className="relative aspect-square md:aspect-auto md:h-64 w-full overflow-hidden bg-surface-container-lowest rounded-2xl">
-        {/* Live 3D model — only mounts if tapped AND visible on screen */}
-        {dish.modelUrl && isPreviewActivated && isIntersecting ? (
-          <ArPreviewInCard
-            modelUrl={dish.modelUrl}
-            alt={dish.name}
-            onLoaded={() => setIsModelLoaded(true)}
-          />
-        ) : null}
-
-        {/* Poster overlay — fades out once GLB finishes loading */}
-        <div
-          className={cn(
-            "absolute inset-0 transition-opacity duration-500",
-            isPreviewActivated && isModelLoaded
-              ? "pointer-events-none opacity-0"
-              : "opacity-100",
-          )}
-        >
-          {dish.posterUrl ? (
-            <img
-              src={dish.posterUrl}
-              alt={dish.name}
-              loading="lazy"
-              decoding="async"
-              className="object-cover w-full h-full transform transition-transform duration-700 group-hover:scale-105 opacity-90"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <span className="material-symbols-outlined text-5xl text-primary/70">
-                  view_in_ar
-                </span>
-                {!isPreviewActivated ? (
-                  <p className="text-sm font-semibold text-on-surface">
-                    Tap to load 3D
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* AR Badge */}
-        {!isPreviewActivated && dish.posterUrl ? (
-          <div className="absolute top-4 right-4 bg-surface-container-highest/60 backdrop-blur-[24px] px-3 py-1.5 rounded-full flex items-center gap-2 border border-outline-variant/15 shadow-sm">
-            <span className="material-symbols-outlined text-primary text-[16px]">view_in_ar</span>
-            <span className="text-xs font-bold uppercase tracking-wider text-on-surface">Tap for 3D</span>
-          </div>
-        ) : null}
-      </div>
-      </div>
-
-      {/* ── Content Area ──────────────────────────────────────────────────────── */}
-      <div className="p-4 md:p-6 flex flex-col flex-grow">
-        <div className="flex justify-between items-start mb-3">
-          <h2 className="text-2xl font-bold tracking-wide text-on-surface">
-            {dish.name}
-          </h2>
-          {/* Dietary Badge - reference site style */}
-          {dish.dietaryType === "VEG" && (
-            <div className="flex items-center gap-1.5 bg-emerald-500 text-white text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full">
-              <span className="flex items-center justify-center w-[11px] h-[11px] border-[1.5px] border-white rounded-[2px]">
-                <span className="w-[4px] h-[4px] bg-white rounded-full" />
-              </span>
-              VEG
-            </div>
-          )}
-          {dish.dietaryType === "NON_VEG" && (
-            <div className="flex items-center gap-1.5 bg-red-500 text-white text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full">
-              <span className="flex items-center justify-center w-[11px] h-[11px] border-[1.5px] border-white rounded-[2px]">
-                <span className="w-[4px] h-[4px] bg-white rounded-full" />
-              </span>
-              NON-VEG
-            </div>
-          )}
-          {dish.dietaryType === "BOTH" && (
-            <div className="flex items-center gap-1.5 bg-white/10 text-white text-[10px] font-bold tracking-wider uppercase px-2.5 py-1 rounded-full border border-white/20">
-              <span className="flex items-center justify-center w-[11px] h-[11px] border-[1.5px] border-emerald-400 rounded-[2px]">
-                <span className="w-[4px] h-[4px] bg-emerald-400 rounded-full" />
-              </span>
-              <span className="flex items-center justify-center w-[11px] h-[11px] border-[1.5px] border-red-400 rounded-[2px]">
-                <span className="w-[4px] h-[4px] bg-red-400 rounded-full" />
-              </span>
-              VEG & NON-VEG
-            </div>
-          )}
-        </div>
-        
-        <p className="text-sm text-[#a3a3a3] uppercase tracking-wide leading-relaxed mb-6 flex-grow">
-          {dish.description || "Experience this dish in your own space before you order."}
-        </p>
-        
-        <div className="flex flex-col gap-5 mt-auto">
-          <span className="text-2xl font-bold text-on-surface font-sans">
-            {formatPrice(dish.price, dish.currency).replace('.00', '')}
-          </span>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              void handleViewInAr();
-            }}
-            disabled={isArLaunching}
-            className="w-full bg-[#fa5555] text-white px-6 py-3.5 rounded-xl font-bold text-base transition-all duration-300 hover:opacity-90 disabled:opacity-70 disabled:cursor-not-allowed"
-          >
-            {isArLaunching ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Wait...
-              </span>
-            ) : "View on Table"}
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-});
-
-// ─── ArPreviewInCard ─────────────────────────────────────────────────────────
-// Thin inline wrapper — avoids the broken dynamic() self-import pattern.
-
-function ArPreviewInCard({
-  modelUrl,
-  alt,
-  onLoaded,
-}: {
-  modelUrl: string;
-  alt: string;
-  onLoaded: () => void;
-}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const onLoadedRef = useRef(onLoaded);
-  onLoadedRef.current = onLoaded;
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    let mv: HTMLElement | null = null;
-
-    // Load the model-viewer library first — without this the custom element
-    // is just an unknown HTML tag and won't render anything.
-    void ensureModelViewerScript().then(() => {
-      if (!container.isConnected) return; // unmounted while script was loading
-
-      mv = document.createElement("model-viewer");
-      mv.setAttribute("src", modelUrl);
-      mv.setAttribute("alt", alt);
-      mv.setAttribute("camera-orbit", "0deg 82deg auto");
-      mv.setAttribute("field-of-view", "28deg");
-      mv.setAttribute("environment-image", "neutral");
-      mv.setAttribute("exposure", "1");
-      mv.setAttribute("shadow-intensity", "1");
-      mv.setAttribute("camera-controls", "");
-      mv.setAttribute("auto-rotate", "");
-      mv.setAttribute("auto-rotate-delay", "0");
-      mv.setAttribute("rotation-per-second", "25deg");
-      mv.setAttribute("interaction-prompt", "none");
-      mv.setAttribute("disable-zoom", "");
-      mv.setAttribute("autoplay", ""); // play any animations embedded in the GLB
-      mv.style.width = "100%";
-      mv.style.height = "100%";
-      mv.style.setProperty("--poster-color", "transparent");
-      mv.style.setProperty("--progress-bar-height", "0px");
-      mv.style.background = "transparent";
-      mv.setAttribute("reveal", "auto"); // Ensure it renders immediately
-
-      const handleLoad = () => onLoadedRef.current();
-      mv.addEventListener("load", handleLoad, { once: true });
-      container.appendChild(mv);
-    });
-
-    return () => {
-      if (mv) {
-        mv.removeEventListener("load", onLoadedRef.current);
-        if (container.contains(mv)) container.removeChild(mv);
-      }
-    };
-  }, [modelUrl, alt]);
-
-  return <div ref={containerRef} className="h-full w-full" />;
 }
 
 const DishMenuRow = memo(function DishMenuRow({ dish }: { dish: PublicDishPayload }) {

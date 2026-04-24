@@ -1,9 +1,32 @@
 "use client";
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
-import { useGLTF } from "@react-three/drei";
 import "./MenuCard.css";
 import { ArPreviewModelViewer } from "../ArPreviewModelViewer";
+import { ensureModelViewerScript } from "@/lib/model-viewer";
+
+// ─── Global one-at-a-time model singleton ─────────────────────────────────────
+// Ensures only ONE GLB is ever decoding / uploading to GPU at a time.
+// When a new card is activated we cancel the previous pending activation so the
+// previous <model-viewer> never mounts and its WebGL context is never created.
+const activeModelStore = {
+  activeId: null as string | null,
+  // Notify the currently-active card that it has been superseded.
+  listeners: new Map<string, () => void>(),
+  activate(id: string, onSupersede: () => void) {
+    // Kick the previously-active card out.
+    if (this.activeId && this.activeId !== id) {
+      this.listeners.get(this.activeId)?.();
+      this.listeners.delete(this.activeId);
+    }
+    this.activeId = id;
+    this.listeners.set(id, onSupersede);
+  },
+  deactivate(id: string) {
+    if (this.activeId === id) this.activeId = null;
+    this.listeners.delete(id);
+  },
+};
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,13 +69,26 @@ export const MenuCard = memo(function MenuCard({
 
   // ── 3D model state ────────────────────────────────────────────────────────
   const [isPreviewActivated, setIsPreviewActivated] = useState(false);
+  // isModelLoading: true from the moment user taps until model fires "load".
+  // Shows the spinner overlay immediately, before <model-viewer> even mounts.
+  const [isModelLoading, setIsModelLoading] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [isArLaunching, setIsArLaunching] = useState(false);
   const [isIntersecting, setIsIntersecting] = useState(false);
   const prefetchedRef = useRef(false);
+  // rAF handle so we can cancel a pending mount if the card is deactivated before
+  // the next frame fires (e.g. user taps a different card in rapid succession).
+  const pendingRafRef = useRef<number>(0);
   const cardRef = useRef<HTMLDivElement>(null);
   // Track touch start position to distinguish intentional tap from accidental scroll-touch
   const touchStartY = useRef<number>(0);
+
+  // Warm the <model-viewer> script singleton on mount so the CDN script is
+  // already loaded by the time the user taps a card. Safe to call many times —
+  // ensureModelViewerScript() is itself a singleton promise.
+  useEffect(() => {
+    void ensureModelViewerScript();
+  }, []);
 
   // Intersection Observer — deactivates the 3D preview when card is scrolled
   // more than half off-screen, requiring a deliberate tap to reactivate.
@@ -66,7 +102,10 @@ export const MenuCard = memo(function MenuCard({
         // This frees the WebGL context and forces the poster to show again.
         // User must intentionally tap the card to re-enable 3D.
         if (!entry.isIntersecting) {
+          cancelAnimationFrame(pendingRafRef.current);
+          activeModelStore.deactivate(dish.id);
           setIsPreviewActivated(false);
+          setIsModelLoading(false);
           setIsModelLoaded(false);
         }
       },
@@ -77,19 +116,58 @@ export const MenuCard = memo(function MenuCard({
     );
     observer.observe(cardRef.current);
     return () => observer.disconnect();
-  }, []);
+  }, [dish.id]);
 
 
-  // Highly optimized WebWorker-based prefetching
-  // Bypasses main thread entirely and uses Draco/ThreeJS native caching
+  // Prefetch the GLB at the network level (browser cache only).
+  // No JS parsing, no WASM decoding, no GPU upload — those happen
+  // inside <model-viewer> only after the user explicitly taps the card.
+  // This means only ONE Three.js instance (model-viewer's own) is ever active.
   const prefetchModel = useCallback(() => {
     if (prefetchedRef.current || !dish.modelUrl) return;
     prefetchedRef.current = true;
-    useGLTF.preload(
-      dish.modelUrl,
-      "https://www.gstatic.com/draco/versioned/decoders/1.5.7/",
-    );
+
+    const link = document.createElement("link");
+    link.rel = "prefetch";
+    link.as = "fetch";
+    link.href = dish.modelUrl;
+    link.crossOrigin = "anonymous";
+    document.head.appendChild(link);
   }, [dish.modelUrl]);
+
+  // Activate 3D preview with rAF deferral.
+  // Phase 1 (synchronous): show loading spinner immediately — React paints this first.
+  // Phase 2 (next frame):   mount <model-viewer> — heavy work starts after the paint.
+  // Global singleton: cancels any other card's pending activation so only ONE GLB
+  // decodes at a time, preventing memory spikes on low-end devices.
+  const activatePreview = useCallback(() => {
+    if (!dish.modelUrl || isPreviewActivated) return;
+
+    // Show spinner immediately (no frame delay — this must paint before the freeze).
+    setIsModelLoading(true);
+
+    // Register with the global store. If another card was active, its supersede
+    // callback runs and cancels its pending rAF + resets its state.
+    activeModelStore.activate(dish.id, () => {
+      cancelAnimationFrame(pendingRafRef.current);
+      setIsPreviewActivated(false);
+      setIsModelLoading(false);
+      setIsModelLoaded(false);
+    });
+
+    // Mount <model-viewer> on the NEXT frame so React flushes the spinner paint first.
+    pendingRafRef.current = requestAnimationFrame(() => {
+      setIsPreviewActivated(true);
+    });
+  }, [dish.id, dish.modelUrl, isPreviewActivated]);
+
+  // Cleanup the singleton entry when this card unmounts.
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(pendingRafRef.current);
+      activeModelStore.deactivate(dish.id);
+    };
+  }, [dish.id]);
 
   // Reset launching state when returning to this page via the browser back button (BFCache)
   useEffect(() => {
@@ -114,7 +192,10 @@ export const MenuCard = memo(function MenuCard({
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const show3D = dish.modelUrl && isPreviewActivated && isIntersecting;
+  // Poster fades out only once the model has fully loaded (fires on "load" event).
   const posterVisible = !(isPreviewActivated && isModelLoaded);
+  // Loading overlay: visible from first tap until model fires "load", then gone.
+  const showLoadingOverlay = isModelLoading && !isModelLoaded;
 
   return (
     <div >
@@ -130,13 +211,9 @@ export const MenuCard = memo(function MenuCard({
         onTouchEnd={(e) => {
           // Only activate if finger moved < 8px — anything more is a scroll, not a tap
           const deltaY = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
-          if (deltaY < 8 && !isPreviewActivated) {
-            setIsPreviewActivated(true);
-          }
+          if (deltaY < 8) activatePreview();
         }}
-        onClick={() => {
-          if (!isPreviewActivated) setIsPreviewActivated(true);
-        }}
+        onClick={activatePreview}
       >
         {/* ── Hero / 3D Preview Area ────────────────────────────────────── */}
         <div className="hero-area" style={{ position: "relative", overflow: "hidden" }}>
@@ -147,9 +224,24 @@ export const MenuCard = memo(function MenuCard({
               modelUrl={dish.modelUrl!}
               alt={dish.name}
               interactive={false}
-              onLoaded={() => setIsModelLoaded(true)}
+              onLoaded={() => {
+                setIsModelLoaded(true);
+                setIsModelLoading(false);
+              }}
             />
           )}
+
+          {/* Loading overlay — visible between tap and model "load" event.
+               Sits above the poster so user gets immediate feedback.
+               CSS handles the fade-in/out transition. */}
+          <div
+            className="model-loading-overlay"
+            aria-hidden="true"
+            style={{ opacity: showLoadingOverlay ? 1 : 0, pointerEvents: "none" }}
+          >
+            <span className="model-loading-spinner" />
+            <span className="model-loading-text">Loading 3D preview…</span>
+          </div>
 
           {/* Poster overlay — fades out once GLB finishes loading */}
           <div
@@ -178,7 +270,7 @@ export const MenuCard = memo(function MenuCard({
           </div>
 
           {/* AR launch button — bottom right */}
-          <div
+          {/* <div
             className="preview-btn"
             onClick={(e) => {
               e.stopPropagation();
@@ -211,7 +303,7 @@ export const MenuCard = memo(function MenuCard({
                 <span>📦</span> AR View
               </>
             )}
-          </div>
+          </div> */}
         </div>
 
         {/* ── Content Area ──────────────────────────────────────────────── */}
@@ -408,8 +500,7 @@ export const MenuCard = memo(function MenuCard({
         </div>
       </div>
 
-      {/* Spinner keyframes — scoped inline so no global CSS needed */}
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
     </div>
   );
 });

@@ -1,517 +1,1142 @@
 /* =========================================
+
    Theme Variables
+
    ========================================= */
+
 :root {
+
     --card-bg: #080808; 
+
     --hero-plate-gradient-top: #151515; 
+
     --surface-dark-slate: #101012; 
+
     
+
     --text-primary: #FFFFFF; 
+
     --text-description-gold: #A0916D; 
+
     --text-accent-gold: #D0BE84; 
+
     --text-muted-grey: #A1A1A1; 
+
     
+
     --badge-dark-red: #6C2424; 
+
     --badge-border-red: #882222; 
+
     --btn-primary-red: #B83A31; 
+
     --btn-border-red: #A33029; 
+
     --accent-green-tag: #4CAF50; 
+
     
+
     --border-color-subtle: rgba(255, 255, 255, 0.05); 
+
 }
 
+
+
 /* =========================================
+
    Component Base (Self-Contained)
+
    ========================================= */
+
 .menu-card * {
+
     box-sizing: border-box;
+
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
 }
+
+
 
 .menu-card {
+
     width: 100%;
+
     max-width: 440px; 
+
     margin: 0 auto; 
+
     background-color: var(--card-bg);
+
     background-image: 
+
         radial-gradient(ellipse 85% 350px at 50% 120px, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.04) 40%, transparent 80%),
+
         linear-gradient(180deg, var(--hero-plate-gradient-top) 0%, var(--card-bg) 300px);
+
     border-radius: 24px;
+
     border: 1px solid var(--border-color-subtle);
+
     overflow: hidden;
+
     box-shadow: 0 10px 30px rgba(0,0,0,0.8); 
+
     color: var(--text-primary);
+
     
+
     display: flex;
+
     flex-direction: column;
+
     height: 100%; 
+
     
+
     /* Hardware acceleration to prevent animation lag */
+
     transform: translateZ(0);
+
     will-change: transform;
+
 }
+
+
 
 /* =========================================
+
    Hero / 3D Area
+
    ========================================= */
+
 .hero-area {
+
     height: 240px;
+
     position: relative;
+
     background: transparent;
+
     /* Isolate WebGL canvas to prevent layout thrashing */
+
     contain: paint layout;
+
 }
 
-.badge-hot {
+
+
+/* =========================================
+
+   3D Model Loading Overlay
+
+   ========================================= */
+
+
+
+/* Overlay sits in the hero-area above the poster, below the badge.
+
+   Uses opacity transition only — no layout thrashing. */
+
+.model-loading-overlay {
+
     position: absolute;
-    top: 20px;
-    left: 20px;
-    background-color: var(--badge-dark-red);
-    border: 1px solid var(--badge-border-red);
-    color: #fff;
-    padding: 6px 14px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 600;
+
+    inset: 0;
+
+    z-index: 5;
+
     display: flex;
+
+    flex-direction: column;
+
     align-items: center;
-    gap: 6px;
-    backdrop-filter: blur(10px);
-    z-index: 10;
+
+    justify-content: center;
+
+    gap: 12px;
+
+    /* Subtle frosted glass so the poster is still faintly visible beneath */
+
+    background: rgba(8, 8, 8, 0.55);
+
+    backdrop-filter: blur(4px);
+
+    -webkit-backdrop-filter: blur(4px);
+
+    transition: opacity 0.35s ease;
+
+    /* Prevent the overlay from receiving pointer events even before opacity:0 */
+
+    pointer-events: none;
+
 }
+
+
+
+/* Spinning ring — conic-gradient gives a "loading arc" feel */
+
+.model-loading-spinner {
+
+    display: block;
+
+    width: 36px;
+
+    height: 36px;
+
+    border-radius: 50%;
+
+    border: 2.5px solid rgba(208, 190, 132, 0.2);
+
+    border-top-color: var(--text-accent-gold);
+
+    animation: mv-spin 0.75s linear infinite;
+
+    flex-shrink: 0;
+
+}
+
+
+
+.model-loading-text {
+
+    font-size: 11px;
+
+    font-weight: 600;
+
+    letter-spacing: 0.04em;
+
+    color: rgba(255, 255, 255, 0.55);
+
+    white-space: nowrap;
+
+}
+
+
+
+@keyframes mv-spin {
+
+    to { transform: rotate(360deg); }
+
+}
+
+
+
+/* CTA button AR-launching spinner */
+
+@keyframes spin {
+
+    to { transform: rotate(360deg); }
+
+}
+
+
+
+.badge-hot {
+
+    position: absolute;
+
+    top: 20px;
+
+    left: 20px;
+
+    background-color: var(--badge-dark-red);
+
+    border: 1px solid var(--badge-border-red);
+
+    color: #fff;
+
+    padding: 6px 14px;
+
+    border-radius: 20px;
+
+    font-size: 13px;
+
+    font-weight: 600;
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 6px;
+
+    backdrop-filter: blur(10px);
+
+    z-index: 10;
+
+}
+
+
 
 .badge-hot span { color: var(--text-accent-gold); } 
 
+
+
 .preview-btn {
+
     position: absolute;
+
     bottom: 20px;
+
     right: 20px;
+
     background: rgba(20, 20, 20, 0.7);
+
     border: 1px solid var(--text-accent-gold);
+
     color: var(--text-primary);
+
     padding: 8px 16px;
+
     border-radius: 12px;
+
     font-size: 13px;
+
     display: flex;
+
     align-items: center;
+
     gap: 8px;
+
     cursor: pointer;
+
     backdrop-filter: blur(10px);
+
     z-index: 10;
+
 }
+
+
 
 .preview-btn span { color: var(--text-accent-gold); } 
 
+
+
 /* =========================================
+
    Content Area
+
    ========================================= */
+
 .content-area {
+
     padding: 24px;
+
     display: flex;
+
     flex-direction: column;
+
     flex-grow: 1; 
+
     overflow: hidden;
+
 }
+
+
 
 /* FIXED: Perfect Flexbox Layout for the Title Row */
+
 .title-row {
+
     display: flex; 
+
     flex-direction: row;
+
     justify-content: space-between;
+
     align-items: flex-end; /* Anchors the tag to the bottom right of the text block */
+
     gap: 12px;
+
     margin-bottom: 2px;
+
     width: 100%;
+
 }
+
+
 
 /* FIXED: flex: 1 allows it to take up available space and wrap naturally without pushing the tag to an empty line */
+
 .title-row h1 {
+
     flex: 1; 
+
     font-size: clamp(15px, 5.5cqi, 20px); 
+
     font-weight: 600; 
+
     color: var(--text-primary);
+
     line-height: 1.3;
+
     margin: 0;
+
     word-break: keep-all; 
+
     overflow-wrap: break-word; 
+
     letter-spacing: -0.3px; 
+
 }
+
+
 
 /* FIXED: No floats! Locks cleanly to the right side */
+
 .diet-indicators {
+
     flex-shrink: 0; /* Prevents the tag from squishing */
+
     display: inline-flex; 
+
     align-items: center;
+
     gap: 6px;
+
     background: var(--surface-dark-slate);
+
     padding: 5px 10px; 
+
     border-radius: 8px;
+
     border: 1px solid var(--border-color-subtle);
+
     font-size: 11px; 
+
     font-weight: 700;
+
     letter-spacing: 0.5px;
+
     color: var(--text-primary);
+
     white-space: nowrap; 
+
     margin-bottom: 2px; /* Optical tweak to align tag with the text baseline */
+
 }
+
+
 
 .veg-text { color: var(--accent-green-tag); font-size: 14px; }
+
 .nonveg-text { color: var(--btn-primary-red); font-size: 14px; }
 
+
+
 /* 1-Line Description with ellipsis (...) */
+
 .description {
+
     color: #EAE0C9; 
+
     font-weight: 500;
+
     font-style: italic;
+
     font-size: 11px;
+
     margin-bottom: 6px; 
+
     line-height: 1.4;
+
     white-space: nowrap;
+
     overflow: hidden;
+
     text-overflow: ellipsis;
+
 }
+
+
 
 .price-row {
+
     display: flex;
+
     align-items: center;
+
     flex-wrap: nowrap; 
+
     gap: 8px; 
+
     margin-bottom: 20px;
+
     font-size: 13px; 
+
     color: var(--text-muted-grey);
+
     white-space: nowrap; 
+
     overflow-x: auto; 
+
     scrollbar-width: none;
+
     -ms-overflow-style: none;
+
 }
+
+
 
 .price-row::-webkit-scrollbar { 
+
     display: none; 
+
 }
+
+
 
 .price {
+
     font-size: 26px;
+
     font-weight: 700;
+
     color: var(--text-primary);
+
     letter-spacing: -0.5px;
+
 }
+
+
 
 .dot {
+
     width: 4px; height: 4px;
+
     background-color: var(--border-color-subtle); 
+
     border-radius: 50%;
+
     flex-shrink: 0;
+
 }
+
+
 
 .satisfaction {
+
     display: flex;
+
     align-items: center;
+
     gap: 2px; 
+
     color: var(--text-muted-grey);
+
 }
 
+
+
 .cta-button {
+
     width: 100%;
+
     background-color: var(--btn-primary-red);
+
     color: white;
+
     border: 1px solid var(--btn-border-red);
+
     padding: 16px;
+
     border-radius: 12px;
+
     font-size: 16px;
+
     font-weight: 600;
+
     display: flex;
+
     justify-content: center;
+
     align-items: center;
+
     gap: 10px;
+
     cursor: pointer;
+
     transition: background-color 0.2s;
+
     margin-top: auto; 
+
 }
+
+
 
 .cta-button:hover { background-color: var(--btn-border-red); }
 
+
+
 .menu-card hr {
+
     border: 0;
+
     height: 1px;
+
     background: var(--border-color-subtle);
+
     margin: 0;
+
 }
 
+
+
 /* =========================================
+
    Toggle Dropdown Styles
+
    ========================================= */
+
 .toggle-container {
+
     width: 100%;
+
     background: transparent;
+
     border: none;
+
     font-family: inherit;
+
     display: flex;
+
     justify-content: center;
+
     align-items: center;
+
     gap: 8px;
+
     padding: 16px 0 16px 0;
+
     color: var(--text-description-gold);
+
     font-size: 14px;
+
     font-weight: 600;
+
     cursor: pointer;
+
     user-select: none;
+
     transition: color 0.2s;
+
     outline: none;
+
 }
+
+
 
 .toggle-container:hover {
+
     color: var(--text-accent-gold);
+
 }
+
+
 
 .icon-chevron {
+
     display: flex;
+
     align-items: center;
+
     justify-content: center;
+
     transition: transform 0.3s ease;
+
 }
+
+
 
 .toggle-container.active .icon-chevron {
+
     transform: rotate(180deg);
+
 }
+
+
 
 .bottom-section-wrapper {
+
     display: grid;
+
     grid-template-rows: 0fr;
+
     transition: grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
 }
+
+
 
 .bottom-section-wrapper.open {
+
     grid-template-rows: 1fr;
+
 }
+
+
 
 .bottom-section-inner {
+
     overflow: hidden;
+
     opacity: 0;
+
     transition: opacity 0.3s ease-out 0s;
+
     min-height: 0; /* CRUCIAL for smooth grid-template-rows animation */
+
 }
+
+
 
 .bottom-section-wrapper.open .bottom-section-inner {
+
     opacity: 1;
+
     transition: opacity 0.4s ease-in 0.15s; 
+
 }
+
+
 
 /* =========================================
+
    Cross Sell Section
+
    ========================================= */
+
 .section-header {
+
     display: flex;
+
     justify-content: space-between;
+
     align-items: center;
+
     margin-bottom: 16px;
+
 }
 
+
+
 .section-title {
+
     font-size: 15px;
+
     font-weight: 600;
+
     display: flex;
+
     align-items: center;
+
     gap: 8px;
+
     color: var(--text-description-gold);
+
 }
+
+
 
 .section-title span { color: var(--text-accent-gold); } 
 
+
+
 .add-all {
+
     visibility: hidden;
+
     appearance: none;
+
     -webkit-appearance: none;
+
     background: transparent;
+
     border: none;
+
     padding: 0;
+
     margin: 0;
+
     font-family: inherit;
+
     color: var(--text-primary); 
+
     font-size: 13px;
+
     font-weight: 600;
+
     cursor: pointer;
+
     display: flex;
+
     align-items: center;
+
     gap: 4px;
+
     outline: none;
+
 }
+
+
 
 .add-all-icon { color: var(--text-accent-gold); font-size: 14px; } 
 
+
+
 .cross-sell-grid {
+
     display: none; /* flex */
+
     gap: 12px;
+
     overflow-x: auto;
+
     padding-bottom: 12px;
+
     scrollbar-width: none; 
+
     -ms-overflow-style: none; /* IE/Edge */
+
     
+
     /* Hardware acceleration for scrollable area */
+
     transform: translateZ(0);
+
     will-change: transform;
+
 }
+
 .cross-sell-grid::-webkit-scrollbar { display: none; } 
 
+
+
 .item-card {
+
     background: var(--surface-dark-slate);
+
     border: 1px solid var(--border-color-subtle);
+
     border-radius: 12px;
+
     padding: 10px;
+
     min-width: 110px;
+
     display: flex;
+
     flex-direction: column; 
+
     gap: 10px;
+
     flex-shrink: 0; 
+
 }
+
+
 
 .item-img {
+
     position: relative;
+
     width: 100%;
+
     height: 70px; 
+
     background: rgba(255, 255, 255, 0.05); 
+
     border-radius: 8px;
+
     display: flex;
+
     justify-content: center;
+
     align-items: center;
+
     font-size: 32px;
+
 }
+
+
 
 .item-info { 
+
     display: flex; 
+
     flex-direction: column; 
+
     gap: 4px; 
+
     width: 100%;
+
     padding-bottom: 2px;
+
 }
+
+
 
 .item-name { 
+
     font-size: 13px; 
+
     font-weight: 600; 
+
     color: var(--text-primary); 
+
     line-height: 1.3;
+
 }
+
+
 
 .item-price { 
+
     font-size: 13px; 
+
     font-weight: 600;
+
     color: var(--text-muted-grey); 
+
 }
 
+
+
 /* =========================================
+
    Perfectly Centered + Button
+
    ========================================= */
+
 .add-item-btn {
+
     position: absolute;
+
     bottom: 2px; 
+
     right: 2px;  
+
     background: var(--card-bg); 
+
     border: 1px solid var(--border-color-subtle);
+
     width: 24px;
+
     height: 24px;
+
     border-radius: 50%;
+
     display: flex;
+
     justify-content: center;
+
     align-items: center;
+
     cursor: pointer;
+
     transition: background-color 0.2s, transform 0.1s;
+
     box-shadow: 0 2px 4px rgba(0,0,0,0.5); 
+
     padding: 0;
+
     margin: 0;
+
     outline: none;
+
 }
+
+
 
 .add-item-btn:hover {
+
     background: var(--surface-dark-slate);
+
     transform: scale(1.05);
+
 }
+
+
 
 .add-item-btn:active {
+
     transform: scale(0.95);
+
 }
+
+
 
 .add-item-btn::before {
+
     content: '';
+
     position: absolute;
+
     background-color: var(--text-accent-gold);
+
     width: 2px;
+
     height: 12px;
+
     border-radius: 1px;
+
 }
+
+
 
 .add-item-btn::after {
+
     content: '';
+
     position: absolute;
+
     background-color: var(--text-accent-gold);
+
     width: 12px;
+
     height: 2px;
+
     border-radius: 1px;
+
 }
 
+
+
 /* =========================================
+
    Highlights Row (Ultra-Slim Vertical Profile)
+
    ========================================= */
+
 .highlights-row {
+
     display: flex; 
+
     align-items: stretch; 
+
     justify-content: space-between;
+
     background: var(--surface-dark-slate);
+
     border: 1px solid var(--border-color-subtle);
+
     border-radius: 8px; 
+
     padding: 8px 6px; 
+
     margin-bottom: 16px;
+
     margin-top: 16px;
+
     min-height: 48px; 
+
 }
+
+
 
 .highlight-item {
+
     display: flex;
+
     align-items: center; 
+
     gap: 5px; 
+
     flex: 1; 
+
 }
+
+
 
 .highlight-item:nth-child(2) {
+
     flex: 1.4; 
+
     padding: 0 8px;
+
     margin: 0 6px;
+
     border-left: 1px solid var(--border-color-subtle);
+
     border-right: 1px solid var(--border-color-subtle);
+
     height: auto; 
+
 }
+
+
 
 .hl-icon { 
+
     font-size: 16px; 
+
     color: var(--text-accent-gold); 
+
     flex-shrink: 0; 
+
 } 
+
+
 
 .hl-text { 
+
     display: flex; 
+
     flex-direction: column; 
+
     font-size: 10px; 
+
     line-height: 1.15; 
+
     color: var(--text-muted-grey); 
+
     letter-spacing: -0.1px; 
+
 }
+
+
 
 .hl-text strong { 
+
     color: var(--text-primary); 
+
     font-weight: 600; 
+
     font-size: 11px; 
+
     white-space: nowrap; 
+
 } 
 
+
+
 /* =========================================
+
    Responsive Adjustments for Component 
+
    ========================================= */
 
+
+
 @media screen and (min-width: 768px) {
+
     .menu-card { 
+
         max-width: 480px; 
+
     }
+
 }
 
+
+
 @media screen and (max-width: 480px) {
+    /* Adds a tiny bit of padding so the card doesn't touch the phone edges */
+    .menu-card {
+        width: calc(100% - 24px); 
+        margin: 0 auto;
+    }
+
     .content-area { 
         padding: 16px; 
     }
@@ -526,22 +1151,49 @@
         font-size: 12px;
     }
 
+    /* FIXED: Shrinks button text and forces it to stay on one single line */
+    .cta-button {
+        font-size: 13.5px; /* Slightly smaller text for mobile */
+        padding: 12px 8px; /* Tighter padding */
+        gap: 6px; /* Less space between the icon and text */
+        white-space: nowrap; /* Strictly prevents breaking into two lines */
+        letter-spacing: -0.3px; /* Helps squeeze it in beautifully */
+    }
+
+    /* Keeps highlights horizontal on mobile and scales them to fit */
     .highlights-row {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px; 
-        padding: 12px; 
+        flex-direction: row; 
+        align-items: stretch;
+        gap: 0; 
+        padding: 8px 4px; 
         min-height: auto;
     }
 
+    .highlight-item {
+        gap: 4px; 
+    }
+
     .highlight-item:nth-child(2) {
-        border-left: none;
-        border-right: none;
-        border-top: 1px solid var(--border-color-subtle);
-        border-bottom: 1px solid var(--border-color-subtle);
-        padding: 12px 0;
-        margin: 0;
-        width: 100%;
-        height: auto; 
+        border-top: none;
+        border-bottom: none;
+        border-left: 1px solid var(--border-color-subtle);
+        border-right: 1px solid var(--border-color-subtle);
+        padding: 0 6px;
+        margin: 0 6px;
+        width: auto;
+    }
+
+    /* Shrink the icons and text so they fit horizontally without wrapping */
+    .hl-icon {
+        font-size: 13px;
+    }
+
+    .hl-text {
+        font-size: 9px;
+        letter-spacing: -0.2px;
+    }
+
+    .hl-text strong {
+        font-size: 10px;
     }
 }
