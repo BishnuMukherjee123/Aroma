@@ -5,6 +5,7 @@ import {
   buildAssetUrl,
   rebuildPublicRestaurantSnapshot,
 } from "../../lib/public-menu.js";
+import { schedulePosterGeneration } from "../../lib/poster-service.js";
 import {
   createSignedUpload,
   ensureStorageBucket,
@@ -123,6 +124,8 @@ export const completeAssetUpload = async (
     where: { id: assetId },
     select: {
       id: true,
+      kind: true,
+      dishId: true,
       restaurantId: true,
       storageKey: true,
     },
@@ -152,6 +155,27 @@ export const completeAssetUpload = async (
   });
 
   await rebuildPublicRestaurantSnapshot(existingAsset.restaurantId);
+
+  // ── Auto-generate poster when a 3D model upload is completed ──────────────
+  // Fire-and-forget: does NOT block the HTTP response.
+  // If poster generation fails, the error is logged but the upload still
+  // succeeds. The backfill script can recover any missing posters later.
+  if (existingAsset.kind === "MODEL_3D") {
+    const dish = await prisma.dish.findUnique({
+      where: { id: existingAsset.dishId },
+      select: { name: true },
+    });
+
+    if (dish) {
+      schedulePosterGeneration({
+        dishId: existingAsset.dishId,
+        restaurantId: existingAsset.restaurantId,
+        modelUrl: publicUrl,
+        modelStorageKey: existingAsset.storageKey,
+        dishName: dish.name,
+      });
+    }
+  }
 
   return {
     asset: {
