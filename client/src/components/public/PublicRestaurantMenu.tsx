@@ -76,11 +76,14 @@ export function PublicRestaurantMenu({
   const [activeViewId, setActiveViewId] = useState<string>("");
   const [currentMainTab, setCurrentMainTab] = useState<"special" | "menu">("special");
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
-  const [headerHeight, setHeaderHeight] = useState(118);
-  const [navbarHidden, setNavbarHidden] = useState(false);
+  
+  // Use refs instead of state for layout values that change on every scroll/resize frame.
+  // This prevents React re-renders during scroll, which is the primary cause of jitter.
+  const headerHeightRef = useRef(118);
   
   const headerRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLElement>(null);
 
   const deferredSearch = useDeferredValue(search);
 
@@ -214,7 +217,7 @@ export function PublicRestaurantMenu({
   useEffect(() => {
     const lenis = new Lenis({
       duration: 1.5,
-      lerp: 0.05,
+      lerp: 0.08, // slightly snappier than 0.05 to reduce perceived lag
       smoothWheel: true,
       wheelMultiplier: 1,
     });
@@ -232,9 +235,15 @@ export function PublicRestaurantMenu({
     let isHidden = false; // local sync to avoid React re-render overhead on every frame
 
     const updateMeasurements = () => {
-      if (headerRef.current) {
-        const navHeight = headerRef.current.offsetHeight;
-        setHeaderHeight(navHeight);
+      const header = headerRef.current;
+      const main = mainRef.current;
+      if (header) {
+        const navHeight = header.offsetHeight;
+        // ✅ Direct DOM write — no React re-render
+        headerHeightRef.current = navHeight;
+        if (main) {
+          main.style.paddingTop = `${navHeight + 20}px`;
+        }
         
         if (titleRef.current) {
           const rect = titleRef.current.getBoundingClientRect();
@@ -250,25 +259,30 @@ export function PublicRestaurantMenu({
     const resizeObserver = new ResizeObserver(updateMeasurements);
     if (headerRef.current) resizeObserver.observe(headerRef.current);
 
-    // Auto-animate navbar: highly optimized scroll loop
-    lenis.on('scroll', ({ scroll, direction }) => {
+    // Auto-animate navbar: direct DOM writes — zero React re-renders per scroll frame
+    lenis.on('scroll', ({ scroll, direction }: { scroll: number; direction: number }) => {
+      const header = headerRef.current;
+      if (!header) return;
       if (scroll <= cachedThreshold) {
         // ALWAYS show if we are above the threshold
         if (isHidden) {
           isHidden = false;
-          setNavbarHidden(false);
+          // ✅ Direct DOM write — no React re-render
+          header.style.transform = 'translateY(0)';
         }
       } else if (direction === 1) {
         // Scrolling DOWN past threshold -> HIDE
         if (!isHidden) {
           isHidden = true;
-          setNavbarHidden(true);
+          // ✅ Direct DOM write — no React re-render
+          header.style.transform = 'translateY(-100%)';
         }
       } else if (direction === -1) {
         // Scrolling UP past threshold -> SHOW
         if (isHidden) {
           isHidden = false;
-          setNavbarHidden(false);
+          // ✅ Direct DOM write — no React re-render
+          header.style.transform = 'translateY(0)';
         }
       }
     });
@@ -310,11 +324,15 @@ export function PublicRestaurantMenu({
         {/* ── TopNavBar ──────────────────────────────────────────────────────── */}
         <header 
           ref={headerRef}
-          className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 backdrop-blur-xl"
+          className="fixed top-0 left-0 right-0 z-50 border-b border-white/5"
           style={{
-            backgroundColor: "rgba(15, 15, 15, 0.85)",
-            transform: navbarHidden ? `translateY(-100%)` : `translateY(0)`,
+            // Fully opaque — eliminates backdrop-filter blur which forces a GPU re-composite
+            // on EVERY scroll frame and is the primary cause of scroll jitter.
+            backgroundColor: "rgb(15, 15, 15)",
+            // Initial transform — Lenis scroll handler updates this directly via DOM (no re-renders)
+            transform: 'translateY(0)',
             transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
+            willChange: "transform", // hints browser to GPU-composite this layer
           }}
         >
           <div className="max-w-4xl mx-auto px-6 py-4 flex flex-col gap-4">
@@ -365,8 +383,9 @@ export function PublicRestaurantMenu({
 
           {/* ── Main Content Canvas ───────────────────────────────────────────── */}
           <main 
+            ref={mainRef}
             className="w-full max-w-screen-2xl mx-auto px-[2vw] md:px-[4%] lg:px-[7%] 2xl:px-[9%] pb-8 md:pb-16"
-            style={{ paddingTop: `${headerHeight + 20}px` }}
+            style={{ paddingTop: `${headerHeightRef.current + 20}px` }}
           >
             
             {/* Section Header */}

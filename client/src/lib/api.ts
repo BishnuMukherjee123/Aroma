@@ -227,7 +227,9 @@ const apiRequest = async <T>(
       ...(options.body ? { "Content-Type": "application/json" } : {}),
     },
     ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-    cache: "no-store",
+    // For authenticated / mutating requests keep no-store.
+    // Public read-only fetches can opt in to browser caching via cache headers.
+    cache: options.token || options.method ? "no-store" : "default",
   });
 
   if (!response.ok) {
@@ -373,7 +375,11 @@ export const fetchPublicRestaurantServer = async (
   const response = await fetch(
     `${getServerApiBaseUrl()}/api/v1/public/r/${publicId}`,
     {
-      cache: "no-store",
+      // Cache the public menu on the Next.js server for 60 s.
+      // This means the first visitor fetches from the backend;
+      // every subsequent visitor within that window gets the
+      // pre-rendered response instantly — no backend round-trip.
+      next: { revalidate: 60 },
     },
   );
 
