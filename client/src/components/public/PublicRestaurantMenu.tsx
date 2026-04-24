@@ -213,86 +213,93 @@ export function PublicRestaurantMenu({
     0,
   );
 
-  // Smooth Scroll Initialization (Slow & Cinematic)
+  // Scroll Initialization — Lenis on desktop, native on mobile
   useEffect(() => {
-    const lenis = new Lenis({
-      duration: 1.5,
-      lerp: 0.08, // slightly snappier than 0.05 to reduce perceived lag
-      smoothWheel: true,
-      wheelMultiplier: 1,
-    });
+    const header = headerRef.current;
+    if (!header) return;
 
-    let rafId: number;
-    function raf(time: number) {
-      lenis.raf(time);
-      rafId = requestAnimationFrame(raf);
-    }
+    // ── Detect touch/mobile ─────────────────────────────────────────────────
+    // Mobile "Aw, Snap!" crashes are caused by Lenis's continuous rAF loop
+    // competing with WebGL contexts for mobile RAM. On touch devices the browser
+    // already scrolls on a separate GPU compositor thread — faster than any JS.
+    const isTouchDevice =
+      window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
-    rafId = requestAnimationFrame(raf);
-
-    // Performance Optimization: Cache measurements so we don't recalculate on every scroll frame
     let cachedThreshold = 0;
-    let isHidden = false; // local sync to avoid React re-render overhead on every frame
+    let isHidden = false;
+    let rafId: number;
 
+    // ── Shared measurement logic ────────────────────────────────────────────
     const updateMeasurements = () => {
-      const header = headerRef.current;
       const main = mainRef.current;
-      if (header) {
-        const navHeight = header.offsetHeight;
-        // ✅ Direct DOM write — no React re-render
-        headerHeightRef.current = navHeight;
-        if (main) {
-          main.style.paddingTop = `${navHeight + 20}px`;
-        }
-        
-        if (titleRef.current) {
-          const rect = titleRef.current.getBoundingClientRect();
-          // Absolute midpoint from the very top of the document
-          const absoluteMidpoint = rect.top + window.scrollY + (rect.height / 2);
-          cachedThreshold = absoluteMidpoint - navHeight;
-        }
+      const navHeight = header.offsetHeight;
+      headerHeightRef.current = navHeight;
+      if (main) main.style.paddingTop = `${navHeight + 20}px`;
+      if (titleRef.current) {
+        const rect = titleRef.current.getBoundingClientRect();
+        const absoluteMidpoint = rect.top + window.scrollY + (rect.height / 2);
+        cachedThreshold = absoluteMidpoint - navHeight;
       }
     };
-    
-    // Initial measurement
     updateMeasurements();
     const resizeObserver = new ResizeObserver(updateMeasurements);
-    if (headerRef.current) resizeObserver.observe(headerRef.current);
+    resizeObserver.observe(header);
 
-    // Auto-animate navbar: direct DOM writes — zero React re-renders per scroll frame
-    lenis.on('scroll', ({ scroll, direction }: { scroll: number; direction: number }) => {
-      const header = headerRef.current;
-      if (!header) return;
+    // ── Shared navbar hide/show (direct DOM, zero React re-renders) ─────────
+    const handleScroll = (scroll: number, direction: number) => {
       if (scroll <= cachedThreshold) {
-        // ALWAYS show if we are above the threshold
-        if (isHidden) {
-          isHidden = false;
-          // ✅ Direct DOM write — no React re-render
-          header.style.transform = 'translateY(0)';
-        }
-      } else if (direction === 1) {
-        // Scrolling DOWN past threshold -> HIDE
-        if (!isHidden) {
-          isHidden = true;
-          // ✅ Direct DOM write — no React re-render
-          header.style.transform = 'translateY(-100%)';
-        }
-      } else if (direction === -1) {
-        // Scrolling UP past threshold -> SHOW
-        if (isHidden) {
-          isHidden = false;
-          // ✅ Direct DOM write — no React re-render
-          header.style.transform = 'translateY(0)';
-        }
+        if (isHidden) { isHidden = false; header.style.transform = 'translateY(0)'; }
+      } else if (direction === 1 && !isHidden) {
+        isHidden = true; header.style.transform = 'translateY(-100%)';
+      } else if (direction === -1 && isHidden) {
+        isHidden = false; header.style.transform = 'translateY(0)';
       }
-    });
-
-    return () => {
-      lenis.destroy();
-      resizeObserver.disconnect();
-      cancelAnimationFrame(rafId);
     };
+
+    if (isTouchDevice) {
+      // ── MOBILE: native passive scroll ────────────────────────────────────
+      // passive:true lets the browser start scrolling BEFORE JS runs.
+      // No Lenis = no rAF loop = no memory pressure = no "Aw, Snap!" crash.
+      let lastScrollY = window.scrollY;
+      let ticking = false;
+      const onScroll = () => {
+        const y = window.scrollY;
+        if (!ticking) {
+          requestAnimationFrame(() => {
+            handleScroll(y, y > lastScrollY ? 1 : -1);
+            lastScrollY = y;
+            ticking = false;
+          });
+          ticking = true;
+        }
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      return () => {
+        window.removeEventListener('scroll', onScroll);
+        resizeObserver.disconnect();
+      };
+
+    } else {
+      // ── DESKTOP: Lenis cinematic smooth scroll ────────────────────────────
+      const lenis = new Lenis({
+        duration: 1.5,
+        lerp: 0.08,
+        smoothWheel: true,
+        wheelMultiplier: 1,
+      });
+      const raf = (time: number) => { lenis.raf(time); rafId = requestAnimationFrame(raf); };
+      rafId = requestAnimationFrame(raf);
+      lenis.on('scroll', ({ scroll, direction }: { scroll: number; direction: number }) => {
+        handleScroll(scroll, direction);
+      });
+      return () => {
+        lenis.destroy();
+        resizeObserver.disconnect();
+        cancelAnimationFrame(rafId);
+      };
+    }
   }, []);
+
 
   // ── Render ──────────────────────────────────────────────────────────────────
 

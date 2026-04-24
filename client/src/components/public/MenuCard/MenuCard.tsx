@@ -51,26 +51,34 @@ export const MenuCard = memo(function MenuCard({
   const [isIntersecting, setIsIntersecting] = useState(false);
   const prefetchedRef = useRef(false);
   const cardRef = useRef<HTMLDivElement>(null);
+  // Track touch start position to distinguish intentional tap from accidental scroll-touch
+  const touchStartY = useRef<number>(0);
 
-  // Intersection Observer to completely deactivate WebGL when off-screen
+  // Intersection Observer — deactivates the 3D preview when card is scrolled
+  // more than half off-screen, requiring a deliberate tap to reactivate.
   useEffect(() => {
     if (!cardRef.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         setIsIntersecting(entry.isIntersecting);
 
-        // If the card is completely off-screen, reset the 3D preview.
-        // This forces it to show the poster picture again, requiring another tap to load 3D.
+        // Deactivate when less than 50% of the card is visible.
+        // This frees the WebGL context and forces the poster to show again.
+        // User must intentionally tap the card to re-enable 3D.
         if (!entry.isIntersecting) {
           setIsPreviewActivated(false);
           setIsModelLoaded(false);
         }
       },
-      { rootMargin: "0px" }, // Trigger the exact moment it leaves the screen
+      {
+        // 0.5 = fire when card crosses the 50% visibility threshold
+        threshold: 0.5,
+      },
     );
     observer.observe(cardRef.current);
     return () => observer.disconnect();
   }, []);
+
 
   // Highly optimized WebWorker-based prefetching
   // Bypasses main thread entirely and uses Draco/ThreeJS native caching
@@ -114,9 +122,17 @@ export const MenuCard = memo(function MenuCard({
         ref={cardRef}
         className="menu-card"
         onPointerEnter={prefetchModel}
-        onTouchStart={() => {
+        onTouchStart={(e) => {
+          // Record the starting Y so we can detect scroll vs intentional tap
+          touchStartY.current = e.touches[0].clientY;
           prefetchModel();
-          if (!isPreviewActivated) setIsPreviewActivated(true);
+        }}
+        onTouchEnd={(e) => {
+          // Only activate if finger moved < 8px — anything more is a scroll, not a tap
+          const deltaY = Math.abs(e.changedTouches[0].clientY - touchStartY.current);
+          if (deltaY < 8 && !isPreviewActivated) {
+            setIsPreviewActivated(true);
+          }
         }}
         onClick={() => {
           if (!isPreviewActivated) setIsPreviewActivated(true);
