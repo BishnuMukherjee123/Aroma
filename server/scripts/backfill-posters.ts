@@ -64,7 +64,7 @@ const createPosterHtml = (modelUrl: string, alt: string): string =>
         margin: 0;
         padding: 0;
         overflow: hidden;
-        background: radial-gradient(circle at top, rgba(255,255,255,0.72), transparent 50%), linear-gradient(180deg, #dbe7fb 0%, #cfdcf5 100%);
+        background: transparent;
       }
       body {
         display: flex;
@@ -90,12 +90,12 @@ const createPosterHtml = (modelUrl: string, alt: string): string =>
       environment-image="neutral"
       exposure="1"
       shadow-intensity="1"
-      camera-orbit="0deg 82deg auto"
-      field-of-view="28deg"
+      camera-orbit="45deg 60deg auto"
+      field-of-view="30deg"
       min-camera-orbit="auto auto auto"
       max-camera-orbit="auto auto auto"
-      min-field-of-view="28deg"
-      max-field-of-view="28deg"
+      min-field-of-view="30deg"
+      max-field-of-view="30deg"
       disable-zoom
     ></model-viewer>
     <script>
@@ -180,7 +180,7 @@ const renderPosterPng = async (
       // Give the renderer one more frame to stabilise
       await new Promise((r) => setTimeout(r, 500));
 
-      await page.screenshot({ path: outputPath as `${string}.png` });
+      await page.screenshot({ path: outputPath as `${string}.png`, omitBackground: true });
     } finally {
       await browser.close();
     }

@@ -4,8 +4,8 @@ import { useEffect, useRef } from "react";
 
 import { ensureModelViewerScript } from "@/lib/model-viewer";
 
-const CAMERA_ORBIT = "0deg 82deg auto";
-const FIELD_OF_VIEW = "28deg";
+const CAMERA_ORBIT = "45deg 60deg auto";
+const FIELD_OF_VIEW = "30deg";
 
 type Props = {
   modelUrl: string;

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { ensureModelViewerScript } from "@/lib/model-viewer";
 import Lenis from 'lenis';
 import { useGLTF } from "@react-three/drei";
+import { MenuCard } from "./MenuCard/MenuCard";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -386,7 +387,7 @@ export function PublicRestaurantMenu({
                 <section className="space-y-10">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7 md:gap-5">
                     {topArDishes.map((dish) => (
-                      <TopArCard key={dish.id} dish={dish} publicId={publicId} />
+                      <MenuCard key={dish.id} dish={dish} publicId={publicId} />
                     ))}
                   </div>
                 </section>
