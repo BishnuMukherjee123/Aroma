@@ -2,6 +2,7 @@ import { prisma } from "../../db/prisma.js";
 import { badRequest, ensureFoundValue } from "../../lib/errors.js";
 import { rebuildPublicRestaurantSnapshot } from "../../lib/public-menu.js";
 import { removeStorageObjects } from "../../lib/supabase-storage.js";
+import type { CrossSellItemInput } from "../../lib/validation.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
 
 export const updateDish = async (
@@ -13,9 +14,13 @@ export const updateDish = async (
     price?: number;
     currency?: "USD" | "INR" | "EUR" | "GBP" | "AED";
     description?: string;
+    badgeLabel?: string | null;
+    servingSize?: number;
+    detailsPanelEnabled?: boolean;
+    crossSellItems?: CrossSellItemInput[];
     isPublished?: boolean;
     sortOrder?: number;
-    dietaryType?: "VEG" | "NON_VEG" | "BOTH";
+    dietaryType?: "VEG" | "NON_VEG" | "BOTH" | null;
   },
 ) => {
   const dish = await prisma.dish.findUnique({
@@ -54,6 +59,18 @@ export const updateDish = async (
       ...(input.description !== undefined
         ? { description: input.description }
         : {}),
+      ...(input.badgeLabel !== undefined
+        ? { badgeLabel: input.badgeLabel }
+        : {}),
+      ...(input.servingSize !== undefined
+        ? { servingSize: input.servingSize }
+        : {}),
+      ...(input.detailsPanelEnabled !== undefined
+        ? { detailsPanelEnabled: input.detailsPanelEnabled }
+        : {}),
+      ...(input.crossSellItems !== undefined
+        ? { crossSellItems: input.crossSellItems }
+        : {}),
       ...(input.isPublished !== undefined
         ? { isPublished: input.isPublished }
         : {}),
@@ -66,6 +83,10 @@ export const updateDish = async (
       price: true,
       currency: true,
       description: true,
+      badgeLabel: true,
+      servingSize: true,
+      detailsPanelEnabled: true,
+      crossSellItems: true,
       restaurantId: true,
       menuId: true,
       isPublished: true,

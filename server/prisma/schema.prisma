@@ -19,6 +19,7 @@ enum AssetKind {
   PREVIEW_3D
   THUMBNAIL
   POSTER
+  CROSS_SELL_IMAGE
 }
 
 enum AssetStatus {
@@ -134,6 +135,10 @@ model Dish {
   price        Int
   currency     CurrencyCode @default(USD)
   description  String?
+  badgeLabel   String?
+  servingSize  Int      @default(2)
+  detailsPanelEnabled Boolean @default(true)
+  crossSellItems Json   @default("[]")
   restaurantId String
   menuId       String
   dietaryType  DietaryType?

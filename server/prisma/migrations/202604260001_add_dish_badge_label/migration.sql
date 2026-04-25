@@ -1,0 +1,1 @@
+ALTER TABLE "Dish" ADD COLUMN "badgeLabel" TEXT;

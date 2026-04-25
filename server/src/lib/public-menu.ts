@@ -16,6 +16,16 @@ export type PublicDishPayload = {
   price: number;
   currency: "USD" | "INR" | "EUR" | "GBP" | "AED";
   description: string | null;
+  badgeLabel: string | null;
+  servingSize: number;
+  detailsPanelEnabled: boolean;
+  crossSellItems: Array<{
+    id: string;
+    name: string;
+    price: number;
+    imageUrl: string | null;
+    imageStorageKey: string | null;
+  }>;
   sortOrder: number;
   dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
   modelUrl: string | null;
@@ -124,6 +134,10 @@ const buildSnapshot = async (
                   price: true,
                   currency: true,
                   description: true,
+                  badgeLabel: true,
+                  servingSize: true,
+                  detailsPanelEnabled: true,
+                  crossSellItems: true,
                   sortOrder: true,
                   dietaryType: true,
                   assets: {
@@ -167,6 +181,12 @@ const buildSnapshot = async (
             price: dish.price,
             currency: dish.currency,
             description: dish.description,
+            badgeLabel: dish.badgeLabel,
+            servingSize: dish.servingSize,
+            detailsPanelEnabled: dish.detailsPanelEnabled,
+            crossSellItems: Array.isArray(dish.crossSellItems)
+              ? dish.crossSellItems as PublicDishPayload["crossSellItems"]
+              : [],
             sortOrder: dish.sortOrder,
             dietaryType: (dish.dietaryType as "VEG" | "NON_VEG" | "BOTH" | null) ?? null,
             modelUrl: assetMap.modelUrl,
@@ -220,6 +240,10 @@ const isCurrentSnapshotShape = (
               typeof dish?.currency === "string" &&
               supportedCurrencyCodes.has(dish.currency) &&
               "dietaryType" in dish && // invalidate snapshots built before dietaryType was added
+              "badgeLabel" in dish &&  // invalidate snapshots built before badgeLabel was added
+              "servingSize" in dish && // invalidate snapshots built before servingSize was added
+              "detailsPanelEnabled" in dish && // invalidate snapshots built before detailsPanelEnabled was added
+              "crossSellItems" in dish && // invalidate snapshots built before crossSellItems was added
               "lodUrl" in dish,        // invalidate snapshots built before lodUrl was added
           ),
       ),

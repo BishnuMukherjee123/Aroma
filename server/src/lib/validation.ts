@@ -30,6 +30,21 @@ export const optionalString = (
   return requireString(value, fieldName, 1);
 };
 
+export const optionalNullableString = (
+  value: unknown,
+  fieldName: string,
+): string | null | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === "") {
+    return null;
+  }
+
+  return requireString(value, fieldName, 1);
+};
+
 export const requireInteger = (
   value: unknown,
   fieldName: string,
@@ -182,4 +197,76 @@ export const optionalDietaryType = (
   }
 
   return requireEnumValue(value, fieldName, dietaryCodes);
+};
+
+export const optionalNullableDietaryType = (
+  value: unknown,
+  fieldName = "dietaryType",
+): (typeof dietaryCodes)[number] | null | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null || value === "") {
+    return null;
+  }
+
+  return requireEnumValue(value, fieldName, dietaryCodes);
+};
+
+export type CrossSellItemInput = {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string | null;
+  imageStorageKey: string | null;
+};
+
+export const optionalCrossSellItems = (
+  value: unknown,
+  fieldName = "crossSellItems",
+): CrossSellItemInput[] | undefined => {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    badRequest(`${fieldName} must be an array`);
+  }
+
+  const items = value as unknown[];
+
+  if (items.length > 12) {
+    badRequest(`${fieldName} can include at most 12 items`);
+  }
+
+  return items.map((item, index) => {
+    if (!item || typeof item !== "object") {
+      badRequest(`${fieldName}[${index}] must be an object`);
+    }
+
+    const candidate = item as Record<string, unknown>;
+    const name = requireString(candidate.name, `${fieldName}[${index}].name`, 1);
+    const price = requireInteger(candidate.price, `${fieldName}[${index}].price`, { min: 0 });
+    const id =
+      typeof candidate.id === "string" && candidate.id.trim()
+        ? candidate.id.trim()
+        : `cross-sell-${index + 1}`;
+    const imageUrl =
+      typeof candidate.imageUrl === "string" && candidate.imageUrl.trim()
+        ? candidate.imageUrl.trim()
+        : null;
+    const imageStorageKey =
+      typeof candidate.imageStorageKey === "string" && candidate.imageStorageKey.trim()
+        ? candidate.imageStorageKey.trim()
+        : null;
+
+    return {
+      id,
+      name,
+      price,
+      imageUrl,
+      imageStorageKey,
+    };
+  });
 };

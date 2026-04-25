@@ -743,8 +743,8 @@
 
 
 .add-all {
-
-    visibility: hidden;
+/* 
+    visibility: hidden; */
 
     appearance: none;
 
@@ -786,7 +786,7 @@
 
 .cross-sell-grid {
 
-    display: none; /* flex */
+    display: flex; /* flex */
 
     gap: 12px;
 
@@ -856,6 +856,19 @@
 
     font-size: 32px;
 
+}
+
+.item-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+}
+
+.item-img-placeholder {
+    color: var(--text-accent-gold);
+    font-size: 28px;
+    font-weight: 700;
 }
 
 

@@ -5,6 +5,9 @@ import {
   requireCurrencyCode,
   optionalBoolean,
   optionalInteger,
+  optionalDietaryType,
+  optionalCrossSellItems,
+  optionalNullableString,
   optionalString,
   requireInteger,
   requireString,
@@ -47,8 +50,13 @@ export const createDish = async (
       price: requireInteger(req.body.price, "price", { min: 0 }),
       currency: requireCurrencyCode(req.body.currency),
       description: optionalString(req.body.description, "description"),
+      badgeLabel: optionalNullableString(req.body.badgeLabel, "badgeLabel"),
+      servingSize: optionalInteger(req.body.servingSize, "servingSize", { min: 1 }),
+      detailsPanelEnabled: optionalBoolean(req.body.detailsPanelEnabled, "detailsPanelEnabled"),
+      crossSellItems: optionalCrossSellItems(req.body.crossSellItems),
       isPublished: optionalBoolean(req.body.isPublished, "isPublished"),
       sortOrder: optionalInteger(req.body.sortOrder, "sortOrder", { min: 0 }),
+      dietaryType: optionalDietaryType(req.body.dietaryType),
     },
   );
 

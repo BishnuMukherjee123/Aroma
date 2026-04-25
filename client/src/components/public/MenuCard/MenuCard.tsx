@@ -37,6 +37,16 @@ export type MenuCardDish = {
   description?: string | null;
   price: number;
   currency?: string;
+  badgeLabel?: string | null;
+  servingSize?: number | null;
+  detailsPanelEnabled?: boolean | null;
+  crossSellItems?: Array<{
+    id: string;
+    name: string;
+    price: number;
+    imageUrl?: string | null;
+    imageStorageKey?: string | null;
+  }> | null;
   dietaryType?: "VEG" | "NON_VEG" | "BOTH" | null;
   posterUrl?: string | null;
   modelUrl?: string | null;
@@ -239,6 +249,21 @@ export const MenuCard = memo(function MenuCard({
   const show3D = dish.modelUrl && isPreviewActivated && isIntersecting;
   // Poster fades out once the model has fully loaded (fires on "load" event).
   const posterVisible = !(isPreviewActivated && isModelLoaded);
+  const servingSize =
+    Number.isFinite(dish.servingSize) && dish.servingSize
+      ? Math.max(1, Math.round(dish.servingSize))
+      : 2;
+  const detailsPanelEnabled = dish.detailsPanelEnabled !== false;
+  const crossSellItems = Array.isArray(dish.crossSellItems)
+    ? dish.crossSellItems
+    : [];
+  const primaryCrossSellItem = crossSellItems[0] ?? null;
+
+  useEffect(() => {
+    if (!detailsPanelEnabled && isOpen) {
+      setIsOpen(false);
+    }
+  }, [detailsPanelEnabled, isOpen]);
 
   return (
     <div >
@@ -320,10 +345,11 @@ export const MenuCard = memo(function MenuCard({
             ) : null}
           </div>
 
-          {/* "Most Ordered" badge — top left */}
-          <div className="badge-hot">
-            <span>🔥</span> Most Ordered This Week
-          </div>
+          {dish.badgeLabel ? (
+            <div className="badge-hot">
+              <span>&#128293;</span> {dish.badgeLabel}
+            </div>
+          ) : null}
 
           {/* AR launch button — bottom right */}
           {/* <div
@@ -396,8 +422,8 @@ export const MenuCard = memo(function MenuCard({
             <span className="price">{formatPrice(dish.price, dish.currency)}</span>
             <span className="dot"></span>
             <span>
-              <span role="img" aria-label="2 people">👥</span> Good for{" "}
-              <strong style={{ color: "var(--text-primary)" }}>2</strong>
+              <span role="img" aria-label={`${servingSize} people`}>👥</span> Good for{" "}
+              <strong style={{ color: "var(--text-primary)" }}>{servingSize}</strong>
             </span>
             <span className="dot"></span>
             <span className="satisfaction">
@@ -439,6 +465,8 @@ export const MenuCard = memo(function MenuCard({
             )}
           </button>
 
+          {detailsPanelEnabled ? (
+            <>
           <hr />
 
           {/* ── Toggle ──────────────────────────────────────────────────── */}
@@ -481,52 +509,28 @@ export const MenuCard = memo(function MenuCard({
                 </div>
               </div>
 
-              <div className="cross-sell-grid">
-                <div className="item-card">
-                  <div className="item-img">
-                    🫓
-                    <button className="add-item-btn"></button>
-                  </div>
-                  <div className="item-info">
-                    <span className="item-name">
-                      Butter
-                      <br />
-                      Naan
-                    </span>
-                    <span className="item-price">₹40</span>
-                  </div>
+              {crossSellItems.length > 0 ? (
+                <div className="cross-sell-grid">
+                  {crossSellItems.map((item) => (
+                    <div className="item-card" key={item.id}>
+                      <div className="item-img">
+                        {item.imageUrl ? (
+                          <img src={item.imageUrl} alt={item.name} loading="lazy" />
+                        ) : (
+                          <span className="item-img-placeholder">+</span>
+                        )}
+                        <button className="add-item-btn" aria-label={`Add ${item.name}`}></button>
+                      </div>
+                      <div className="item-info">
+                        <span className="item-name">{item.name}</span>
+                        <span className="item-price">
+                          {formatPrice(item.price, dish.currency)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-
-                <div className="item-card">
-                  <div className="item-img">
-                    🥣
-                    <button className="add-item-btn"></button>
-                  </div>
-                  <div className="item-info">
-                    <span className="item-name">
-                      Mint
-                      <br />
-                      Chutney
-                    </span>
-                    <span className="item-price">₹20</span>
-                  </div>
-                </div>
-
-                <div className="item-card">
-                  <div className="item-img">
-                    🍹
-                    <button className="add-item-btn"></button>
-                  </div>
-                  <div className="item-info">
-                    <span className="item-name">
-                      Fresh
-                      <br />
-                      Lime Soda
-                    </span>
-                    <span className="item-price">₹60</span>
-                  </div>
-                </div>
-              </div>
+              ) : null}
 
               <div className="highlights-row">
                 <div className="highlight-item">
@@ -547,12 +551,14 @@ export const MenuCard = memo(function MenuCard({
                   <span className="hl-icon">🔥</span>
                   <div className="hl-text">
                     <span>Prefect with</span>
-                    <strong>Butter Naan</strong>
+                    <strong>{primaryCrossSellItem?.name ?? "Chef's pairing"}</strong>
                   </div>
                 </div>
               </div>
             </div>
           </div>
+            </>
+          ) : null}
         </div>
       </div>
 

@@ -95,8 +95,13 @@ export const getRestaurant = async (actorUserId: string, restaurantId: string) =
                   price: true,
                   currency: true,
                   description: true,
+                  badgeLabel: true,
+                  servingSize: true,
+                  detailsPanelEnabled: true,
+                  crossSellItems: true,
                   isPublished: true,
                   sortOrder: true,
+                  dietaryType: true,
                   assets: {
                     orderBy: [{ createdAt: "asc" }],
                     select: {

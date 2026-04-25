@@ -12,6 +12,14 @@ const getServerApiBaseUrl = () =>
 
 export type CurrencyCode = "USD" | "INR" | "EUR" | "GBP" | "AED";
 
+export type CrossSellItem = {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string | null;
+  imageStorageKey: string | null;
+};
+
 type ApiErrorPayload = {
   error?: string;
   message?: string;
@@ -49,7 +57,7 @@ export type RestaurantMemberSummary = {
 
 export type AssetSummary = {
   id: string;
-  kind: "MODEL_3D" | "THUMBNAIL" | "POSTER";
+  kind: "MODEL_3D" | "THUMBNAIL" | "POSTER" | "CROSS_SELL_IMAGE";
   status: "PENDING" | "READY" | "FAILED";
   storageKey: string;
   url: string;
@@ -82,6 +90,10 @@ export type DishSummary = {
   price: number;
   currency: CurrencyCode;
   description: string | null;
+  badgeLabel: string | null;
+  servingSize: number;
+  detailsPanelEnabled: boolean;
+  crossSellItems: CrossSellItem[];
   isPublished: boolean;
   sortOrder: number;
   dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
@@ -129,6 +141,10 @@ export type PublicDishPayload = {
   price: number;
   currency: CurrencyCode;
   description: string | null;
+  badgeLabel: string | null;
+  servingSize: number;
+  detailsPanelEnabled: boolean;
+  crossSellItems: CrossSellItem[];
   sortOrder: number;
   dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
   modelUrl: string | null;
@@ -244,6 +260,7 @@ const apiRequest = async <T>(
 const normalizeDishSummary = (dish: DishSummary): DishSummary => ({
   ...dish,
   currency: normalizeCurrencyCode(dish.currency),
+  crossSellItems: Array.isArray(dish.crossSellItems) ? dish.crossSellItems : [],
   assets: Array.isArray(dish.assets) ? dish.assets : [],
 });
 
@@ -300,6 +317,7 @@ const normalizePublicDishPayload = (
 ): PublicDishPayload => ({
   ...dish,
   currency: normalizeCurrencyCode(dish.currency),
+  crossSellItems: Array.isArray(dish.crossSellItems) ? dish.crossSellItems : [],
 });
 
 const normalizePublicCategoryPayload = (
@@ -637,8 +655,13 @@ export const createDish = async (
     price: number;
     currency: CurrencyCode;
     description?: string;
+    badgeLabel?: string | null;
+    servingSize?: number;
+    detailsPanelEnabled?: boolean;
+    crossSellItems?: CrossSellItem[];
     isPublished?: boolean;
     sortOrder?: number;
+    dietaryType?: "VEG" | "NON_VEG" | "BOTH" | null;
   },
 ): Promise<{
   id: string;
@@ -646,10 +669,15 @@ export const createDish = async (
   price: number;
   currency: CurrencyCode;
   description: string | null;
+  badgeLabel: string | null;
+  servingSize: number;
+  detailsPanelEnabled: boolean;
+  crossSellItems: CrossSellItem[];
   restaurantId: string;
   menuId: string;
   isPublished: boolean;
   sortOrder: number;
+  dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
   createdAt: string;
   updatedAt: string;
 }> => {
@@ -669,6 +697,10 @@ export const updateDish = async (
     price?: number;
     currency?: CurrencyCode;
     description?: string;
+    badgeLabel?: string | null;
+    servingSize?: number;
+    detailsPanelEnabled?: boolean;
+    crossSellItems?: CrossSellItem[];
     isPublished?: boolean;
     sortOrder?: number;
     dietaryType?: "VEG" | "NON_VEG" | "BOTH" | null;
@@ -679,6 +711,10 @@ export const updateDish = async (
   price: number;
   currency: CurrencyCode;
   description: string | null;
+  badgeLabel: string | null;
+  servingSize: number;
+  detailsPanelEnabled: boolean;
+  crossSellItems: CrossSellItem[];
   restaurantId: string;
   menuId: string;
   isPublished: boolean;
@@ -711,7 +747,7 @@ export const createAssetUpload = async (
   token: string,
   input: {
     dishId: string;
-    kind: "MODEL_3D" | "THUMBNAIL" | "POSTER";
+    kind: "MODEL_3D" | "THUMBNAIL" | "POSTER" | "CROSS_SELL_IMAGE";
     fileName: string;
     mimeType: string;
     sizeBytes: number;

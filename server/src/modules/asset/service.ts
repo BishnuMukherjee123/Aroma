@@ -14,7 +14,7 @@ import {
 import { config } from "../../utils/conf.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
 
-export const ASSET_KINDS = ["MODEL_3D", "THUMBNAIL", "POSTER"] as const;
+export const ASSET_KINDS = ["MODEL_3D", "THUMBNAIL", "POSTER", "CROSS_SELL_IMAGE"] as const;
 export const ASSET_MIME_TYPES = [
   "model/gltf-binary",
   "model/gltf+json",
@@ -46,7 +46,7 @@ const validateAssetKindMimeType = (kind: AssetKind, mimeType: string): void => {
   }
 
   if (kind !== "MODEL_3D" && !imageMimeTypes.has(mimeType)) {
-    badRequest("Thumbnail and poster assets must use image mime types");
+    badRequest("Image assets must use image mime types");
   }
 };
 

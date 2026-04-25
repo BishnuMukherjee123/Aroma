@@ -1,6 +1,7 @@
 import { prisma } from "../../db/prisma.js";
 import { badRequest, ensureFoundValue } from "../../lib/errors.js";
 import { rebuildPublicRestaurantSnapshot } from "../../lib/public-menu.js";
+import type { CrossSellItemInput } from "../../lib/validation.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
 
 export const createCategory = async (
@@ -55,8 +56,13 @@ export const createDishForCategory = async (
     price: number;
     currency: "USD" | "INR" | "EUR" | "GBP" | "AED";
     description?: string;
+    badgeLabel?: string | null;
+    servingSize?: number;
+    detailsPanelEnabled?: boolean;
+    crossSellItems?: CrossSellItemInput[];
     isPublished?: boolean;
     sortOrder?: number;
+    dietaryType?: "VEG" | "NON_VEG" | "BOTH";
   },
 ) => {
   const category = await prisma.menu.findUnique({
@@ -78,8 +84,13 @@ export const createDishForCategory = async (
       price: input.price,
       currency: input.currency,
       description: input.description,
+      badgeLabel: input.badgeLabel,
+      servingSize: input.servingSize ?? 2,
+      detailsPanelEnabled: input.detailsPanelEnabled ?? true,
+      crossSellItems: input.crossSellItems ?? [],
       isPublished: input.isPublished ?? false,
       sortOrder: input.sortOrder ?? 0,
+      dietaryType: input.dietaryType,
     },
     select: {
       id: true,
@@ -87,10 +98,15 @@ export const createDishForCategory = async (
       price: true,
       currency: true,
       description: true,
+      badgeLabel: true,
+      servingSize: true,
+      detailsPanelEnabled: true,
+      crossSellItems: true,
       restaurantId: true,
       menuId: true,
       isPublished: true,
       sortOrder: true,
+      dietaryType: true,
       createdAt: true,
       updatedAt: true,
     },

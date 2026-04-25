@@ -22,6 +22,7 @@ import {
   uploadFileToSignedUrl,
   type AssetSummary,
   type CategorySummary,
+  type CrossSellItem,
   type CurrencyCode,
   type DishSummary,
   type RestaurantDetails,
@@ -54,8 +55,18 @@ type ComposerState = {
   price: string;
   currency: CurrencyCode;
   description: string;
+  badgeLabel: string;
+  servingSize: string;
+  sortOrder: string;
+  detailsPanelEnabled: boolean;
+  crossSellItems: CrossSellComposerItem[];
   isPublished: boolean;
   dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
+};
+
+type CrossSellComposerItem = CrossSellItem & {
+  imageFile?: File | null;
+  imagePreviewUrl?: string | null;
 };
 
 type DishRow = DishSummary & {
@@ -125,6 +136,11 @@ const emptyComposerState: ComposerState = {
   price: "",
   currency: "USD",
   description: "",
+  badgeLabel: "",
+  servingSize: "2",
+  sortOrder: "0",
+  detailsPanelEnabled: true,
+  crossSellItems: [],
   isPublished: false,
   dietaryType: null,
 };
@@ -225,6 +241,22 @@ const getMimeTypeForModel = (file: File) =>
   (file.name.toLowerCase().endsWith(".gltf")
     ? "model/gltf+json"
     : "model/gltf-binary");
+
+const createCrossSellItemId = () =>
+  `cross-sell-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const toCrossSellPayload = (
+  items: CrossSellComposerItem[],
+): CrossSellItem[] =>
+  items
+    .map((item) => ({
+      id: item.id || createCrossSellItemId(),
+      name: item.name.trim(),
+      price: Math.max(0, Math.round(Number(item.price))),
+      imageUrl: item.imageUrl || item.imagePreviewUrl || null,
+      imageStorageKey: item.imageStorageKey || null,
+    }))
+    .filter((item) => item.name.length > 0);
 
 export function RestaurantWorkspace({
   restaurantId,
@@ -885,7 +917,10 @@ export function RestaurantWorkspace({
   };
 
   const handleStartCreate = () => {
-    setComposerState(emptyComposerState);
+    setComposerState({
+      ...emptyComposerState,
+      sortOrder: (selectedMenu?.dishes.length ?? 0).toString(),
+    });
     setComposerMessage(null);
     setComposerModelFile(null);
     setComposerThumbnailFile(null);
@@ -904,6 +939,15 @@ export function RestaurantWorkspace({
       price: dish.price.toString(),
       currency: dish.currency,
       description: dish.description ?? "",
+      badgeLabel: dish.badgeLabel ?? "",
+      servingSize: dish.servingSize?.toString() ?? "2",
+      sortOrder: dish.sortOrder.toString(),
+      detailsPanelEnabled: dish.detailsPanelEnabled ?? true,
+      crossSellItems: (dish.crossSellItems ?? []).map((item) => ({
+        ...item,
+        imageFile: null,
+        imagePreviewUrl: item.imageUrl,
+      })),
       isPublished: dish.isPublished,
       dietaryType: dish.dietaryType ?? null,
     });
@@ -956,6 +1000,56 @@ export function RestaurantWorkspace({
     }
   };
 
+  const uploadCrossSellItemImages = async (
+    dishId: string,
+  ): Promise<CrossSellItem[]> => {
+    if (session.status !== "authenticated") {
+      return toCrossSellPayload(composerState.crossSellItems);
+    }
+
+    const uploadedItems: CrossSellComposerItem[] = [];
+
+    for (const item of composerState.crossSellItems) {
+      if (!item.name.trim()) {
+        continue;
+      }
+
+      let imageUrl = item.imageUrl;
+      let imageStorageKey = item.imageStorageKey;
+
+      if (item.imageFile) {
+        setComposerProgress(`Uploading ${item.name.trim()} image...`);
+        const upload = await createAssetUpload(session.token, {
+          dishId,
+          kind: "CROSS_SELL_IMAGE",
+          fileName: item.imageFile.name,
+          mimeType: item.imageFile.type || "image/png",
+          sizeBytes: item.imageFile.size,
+        });
+
+        await uploadFileToSignedUrl({
+          signedUrl: upload.upload.signedUrl,
+          file: item.imageFile,
+          mimeType: upload.upload.headers["Content-Type"],
+        });
+
+        const completed = await completeAssetUpload(session.token, upload.asset.id);
+        imageUrl = completed.asset.publicUrl;
+        imageStorageKey = upload.upload.storageKey;
+      }
+
+      uploadedItems.push({
+        ...item,
+        imageUrl: imageUrl ?? null,
+        imageStorageKey: imageStorageKey ?? null,
+        imageFile: null,
+        imagePreviewUrl: imageUrl ?? null,
+      });
+    }
+
+    return toCrossSellPayload(uploadedItems);
+  };
+
   const handleSubmitDish = async () => {
     if (session.status !== "authenticated") {
       return;
@@ -963,6 +1057,8 @@ export function RestaurantWorkspace({
 
     const name = composerState.name.trim();
     const priceValue = Number(composerState.price);
+    const servingSizeValue = Number(composerState.servingSize);
+    const sortOrderValue = Number(composerState.sortOrder);
 
     if (!name) {
       setComposerMessage("Dish name is required.");
@@ -971,6 +1067,26 @@ export function RestaurantWorkspace({
 
     if (!Number.isFinite(priceValue) || priceValue <= 0) {
       setComposerMessage("Price must be a valid number.");
+      return;
+    }
+
+    if (!Number.isInteger(servingSizeValue) || servingSizeValue < 1) {
+      setComposerMessage("Good for must be at least 1 person.");
+      return;
+    }
+
+    if (!Number.isInteger(sortOrderValue) || sortOrderValue < 0) {
+      setComposerMessage("Public display order must be 0 or higher.");
+      return;
+    }
+
+    const invalidCrossSellItem = composerState.crossSellItems.find(
+      (item) =>
+        item.name.trim() &&
+        (!Number.isFinite(Number(item.price)) || Number(item.price) < 0),
+    );
+    if (invalidCrossSellItem) {
+      setComposerMessage("Serve-with item prices must be valid numbers.");
       return;
     }
 
@@ -998,15 +1114,25 @@ export function RestaurantWorkspace({
       }
 
       if (composerState.mode === "edit" && composerState.dishId) {
-        await updateDish(session.token, composerState.dishId, {
+        const updatedDish = await updateDish(session.token, composerState.dishId, {
           menuId,
           name,
           price: Math.round(priceValue),
           currency: composerState.currency,
           description: composerState.description.trim() || undefined,
+          badgeLabel: composerState.badgeLabel.trim() || null,
+          servingSize: servingSizeValue,
+          detailsPanelEnabled: composerState.detailsPanelEnabled,
           isPublished: composerState.isPublished,
+          sortOrder: sortOrderValue,
           dietaryType: composerState.dietaryType,
         });
+        if (updatedDish.servingSize !== servingSizeValue) {
+          throw new Error("Serving size was not saved. Restart the backend and try again.");
+        }
+        if (updatedDish.detailsPanelEnabled !== composerState.detailsPanelEnabled) {
+          throw new Error("Card details toggle was not saved. Restart the backend and try again.");
+        }
         setSelectedDishId(composerState.dishId);
       } else {
         const createdDish = await createDish(session.token, menuId, {
@@ -1014,15 +1140,29 @@ export function RestaurantWorkspace({
           price: Math.round(priceValue),
           currency: composerState.currency,
           description: composerState.description.trim() || undefined,
+          badgeLabel: composerState.badgeLabel.trim() || undefined,
+          servingSize: servingSizeValue,
+          detailsPanelEnabled: composerState.detailsPanelEnabled,
           isPublished: composerState.isPublished,
-          sortOrder: selectedMenu?.dishes.length ?? 0,
+          sortOrder: sortOrderValue,
+          dietaryType: composerState.dietaryType,
         });
+        if (createdDish.servingSize !== servingSizeValue) {
+          throw new Error("Serving size was not saved. Restart the backend and try again.");
+        }
+        if (createdDish.detailsPanelEnabled !== composerState.detailsPanelEnabled) {
+          throw new Error("Card details toggle was not saved. Restart the backend and try again.");
+        }
         dishId = createdDish.id;
         setSelectedDishId(createdDish.id);
       }
 
       if (dishId) {
         await uploadComposerAssets(dishId);
+        const crossSellItems = await uploadCrossSellItemImages(dishId);
+        await updateDish(session.token, dishId, {
+          crossSellItems,
+        });
       }
 
       setComposerProgress("Refreshing workspace...");
@@ -2615,6 +2755,9 @@ export function RestaurantWorkspace({
                               <p className="mt-1 line-clamp-2 text-sm leading-6 text-on-surface-variant">
                                 {dish.description || "No description added yet."}
                               </p>
+                              <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                                Public order {dish.sortOrder} · Good for {dish.servingSize ?? 2} · Details {dish.detailsPanelEnabled === false ? "off" : "on"}
+                              </p>
                             </div>
 
                             <div className="self-center text-xs font-medium text-on-surface-variant">
@@ -3238,6 +3381,47 @@ export function RestaurantWorkspace({
                 </select>
               </div>
 
+              <div>
+                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Good For
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={composerState.servingSize}
+                  onChange={(event) =>
+                    setComposerState((current) => ({
+                      ...current,
+                      servingSize: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Public Display Order
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={composerState.sortOrder}
+                  onChange={(event) =>
+                    setComposerState((current) => ({
+                      ...current,
+                      sortOrder: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                />
+                <p className="mt-2 text-xs font-medium text-on-surface-variant">
+                  Lower numbers appear first on the public restaurant page.
+                </p>
+              </div>
+
               <label className="flex items-center gap-3 rounded-[1.1rem] bg-surface-container-low px-4 py-3.5 md:self-end">
                 <input
                   type="checkbox"
@@ -3254,6 +3438,196 @@ export function RestaurantWorkspace({
                   Publish this dish immediately
                 </span>
               </label>
+
+              <label className="flex items-center gap-3 rounded-[1.1rem] bg-surface-container-low px-4 py-3.5 md:self-end">
+                <input
+                  type="checkbox"
+                  checked={composerState.detailsPanelEnabled}
+                  onChange={(event) =>
+                    setComposerState((current) => ({
+                      ...current,
+                      detailsPanelEnabled: event.target.checked,
+                    }))
+                  }
+                  className="h-4 w-4 rounded border-outline-variant/40 text-primary focus:ring-primary"
+                />
+                <span className="text-sm font-semibold text-on-surface">
+                  Show swipe-down details on public card
+                </span>
+              </label>
+
+              <div className="md:col-span-2">
+                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Public Card Badge
+                </label>
+                <input
+                  type="text"
+                  value={composerState.badgeLabel}
+                  placeholder="Most Ordered This Week"
+                  maxLength={80}
+                  onChange={(event) =>
+                    setComposerState((current) => ({
+                      ...current,
+                      badgeLabel: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                />
+                <p className="mt-2 text-xs font-medium text-on-surface-variant">
+                  Leave blank to hide the badge on the public AR card.
+                </p>
+              </div>
+
+              <div className="md:col-span-2 rounded-[1.3rem] bg-surface-container-low p-5">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                      Serve-With Items
+                    </p>
+                    <p className="mt-1 text-xs font-medium text-on-surface-variant">
+                      Add the extra foods shown inside the swipe-down card section.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setComposerState((current) => ({
+                        ...current,
+                        crossSellItems: [
+                          ...current.crossSellItems,
+                          {
+                            id: createCrossSellItemId(),
+                            name: "",
+                            price: 0,
+                            imageUrl: null,
+                            imageStorageKey: null,
+                            imageFile: null,
+                            imagePreviewUrl: null,
+                          },
+                        ],
+                      }))
+                    }
+                    className="rounded-full bg-white px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-on-surface transition-colors hover:text-primary"
+                  >
+                    Add Item
+                  </button>
+                </div>
+
+                {composerState.crossSellItems.length === 0 ? (
+                  <p className="rounded-[1rem] bg-white/70 px-4 py-4 text-sm font-medium text-on-surface-variant">
+                    No serve-with items added yet.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {composerState.crossSellItems.map((item, index) => (
+                      <div
+                        key={item.id}
+                        className="grid gap-3 rounded-[1rem] bg-white/80 p-4 md:grid-cols-[6rem_minmax(0,1fr)_8rem_auto]"
+                      >
+                        <label className="group flex h-24 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[0.9rem] border border-dashed border-slate-200 bg-surface-container-lowest text-center">
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            className="hidden"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0] ?? null;
+                              setComposerState((current) => ({
+                                ...current,
+                                crossSellItems: current.crossSellItems.map((candidate, candidateIndex) =>
+                                  candidateIndex === index
+                                    ? {
+                                        ...candidate,
+                                        imageFile: file,
+                                        imagePreviewUrl: file
+                                          ? URL.createObjectURL(file)
+                                          : candidate.imageUrl,
+                                      }
+                                    : candidate,
+                                ),
+                              }));
+                            }}
+                          />
+                          {item.imagePreviewUrl || item.imageUrl ? (
+                            <img
+                              src={item.imagePreviewUrl ?? item.imageUrl ?? ""}
+                              alt={item.name || "Serve-with item"}
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-3xl text-slate-300 group-hover:text-primary">
+                                add_photo_alternate
+                              </span>
+                              <span className="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-on-surface-variant">
+                                Image
+                              </span>
+                            </>
+                          )}
+                        </label>
+
+                        <div>
+                          <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                            Name
+                          </label>
+                          <input
+                            type="text"
+                            value={item.name}
+                            placeholder="Butter Naan"
+                            onChange={(event) =>
+                              setComposerState((current) => ({
+                                ...current,
+                                crossSellItems: current.crossSellItems.map((candidate, candidateIndex) =>
+                                  candidateIndex === index
+                                    ? { ...candidate, name: event.target.value }
+                                    : candidate,
+                                ),
+                              }))
+                            }
+                            className="w-full rounded-[0.9rem] bg-surface-container-lowest px-4 py-3 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                            Price
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={item.price}
+                            onChange={(event) =>
+                              setComposerState((current) => ({
+                                ...current,
+                                crossSellItems: current.crossSellItems.map((candidate, candidateIndex) =>
+                                  candidateIndex === index
+                                    ? { ...candidate, price: Number(event.target.value) }
+                                    : candidate,
+                                ),
+                              }))
+                            }
+                            className="w-full rounded-[0.9rem] bg-surface-container-lowest px-4 py-3 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                          />
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setComposerState((current) => ({
+                              ...current,
+                              crossSellItems: current.crossSellItems.filter((_, candidateIndex) => candidateIndex !== index),
+                            }))
+                          }
+                          className="material-symbols-outlined self-end rounded-full p-3 text-on-surface-variant transition-colors hover:bg-red-50 hover:text-error"
+                          title="Remove serve-with item"
+                        >
+                          delete
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <div className="md:col-span-2">
                 <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
