@@ -3,6 +3,26 @@ const MODEL_VIEWER_CDN =
 
 let modelViewerLoadPromise: Promise<void> | null = null;
 
+// ─── Service Worker registration ──────────────────────────────────────────────
+// Registers /sw.js once per page load. The SW intercepts all *.glb and poster
+// fetch requests with a CacheFirst strategy — repeat visits serve from disk
+// in ~1 ms instead of downloading from the network again.
+// This is module-level (not inside a function) so it fires as early as possible.
+(function registerServiceWorker() {
+  if (
+    typeof window === "undefined" ||
+    !("serviceWorker" in navigator)
+  ) {
+    return;
+  }
+  navigator.serviceWorker
+    .register("/sw.js", { scope: "/" })
+    .catch((err: unknown) => {
+      // SW registration is non-critical — log and continue.
+      console.warn("[aroma] SW registration failed:", err);
+    });
+})();
+
 type ModelViewerElement = HTMLElement & {
   activateAR?: () => Promise<void> | void;
 };

@@ -40,6 +40,8 @@ export type MenuCardDish = {
   dietaryType?: "VEG" | "NON_VEG" | "BOTH" | null;
   posterUrl?: string | null;
   modelUrl?: string | null;
+  /** Low-poly LOD-0 variant — loads in ~200ms, displayed first while full model loads */
+  lodUrl?: string | null;
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -70,13 +72,14 @@ export const MenuCard = memo(function MenuCard({
 
   // ── 3D model state ────────────────────────────────────────────────────────
   const [isPreviewActivated, setIsPreviewActivated] = useState(false);
-  // isModelLoading: true from the moment user taps until model fires "load".
-  // Shows the spinner overlay immediately, before <model-viewer> even mounts.
-  const [isModelLoading, setIsModelLoading] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const [isArLaunching, setIsArLaunching] = useState(false);
   const [isIntersecting, setIsIntersecting] = useState(false);
   const prefetchedRef = useRef(false);
+  // Hidden pre-warm model-viewer mounted as soon as card is visible (before tap).
+  // Lets model-viewer start decoding GLB to GPU memory before user interaction.
+  const prewarmContainerRef = useRef<HTMLDivElement>(null);
+  const prewarmMvRef = useRef<Element | null>(null);
   // rAF handle so we can cancel a pending mount if the card is deactivated before
   // the next frame fires (e.g. user taps a different card in rapid succession).
   const pendingRafRef = useRef<number>(0);
@@ -106,7 +109,6 @@ export const MenuCard = memo(function MenuCard({
           cancelAnimationFrame(pendingRafRef.current);
           activeModelStore.deactivate(dish.id);
           setIsPreviewActivated(false);
-          setIsModelLoading(false);
           setIsModelLoaded(false);
         }
       },
@@ -123,6 +125,8 @@ export const MenuCard = memo(function MenuCard({
   // Predictive prefetch observer (triggers before card is fully visible).
   // Safely queues the GLB download via fetch() to warm the browser cache.
   // Stops flooding the network by limiting concurrency in the global queue.
+  // Also mounts a hidden <model-viewer> on intersection so GPU decode starts
+  // before the user taps — this is the primary fix for slow first-tap delays.
   useEffect(() => {
     if (!dish.modelUrl || !cardRef.current) return;
 
@@ -130,18 +134,49 @@ export const MenuCard = memo(function MenuCard({
       (entries) => {
         if (entries[0].isIntersecting) {
           modelPrefetchQueue.add(dish.modelUrl!);
+          // Prefetch the LOD first — it's much smaller and will arrive sooner
+          if (dish.lodUrl) modelPrefetchQueue.add(dish.lodUrl);
+
+          // Mount a hidden pre-warm <model-viewer> so GLB decoding starts now.
+          // It's invisible (opacity:0, pointer-events:none, size 1x1px) so it
+          // has no visual impact but occupies a GPU context slot and begins
+          // geometry/texture decode immediately.
+          if (!prewarmMvRef.current && prewarmContainerRef.current) {
+            const mv = document.createElement("model-viewer");
+            mv.setAttribute("src", dish.modelUrl!);
+            mv.setAttribute("alt", "");
+            mv.setAttribute("environment-image", "neutral");
+            mv.setAttribute("exposure", "1");
+            mv.setAttribute("interaction-prompt", "none");
+            mv.style.cssText = "position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;";
+            prewarmContainerRef.current.appendChild(mv);
+            prewarmMvRef.current = mv;
+          }
         } else {
           // Abort the prefetch if the user scrolls past quickly before it finishes
           modelPrefetchQueue.cancel(dish.modelUrl!);
+
+          // Destroy the pre-warm viewer to free the WebGL context.
+          if (prewarmMvRef.current && prewarmContainerRef.current) {
+            prewarmContainerRef.current.removeChild(prewarmMvRef.current);
+            prewarmMvRef.current = null;
+          }
         }
       },
       {
-        rootMargin: "300px", // Preload early
+        rootMargin: "600px", // Preload early — larger margin = more time for big GLBs
       }
     );
 
     prefetchObserver.observe(cardRef.current);
-    return () => prefetchObserver.disconnect();
+    return () => {
+      prefetchObserver.disconnect();
+      // Cleanup pre-warm viewer on unmount
+      if (prewarmMvRef.current && prewarmContainerRef.current) {
+        try { prewarmContainerRef.current.removeChild(prewarmMvRef.current); } catch {}
+        prewarmMvRef.current = null;
+      }
+    };
   }, [dish.modelUrl]);
 
   // Activate 3D preview with rAF deferral.
@@ -152,19 +187,20 @@ export const MenuCard = memo(function MenuCard({
   const activatePreview = useCallback(() => {
     if (!dish.modelUrl || isPreviewActivated) return;
 
-    // Show spinner immediately (no frame delay — this must paint before the freeze).
-    setIsModelLoading(true);
+    // ① Immediately tell the fetch queue this URL is urgently needed.
+    //    This aborts any slow background download and restarts it at "high"
+    //    priority so the browser network stack frontloads this GLB instantly.
+    modelPrefetchQueue.prioritize(dish.modelUrl);
 
     // Register with the global store. If another card was active, its supersede
     // callback runs and cancels its pending rAF + resets its state.
     activeModelStore.activate(dish.id, () => {
       cancelAnimationFrame(pendingRafRef.current);
       setIsPreviewActivated(false);
-      setIsModelLoading(false);
       setIsModelLoaded(false);
     });
 
-    // Mount <model-viewer> on the NEXT frame so React flushes the spinner paint first.
+    // Mount <model-viewer> on the NEXT frame so React flushes any pending paint first.
     pendingRafRef.current = requestAnimationFrame(() => {
       setIsPreviewActivated(true);
     });
@@ -201,13 +237,14 @@ export const MenuCard = memo(function MenuCard({
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const show3D = dish.modelUrl && isPreviewActivated && isIntersecting;
-  // Poster fades out only once the model has fully loaded (fires on "load" event).
+  // Poster fades out once the model has fully loaded (fires on "load" event).
   const posterVisible = !(isPreviewActivated && isModelLoaded);
-  // Loading overlay: visible from first tap until model fires "load", then gone.
-  const showLoadingOverlay = isModelLoading && !isModelLoaded;
 
   return (
     <div >
+      {/* Hidden pre-warm container — mounts a 1×1px model-viewer on card
+          intersection so GLB decoding is already in-flight before user taps */}
+      <div ref={prewarmContainerRef} style={{ position: "absolute", width: 0, height: 0, overflow: "hidden", pointerEvents: "none" }} aria-hidden="true" />
       <div
         ref={cardRef}
         className="menu-card"
@@ -229,26 +266,15 @@ export const MenuCard = memo(function MenuCard({
           {show3D && (
             <ArPreviewModelViewer
               modelUrl={dish.modelUrl!}
+              lodUrl={dish.lodUrl}
               alt={dish.name}
               interactive={false}
               onLoaded={() => {
                 setIsModelLoaded(true);
-                setIsModelLoading(false);
               }}
             />
           )}
 
-          {/* Loading overlay — visible between tap and model "load" event.
-               Sits above the poster so user gets immediate feedback.
-               CSS handles the fade-in/out transition. */}
-          <div
-            className="model-loading-overlay"
-            aria-hidden="true"
-            style={{ opacity: showLoadingOverlay ? 1 : 0, pointerEvents: "none" }}
-          >
-            <span className="model-loading-spinner" />
-            <span className="model-loading-text">Loading 3D preview…</span>
-          </div>
 
           {/* Poster overlay — fades out once GLB finishes loading */}
           <div

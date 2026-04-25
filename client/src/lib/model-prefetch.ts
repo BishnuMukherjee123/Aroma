@@ -50,6 +50,47 @@ class ModelPrefetchQueue {
     this.process();
   }
 
+  /**
+   * Called when the user TAPS a card.
+   *
+   * Elevates the given URL to maximum urgency:
+   * - If already cached: no-op (model-viewer will use it immediately).
+   * - If currently downloading (low-priority): aborts the slow fetch and
+   *   restarts it immediately with fetch priority "high" so the browser's
+   *   network scheduler promotes it above all other pending requests.
+   * - If waiting in queue: moves it to the front and kicks off a high-priority
+   *   fetch immediately, bypassing the normal concurrency limit.
+   */
+  prioritize(url: string) {
+    if (!url) return;
+
+    // Already fully cached — nothing to do
+    if (this.prefetchedUrls.has(url)) return;
+
+    // Abort any in-flight background fetch for this URL
+    const existingController = this.abortControllers.get(url);
+    if (existingController) {
+      existingController.abort();
+      this.abortControllers.delete(url);
+      this.prefetchedUrls.delete(url);
+      // activeCount will decrement naturally in the aborted fetch's finally{}
+    }
+
+    // Cancel any pending cancellation timeout
+    const existingTimeout = this.cancelTimeouts.get(url);
+    if (existingTimeout) {
+      window.clearTimeout(existingTimeout);
+      this.cancelTimeouts.delete(url);
+    }
+
+    // Remove from queue so we can re-add at the front
+    const idx = this.queue.indexOf(url);
+    if (idx !== -1) this.queue.splice(idx, 1);
+
+    // Fire an urgent high-priority fetch immediately (not through the queue)
+    void this.fetchUrl(url, "high");
+  }
+
   cancel(url: string) {
     // 1. If it's still waiting in the queue, just remove it immediately
     const index = this.queue.indexOf(url);
@@ -88,17 +129,25 @@ class ModelPrefetchQueue {
       return;
     }
 
-    // Adaptive concurrency using hardware capabilities instead of screen width
+    // Allow 2 concurrent prefetches — phones are almost always quad-core+
     const cores = navigator.hardwareConcurrency || 4;
-    const maxConcurrent = cores <= 4 ? 1 : 2;
+    const maxConcurrent = cores <= 2 ? 1 : 2;
 
     if (this.activeCount >= maxConcurrent || this.queue.length === 0) {
       return;
     }
 
     const url = this.queue.shift()!;
+    await this.fetchUrl(url, "auto");
+  }
+
+  private async fetchUrl(url: string, priority: "high" | "auto" | "low") {
+    if (typeof window === "undefined" || typeof navigator === "undefined") {
+      return;
+    }
+
     this.activeCount++;
-    
+
     // Enforce sliding window before adding the new URL
     this.enforceMemoryCap();
     this.prefetchedUrls.add(url);
@@ -111,7 +160,7 @@ class ModelPrefetchQueue {
         mode: "cors",
         credentials: "omit",
         cache: "force-cache",
-        priority: "low",
+        priority,
         signal: controller.signal,
       } as FetchRequestInit);
     } catch (err: unknown) {

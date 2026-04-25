@@ -5,6 +5,7 @@ import { config } from "../utils/conf.js";
 
 type PublicAssetMap = {
   modelUrl: string | null;
+  lodUrl: string | null;
   thumbnailUrl: string | null;
   posterUrl: string | null;
 };
@@ -18,6 +19,8 @@ export type PublicDishPayload = {
   sortOrder: number;
   dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
   modelUrl: string | null;
+  /** LOD-0 variant: ~15% polygon count, loads in ~200ms for instant first-tap display. */
+  lodUrl: string | null;
   thumbnailUrl: string | null;
   posterUrl: string | null;
 };
@@ -63,6 +66,7 @@ const reduceDishAssets = (
   assets: Array<{ kind: string; storageKey: string; url: string }>,
 ): PublicAssetMap => {
   let modelUrl: string | null = null;
+  let lodUrl: string | null = null;
   let thumbnailUrl: string | null = null;
   let posterUrl: string | null = null;
 
@@ -70,6 +74,8 @@ const reduceDishAssets = (
     const resolvedUrl = buildAssetUrl(asset.storageKey, asset.url);
     if (asset.kind === "MODEL_3D") {
       modelUrl = resolvedUrl;
+    } else if (asset.kind === "MODEL_3D_LOD0") {
+      lodUrl = resolvedUrl;
     } else if (asset.kind === "THUMBNAIL") {
       thumbnailUrl = resolvedUrl;
     } else if (asset.kind === "POSTER") {
@@ -79,6 +85,7 @@ const reduceDishAssets = (
 
   return {
     modelUrl,
+    lodUrl,
     thumbnailUrl,
     posterUrl,
   };
@@ -163,6 +170,7 @@ const buildSnapshot = async (
             sortOrder: dish.sortOrder,
             dietaryType: (dish.dietaryType as "VEG" | "NON_VEG" | "BOTH" | null) ?? null,
             modelUrl: assetMap.modelUrl,
+            lodUrl: assetMap.lodUrl,
             thumbnailUrl: assetMap.thumbnailUrl,
             posterUrl: assetMap.posterUrl,
           };
@@ -211,7 +219,8 @@ const isCurrentSnapshotShape = (
             (dish) =>
               typeof dish?.currency === "string" &&
               supportedCurrencyCodes.has(dish.currency) &&
-              "dietaryType" in dish, // invalidate snapshots built before this field was added
+              "dietaryType" in dish && // invalidate snapshots built before dietaryType was added
+              "lodUrl" in dish,        // invalidate snapshots built before lodUrl was added
           ),
       ),
   );

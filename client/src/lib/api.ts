@@ -132,6 +132,8 @@ export type PublicDishPayload = {
   sortOrder: number;
   dietaryType: "VEG" | "NON_VEG" | "BOTH" | null;
   modelUrl: string | null;
+  /** LOD-0: simplified low-poly version that loads in ~200ms for instant first-tap display */
+  lodUrl: string | null;
   thumbnailUrl: string | null;
   posterUrl: string | null;
 };
