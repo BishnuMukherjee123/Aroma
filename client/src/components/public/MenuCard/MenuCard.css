@@ -1133,12 +1133,12 @@
 @media screen and (max-width: 480px) {
     /* Adds a tiny bit of padding so the card doesn't touch the phone edges */
     .menu-card {
-        width: calc(100% - 24px); 
+        width: calc(100% - 16px); 
         margin: 0 auto;
     }
 
     .content-area { 
-        padding: 16px; 
+        padding: 16px 12px; 
     }
 
     .price { 
