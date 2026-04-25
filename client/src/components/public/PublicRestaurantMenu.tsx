@@ -241,48 +241,40 @@ export function PublicRestaurantMenu({
       }
     };
 
-    if (isTouchDevice) {
-      // ── MOBILE: native passive scroll ────────────────────────────────────
-      // passive:true lets the browser start scrolling BEFORE JS runs.
-      // No Lenis = no rAF loop = no memory pressure = no "Aw, Snap!" crash.
-      let lastScrollY = window.scrollY;
-      let ticking = false;
-      const onScroll = () => {
-        const y = window.scrollY;
-        if (!ticking) {
-          requestAnimationFrame(() => {
-            handleScroll(y, y > lastScrollY ? 1 : -1);
-            lastScrollY = y;
-            ticking = false;
-          });
-          ticking = true;
-        }
-      };
-      window.addEventListener('scroll', onScroll, { passive: true });
-      return () => {
-        window.removeEventListener('scroll', onScroll);
-        resizeObserver.disconnect();
-      };
+    // ── Unified Lenis smooth scroll (desktop + mobile) ───────────────────────
+    // Mobile gets a lighter config: shorter duration + faster lerp so the rAF
+    // loop finishes each frame faster and competes less with WebGL contexts.
+    const lenis = new Lenis(
+      isTouchDevice
+        ? {
+            // Mobile — fast, native-feeling inertia with minimal JS overhead
+            duration: 1.0,
+            lerp: 0.12,
+            smoothWheel: false,   // no mousewheel on touch devices
+            touchMultiplier: 30,
+          }
+        : {
+            // Desktop — cinematic slow deceleration
+            duration: 1.5,
+            lerp: 0.08,
+            smoothWheel: true,
+            wheelMultiplier: 1,
+          }
+    );
 
-    } else {
-      // ── DESKTOP: Lenis cinematic smooth scroll ────────────────────────────
-      const lenis = new Lenis({
-        duration: 1.5,
-        lerp: 0.08,
-        smoothWheel: true,
-        wheelMultiplier: 1,
-      });
-      const raf = (time: number) => { lenis.raf(time); rafId = requestAnimationFrame(raf); };
-      rafId = requestAnimationFrame(raf);
-      lenis.on('scroll', ({ scroll, direction }: { scroll: number; direction: number }) => {
-        handleScroll(scroll, direction);
-      });
-      return () => {
-        lenis.destroy();
-        resizeObserver.disconnect();
-        cancelAnimationFrame(rafId);
-      };
-    }
+    const raf = (time: number) => { lenis.raf(time); rafId = requestAnimationFrame(raf); };
+    rafId = requestAnimationFrame(raf);
+
+    lenis.on('scroll', ({ scroll, direction }: { scroll: number; direction: number }) => {
+      handleScroll(scroll, direction);
+    });
+
+    return () => {
+      lenis.destroy();
+      resizeObserver.disconnect();
+      cancelAnimationFrame(rafId);
+    };
+
   }, []);
 
   // ── Render ──────────────────────────────────────────────────────────────────
