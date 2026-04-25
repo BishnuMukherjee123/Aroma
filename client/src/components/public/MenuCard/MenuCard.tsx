@@ -269,6 +269,10 @@ export const MenuCard = memo(function MenuCard({
           if (dish.modelUrl && !isPreviewActivated) {
             modelPrefetchQueue.prioritize(dish.modelUrl);
             if (dish.lodUrl) modelPrefetchQueue.prioritize(dish.lodUrl);
+            // Activate immediately on first touch — don't wait for touchend.
+            // If the user was scrolling, the intersection observer deactivates
+            // the model cleanly once the card scrolls off-screen.
+            activatePreview();
           }
         }}
         onTouchEnd={(e) => {
