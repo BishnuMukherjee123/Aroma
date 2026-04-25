@@ -4,6 +4,7 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import "./MenuCard.css";
 import { ArPreviewModelViewer } from "../ArPreviewModelViewer";
 import { ensureModelViewerScript } from "@/lib/model-viewer";
+import { modelPrefetchQueue } from "@/lib/model-prefetch";
 
 // ─── Global one-at-a-time model singleton ─────────────────────────────────────
 // Ensures only ONE GLB is ever decoding / uploading to GPU at a time.
@@ -119,20 +120,28 @@ export const MenuCard = memo(function MenuCard({
   }, [dish.id]);
 
 
-  // Prefetch the GLB at the network level (browser cache only).
-  // No JS parsing, no WASM decoding, no GPU upload — those happen
-  // inside <model-viewer> only after the user explicitly taps the card.
-  // This means only ONE Three.js instance (model-viewer's own) is ever active.
-  const prefetchModel = useCallback(() => {
-    if (prefetchedRef.current || !dish.modelUrl) return;
-    prefetchedRef.current = true;
+  // Predictive prefetch observer (triggers before card is fully visible).
+  // Safely queues the GLB download via fetch() to warm the browser cache.
+  // Stops flooding the network by limiting concurrency in the global queue.
+  useEffect(() => {
+    if (!dish.modelUrl || !cardRef.current) return;
 
-    const link = document.createElement("link");
-    link.rel = "prefetch";
-    link.as = "fetch";
-    link.href = dish.modelUrl;
-    link.crossOrigin = "anonymous";
-    document.head.appendChild(link);
+    const prefetchObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          modelPrefetchQueue.add(dish.modelUrl!);
+        } else {
+          // Abort the prefetch if the user scrolls past quickly before it finishes
+          modelPrefetchQueue.cancel(dish.modelUrl!);
+        }
+      },
+      {
+        rootMargin: "300px", // Preload early
+      }
+    );
+
+    prefetchObserver.observe(cardRef.current);
+    return () => prefetchObserver.disconnect();
   }, [dish.modelUrl]);
 
   // Activate 3D preview with rAF deferral.
@@ -202,11 +211,9 @@ export const MenuCard = memo(function MenuCard({
       <div
         ref={cardRef}
         className="menu-card"
-        onPointerEnter={prefetchModel}
         onTouchStart={(e) => {
           // Record the starting Y so we can detect scroll vs intentional tap
           touchStartY.current = e.touches[0].clientY;
-          prefetchModel();
         }}
         onTouchEnd={(e) => {
           // Only activate if finger moved < 8px — anything more is a scroll, not a tap
