@@ -248,9 +248,28 @@ export const MenuCard = memo(function MenuCard({
       <div
         ref={cardRef}
         className="menu-card"
+        onPointerEnter={() => {
+          // Desktop intent: hover over card → start download at normal priority.
+          // On mobile this fires too — but touchstart (below) fires first and
+          // already uses "high" priority, so this is a no-op on mobile.
+          if (dish.modelUrl && !isPreviewActivated) {
+            modelPrefetchQueue.add(dish.modelUrl);
+            if (dish.lodUrl) modelPrefetchQueue.add(dish.lodUrl);
+          }
+        }}
         onTouchStart={(e) => {
-          // Record the starting Y so we can detect scroll vs intentional tap
+          // Record the starting Y so we can detect scroll vs intentional tap.
           touchStartY.current = e.touches[0].clientY;
+
+          // ─── Pointer intent ────────────────────────────────────────────────
+          // The finger just landed on this card. Even if the user is scrolling,
+          // this is the strongest possible signal of proximity interest.
+          // Escalate the GLB fetch to "high" priority NOW — ~100-200ms before
+          // the tap is confirmed on touchend. Every millisecond matters here.
+          if (dish.modelUrl && !isPreviewActivated) {
+            modelPrefetchQueue.prioritize(dish.modelUrl);
+            if (dish.lodUrl) modelPrefetchQueue.prioritize(dish.lodUrl);
+          }
         }}
         onTouchEnd={(e) => {
           // Only activate if finger moved < 8px — anything more is a scroll, not a tap
