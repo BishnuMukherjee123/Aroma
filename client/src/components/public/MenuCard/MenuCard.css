@@ -866,6 +866,7 @@
 }
 
 .item-img-placeholder {
+    display: none;
     color: var(--text-accent-gold);
     font-size: 28px;
     font-weight: 700;

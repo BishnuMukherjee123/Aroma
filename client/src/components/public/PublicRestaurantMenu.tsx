@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
   useDeferredValue,
   useMemo,
@@ -321,8 +322,20 @@ export function PublicRestaurantMenu({
           <div className="max-w-4xl mx-auto px-6 py-4 flex flex-col gap-4">
             
             <div className="flex items-center justify-between">
-              <div className="font-sans text-sm md:text-2xl font-black tracking-[0.2em] text-white">
-                {restaurant.name.toUpperCase().replace(/ PRIME$/, "")}
+              <div className="flex-shrink-0">
+                <Image
+                  src="/logo_aroma-removebg-preview.png"
+                  alt="Aroma logo"
+                  width={160}
+                  height={64}
+                  priority
+                  quality={90}
+                  style={{
+                    filter:
+                      "drop-shadow(0 0 0.6px white) drop-shadow(0 0 0.6px white) contrast(1.1)",
+                  }}
+                  className="w-[78px] md:w-[104px] lg:w-[130px] h-auto object-contain"
+                />
               </div>
                 
                 <div className="relative flex-grow max-w-[200px] ml-4">
@@ -478,7 +491,7 @@ const DishMenuRow = memo(function DishMenuRow({ dish }: { dish: PublicDishPayloa
       </div>
       
       {dish.description && (
-        <p className="mt-2 text-[10px] md:text-[11px] uppercase tracking-widest text-on-surface-variant italic leading-relaxed max-w-[85%] font-serif">
+        <p className="mt-2 text-[10px] md:text-[11px] uppercase tracking-widest text-menu-dish-desc italic leading-relaxed max-w-[85%] font-serif">
           {dish.description}
         </p>
       )}
