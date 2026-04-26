@@ -478,7 +478,7 @@ export function PublicArViewer({
           ar-modes="webxr scene-viewer quick-look"
           ar-placement="floor"
           ar-scale="fixed"
-          scale="3 3 3"
+          scale="1.2 1.2 1.2"
           shadow-intensity="1.5"
           camera-orbit="0deg 75deg 100%"
           min-camera-orbit="auto auto 100%"
@@ -488,9 +488,9 @@ export function PublicArViewer({
           max-field-of-view="45deg"
           disable-zoom
           xr-environment
-          touch-action="pan-y"
+          touch-action="none"
           loading="eager"
-          className={`fixed inset-0 z-0 h-full w-full pointer-events-none ${showGateScreen ? "opacity-0" : "opacity-100"}`}
+          className={`fixed inset-0 z-0 h-full w-full ${showGateScreen ? "opacity-0 pointer-events-none" : "opacity-100"}`}
         >
           <div slot="ar-button" className="hidden" />
           <div slot="ar-prompt" className="ar-prompt-chip">
