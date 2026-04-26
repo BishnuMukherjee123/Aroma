@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -3652,6 +3652,20 @@ export function RestaurantWorkspace({
                   Dietary Type
                 </label>
                 <div className="flex gap-3 flex-wrap">
+                  {/* None option */}
+                  <button
+                    type="button"
+                    onClick={() => setComposerState((c) => ({ ...c, dietaryType: null }))}
+                    className={cn(
+                      "rounded-full px-4 py-2 text-xs font-bold tracking-wide border transition-all",
+                      composerState.dietaryType === null
+                        ? "bg-primary text-white border-primary"
+                        : "bg-surface-container-lowest text-on-surface-variant border-outline-variant/20 hover:border-primary/30"
+                    )}
+                  >
+                    None
+                  </button>
+
                   {(["VEG", "NON_VEG", "BOTH"] as const).map((type) => {
                     const labels: Record<string, string> = { VEG: "🟢 Veg", NON_VEG: "🔴 Non-Veg", BOTH: "🟢🔴 Both" };
                     const active = composerState.dietaryType === type;
@@ -3671,15 +3685,7 @@ export function RestaurantWorkspace({
                       </button>
                     );
                   })}
-                  {composerState.dietaryType && (
-                    <button
-                      type="button"
-                      onClick={() => setComposerState((c) => ({ ...c, dietaryType: null }))}
-                      className="text-xs text-on-surface-variant hover:text-on-surface transition-colors self-center"
-                    >
-                      Clear
-                    </button>
-                  )}
+
                 </div>
               </div>
 

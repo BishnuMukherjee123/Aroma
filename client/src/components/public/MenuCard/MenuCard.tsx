@@ -393,25 +393,24 @@ export const MenuCard = memo(function MenuCard({
           <div className="title-row">
             <h1>{dish.name}</h1>
 
-            {/* Dietary indicator */}
-            <div className="diet-indicators">
-              {dish.dietaryType === "VEG" && (
-                <><span className="veg-text">●</span> VEG</>
-              )}
-              {dish.dietaryType === "NON_VEG" && (
-                <><span className="nonveg-text">▲</span> NON-VEG</>
-              )}
-              {dish.dietaryType === "BOTH" && (
-                <>
-                  <span className="veg-text">●</span>
-                  <span className="nonveg-text">▲</span>
-                  VEG &amp; NON-VEG
-                </>
-              )}
-              {(!dish.dietaryType || dish.dietaryType === null) && (
-                <><span className="veg-text">●</span><span className="nonveg-text">▲</span> VEG &amp; NON-VEG</>
-              )}
-            </div>
+            {/* Dietary indicator — only rendered when a type is set */}
+            {dish.dietaryType && (
+              <div className="diet-indicators">
+                {dish.dietaryType === "VEG" && (
+                  <><span className="veg-text">●</span> VEG</>
+                )}
+                {dish.dietaryType === "NON_VEG" && (
+                  <><span className="nonveg-text">▲</span> NON-VEG</>
+                )}
+                {dish.dietaryType === "BOTH" && (
+                  <>
+                    <span className="veg-text">●</span>
+                    <span className="nonveg-text">▲</span>
+                    VEG &amp; NON-VEG
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <p className="description">
