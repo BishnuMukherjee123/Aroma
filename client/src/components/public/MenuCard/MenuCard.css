@@ -866,7 +866,6 @@
 }
 
 .item-img-placeholder {
-    display: none;
     color: var(--text-accent-gold);
     font-size: 28px;
     font-weight: 700;
@@ -924,6 +923,8 @@
 
 .add-item-btn {
 
+    display: none; /* temporarily hidden — remove this line to restore make it later flex for + icon*/
+
     position: absolute;
 
     bottom: 2px; 
@@ -939,8 +940,6 @@
     height: 24px;
 
     border-radius: 50%;
-
-    display: flex;
 
     justify-content: center;
 
