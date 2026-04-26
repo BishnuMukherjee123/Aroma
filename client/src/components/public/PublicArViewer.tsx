@@ -321,35 +321,10 @@ export function PublicArViewer({
         setLaunchError(null);
         setArStage("placed");
 
-        // ── Advanced scale stabilization ────────────────────────────────────
-        // ARCore's auto-fit runs once on placement and can shrink the model.
-        // We run a rAF loop to continuously re-apply our target scale every
-        // frame, preventing any drift or re-normalization by the AR engine.
-        // The loop is automatically stopped when the AR session ends.
-        let active = true;
-        const TARGET_SCALE = "2.5 2.5 2.5";
-
-        const enforceScale = () => {
-          if (!active) return;
-          // Only override if the scale has drifted from our target
-          if (viewer.getAttribute("scale") !== TARGET_SCALE) {
-            viewer.setAttribute("scale", TARGET_SCALE);
-          }
-          requestAnimationFrame(enforceScale);
-        };
-        requestAnimationFrame(enforceScale);
-
-        // Stop the loop when the AR session ends
-        const stopOnExit = (e: Event) => {
-          const s =
-            (e as CustomEvent<{ status?: string }>).detail?.status ??
-            viewer.getAttribute("ar-status");
-          if (s === "not-presenting" || s === "failed") {
-            active = false;
-            viewer.removeEventListener("ar-status", stopOnExit as EventListener);
-          }
-        };
-        viewer.addEventListener("ar-status", stopOnExit as EventListener);
+        // One-time scale reset after ARCore's auto-fit finishes
+        requestAnimationFrame(() => {
+          viewer.setAttribute("scale", "2.5 2.5 2.5");
+        });
         return;
       }
 
