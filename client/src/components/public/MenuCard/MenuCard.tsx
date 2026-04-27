@@ -29,8 +29,6 @@ const activeModelStore = {
   },
 };
 
-};
-
 // ─── Global AR Viewer ─────────────────────────────────────────────────────────
 // We use a single shared <model-viewer> for inline AR launches to ensure the
 // custom element is fully upgraded and ready before the user clicks the button.
