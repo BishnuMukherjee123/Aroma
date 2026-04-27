@@ -117,6 +117,9 @@ export function PublicArViewer({
   const [isLaunchPending, setIsLaunchPending] = useState(false);
 
   const viewerRef = useRef<ModelViewerElement | null>(null);
+  // Holds the focus-locked camera stream kept alive to prevent
+  // Chrome's WebXR from re-enabling autofocus during the AR session.
+  const cameraStreamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     setDeviceProfile(detectDeviceProfile());
@@ -129,8 +132,44 @@ export function PublicArViewer({
     }
   }, []);
 
+  // ── Camera autofocus lock ─────────────────────────────────────────────────────
+  // Chrome Android shares camera constraints between getUserMedia and WebXR.
+  // By pre-acquiring the rear camera with focusMode:'manual' and keeping that
+  // stream alive while WebXR runs, we prevent the camera from continuously
+  // refocusing — which is the primary cause of AR model trembling/jitter.
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      return;
+    }
+
+    const lockFocus = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            // @ts-expect-error — advanced constraints are valid in Chrome Android
+            // but not included in the TS lib types
+            advanced: [{ focusMode: "manual" }],
+          },
+        });
+        cameraStreamRef.current = stream;
+      } catch {
+        // Focus lock not supported on this device/browser — silent fallback
+      }
+    };
+
+    void lockFocus();
+
+    return () => {
+      // Release camera when leaving the AR page
+      cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
+      cameraStreamRef.current = null;
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
+
     const cacheKey = `aroma-public-restaurant:${publicId}`;
 
     const seedFromCache = () => {
@@ -321,10 +360,25 @@ export function PublicArViewer({
         setLaunchError(null);
         setArStage("placed");
 
-        // One-time scale reset after ARCore's auto-fit finishes
-        requestAnimationFrame(() => {
-          viewer.setAttribute("scale", "2.5 2.5 2.5");
-        });
+        // ── Scale drift guard ─────────────────────────────────────────────
+        // ARCore continuously refines its floor estimation even after placement.
+        // Over 30-60s this causes the model to silently grow or shrink.
+        // setInterval at 1s is infrequent enough to not cause jitter, but
+        // fast enough to catch drift before it becomes visually noticeable.
+        const TARGET = "2.5 2.5 2.5";
+
+        // Immediate reset first (handles the initial auto-fit on placement)
+        requestAnimationFrame(() => viewer.setAttribute("scale", TARGET));
+
+        // Then guard against ongoing drift every second
+        const driftGuard = setInterval(() => {
+          if (viewer.getAttribute("scale") !== TARGET) {
+            viewer.setAttribute("scale", TARGET);
+          }
+        }, 1000);
+
+        // Store interval ID on the viewer element so we can clear it later
+        (viewer as ModelViewerElement & { _driftGuard?: ReturnType<typeof setInterval> })._driftGuard = driftGuard;
         return;
       }
 
@@ -332,11 +386,21 @@ export function PublicArViewer({
         setIsLaunchPending(false);
         setLaunchError(null);
         setArStage("gate");
+        // Clear the drift guard interval
+        const guard = (viewer as ModelViewerElement & { _driftGuard?: ReturnType<typeof setInterval> })._driftGuard;
+        if (guard !== undefined) clearInterval(guard);
+        // AR session ended — release the focus-locked camera stream
+        cameraStreamRef.current?.getTracks().forEach((t) => t.stop());
+        cameraStreamRef.current = null;
         return;
       }
 
       if (status === "failed") {
         setIsLaunchPending(false);
+        // Clear the drift guard interval
+        const guard = (viewer as ModelViewerElement & { _driftGuard?: ReturnType<typeof setInterval> })._driftGuard;
+        if (guard !== undefined) clearInterval(guard);
+
         setLaunchError(
           "AR could not open right now. Check camera permission and try again.",
         );
