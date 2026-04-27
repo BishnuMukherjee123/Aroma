@@ -29,6 +29,32 @@ const activeModelStore = {
   },
 };
 
+};
+
+// ─── Global AR Viewer ─────────────────────────────────────────────────────────
+// We use a single shared <model-viewer> for inline AR launches to ensure the
+// custom element is fully upgraded and ready before the user clicks the button.
+// Creating it dynamically in the click handler causes activateAR() to silently
+// fail due to loss of user gesture context while waiting for element upgrade.
+let sharedArViewer: (HTMLElement & { activateAR?: () => void }) | null = null;
+
+function initSharedArViewer() {
+  if (typeof window === "undefined" || sharedArViewer) return;
+  sharedArViewer = document.createElement("model-viewer") as any;
+  sharedArViewer!.setAttribute("ar", "");
+  // webxr for Android, quick-look for iOS
+  sharedArViewer!.setAttribute("ar-modes", "webxr quick-look");
+  sharedArViewer!.setAttribute("ar-placement", "floor");
+  sharedArViewer!.setAttribute("ar-scale", "fixed");
+  sharedArViewer!.setAttribute("scale", "2.5 2.5 2.5");
+  sharedArViewer!.setAttribute("shadow-intensity", "0");
+  sharedArViewer!.setAttribute("touch-action", "none");
+  sharedArViewer!.setAttribute("loading", "eager");
+  sharedArViewer!.style.cssText =
+    "position:fixed;inset:0;width:100%;height:100%;z-index:-1;opacity:0;pointer-events:none;";
+  document.body.appendChild(sharedArViewer!);
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type MenuCardDish = {
@@ -98,10 +124,13 @@ export const MenuCard = memo(function MenuCard({
   const touchStartY = useRef<number>(0);
 
   // Warm the <model-viewer> script singleton on mount so the CDN script is
-  // already loaded by the time the user taps a card. Safe to call many times —
-  // ensureModelViewerScript() is itself a singleton promise.
+  // already loaded by the time the user taps a card. Safe to call many times.
   useEffect(() => {
-    void ensureModelViewerScript();
+    void ensureModelViewerScript().then(() => {
+      // Pre-initialize the shared AR viewer so it's fully upgraded and ready
+      // for synchronous activateAR() calls.
+      initSharedArViewer();
+    });
   }, []);
 
   // Intersection Observer — deactivates the 3D preview when card is scrolled
@@ -241,44 +270,40 @@ export const MenuCard = memo(function MenuCard({
   // Back gesture ends the AR session → user is already on the menu page. ✅
   const handleViewInAr = useCallback(() => {
     if (!dish.modelUrl) return;
+    
+    // If the shared viewer isn't ready yet, we can't launch synchronously.
+    if (!sharedArViewer) {
+      setIsArLaunching(false);
+      return;
+    }
+
     setIsArLaunching(true);
 
-    // Build a model-viewer element for AR and attach it to the body.
-    // It stays invisible (z-index:-1, opacity:0) in the DOM — WebXR itself
-    // creates a full-screen camera overlay when activateAR() is called.
-    type ArModelViewer = HTMLElement & {
-      activateAR?: () => void | Promise<void>;
-    };
-    const mv = document.createElement("model-viewer") as ArModelViewer;
+    const mv = sharedArViewer;
     mv.setAttribute("src", dish.modelUrl);
     mv.setAttribute("alt", dish.name);
-    mv.setAttribute("ar", "");
-    // webxr for Android (Scene Viewer is excluded per request), quick-look for iOS
-    mv.setAttribute("ar-modes", "webxr quick-look");
-    mv.setAttribute("ar-placement", "floor");
-    mv.setAttribute("ar-scale", "fixed");
+    // Reset scale in case a previous dish drifted
     mv.setAttribute("scale", "2.5 2.5 2.5");
-    mv.setAttribute("shadow-intensity", "0");
-    mv.setAttribute("touch-action", "none");
-    mv.setAttribute("loading", "eager");
-    mv.style.cssText =
-      "position:fixed;inset:0;width:100%;height:100%;z-index:-1;opacity:0;pointer-events:none;";
-    document.body.appendChild(mv);
 
     let driftGuard: ReturnType<typeof setInterval> | null = null;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
     const cleanup = () => {
       if (driftGuard !== null) { clearInterval(driftGuard); driftGuard = null; }
+      if (fallbackTimer !== null) { clearTimeout(fallbackTimer); fallbackTimer = null; }
       setIsArLaunching(false);
-      try { document.body.removeChild(mv); } catch { /* already removed */ }
+      mv.removeEventListener("ar-status", handleStatus);
     };
 
-    mv.addEventListener("ar-status", (e: Event) => {
+    const handleStatus = (e: Event) => {
       const status =
         (e as CustomEvent<{ status?: string }>).detail?.status ??
         mv.getAttribute("ar-status");
 
       if (status === "object-placed") {
+        // Clear fallback since AR successfully started
+        if (fallbackTimer !== null) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+        
         // Scale drift guard — ARCore refines floor estimation over time and
         // silently rescales the model. We enforce our target every 1s.
         const TARGET = "2.5 2.5 2.5";
@@ -291,10 +316,11 @@ export const MenuCard = memo(function MenuCard({
       if (status === "not-presenting" || status === "failed") {
         cleanup();
       }
-    });
+    };
+
+    mv.addEventListener("ar-status", handleStatus);
 
     // activateAR() MUST be called synchronously inside the click handler.
-    // Delaying it (async/await) causes Chrome to lose the user gesture context.
     const tryActivate = () => {
       if (typeof mv.activateAR === "function") {
         try {
@@ -303,7 +329,7 @@ export const MenuCard = memo(function MenuCard({
           cleanup();
         }
       } else {
-        // Fallback: if script is still parsing, wait a tiny bit (might lose gesture, but better than nothing)
+        // Fallback: if script is still parsing
         setTimeout(() => {
           try { void mv.activateAR?.(); } catch { cleanup(); }
         }, 100);
@@ -313,8 +339,8 @@ export const MenuCard = memo(function MenuCard({
     tryActivate();
 
     // Safety fallback: if AR never starts within 8s, clean up
-    setTimeout(() => {
-      if (document.body.contains(mv) && !mv.hasAttribute("ar-status")) {
+    fallbackTimer = setTimeout(() => {
+      if (!mv.hasAttribute("ar-status") || mv.getAttribute("ar-status") === "not-presenting") {
         cleanup();
       }
     }, 8000);
