@@ -322,17 +322,16 @@ export function PublicRestaurantMenu({
           <div className="max-w-4xl mx-auto px-6 py-4 flex flex-col gap-4">
             
             <div className="flex items-center justify-between">
-              <div className="flex-shrink-0">
                 <Image
                   src="/logo_aroma-removebg-preview.png"
                   alt="Aroma logo"
-                  width={160}
-                  height={64}
+                  width={320}
+                  height={128}
                   priority
-                  quality={90}
+                  unoptimized={true}
                   style={{
                     filter:
-                      "drop-shadow(0 0 0.6px white) drop-shadow(0 0 0.6px white) contrast(1.1)",
+                      "drop-shadow(0 0 0.3px white) drop-shadow(0 0 0.3px white) contrast(1.1)",
                   }}
                   className="w-[78px] md:w-[104px] lg:w-[130px] h-auto object-contain"
                 />
