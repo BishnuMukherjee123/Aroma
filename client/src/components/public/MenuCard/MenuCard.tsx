@@ -236,14 +236,90 @@ export const MenuCard = memo(function MenuCard({
     return () => window.removeEventListener("pageshow", handlePageShow);
   }, []);
 
-  // "View in AR" — navigates to the dedicated AR setup page.
+  // "See it on your table" — launches WebXR AR directly from the menu page.
+  // No navigation to a separate AR gate screen.
+  // Back gesture ends the AR session → user is already on the menu page. ✅
   const handleViewInAr = useCallback(() => {
     if (!dish.modelUrl) return;
     setIsArLaunching(true);
-    window.location.href = `/r/${publicId}/ar?dish=${dish.id}`;
-    // Fallback reset in case navigation is blocked or delayed
-    setTimeout(() => setIsArLaunching(false), 1500);
-  }, [dish.modelUrl, dish.id, publicId]);
+
+    // Build a model-viewer element for AR and attach it to the body.
+    // It stays invisible (z-index:-1, opacity:0) in the DOM — WebXR itself
+    // creates a full-screen camera overlay when activateAR() is called.
+    type ArModelViewer = HTMLElement & {
+      activateAR?: () => void | Promise<void>;
+    };
+    const mv = document.createElement("model-viewer") as ArModelViewer;
+    mv.setAttribute("src", dish.modelUrl);
+    mv.setAttribute("alt", dish.name);
+    mv.setAttribute("ar", "");
+    // webxr for Android (Scene Viewer is excluded per request), quick-look for iOS
+    mv.setAttribute("ar-modes", "webxr quick-look");
+    mv.setAttribute("ar-placement", "floor");
+    mv.setAttribute("ar-scale", "fixed");
+    mv.setAttribute("scale", "2.5 2.5 2.5");
+    mv.setAttribute("shadow-intensity", "0");
+    mv.setAttribute("touch-action", "none");
+    mv.setAttribute("loading", "eager");
+    mv.style.cssText =
+      "position:fixed;inset:0;width:100%;height:100%;z-index:-1;opacity:0;pointer-events:none;";
+    document.body.appendChild(mv);
+
+    let driftGuard: ReturnType<typeof setInterval> | null = null;
+
+    const cleanup = () => {
+      if (driftGuard !== null) { clearInterval(driftGuard); driftGuard = null; }
+      setIsArLaunching(false);
+      try { document.body.removeChild(mv); } catch { /* already removed */ }
+    };
+
+    mv.addEventListener("ar-status", (e: Event) => {
+      const status =
+        (e as CustomEvent<{ status?: string }>).detail?.status ??
+        mv.getAttribute("ar-status");
+
+      if (status === "object-placed") {
+        // Scale drift guard — ARCore refines floor estimation over time and
+        // silently rescales the model. We enforce our target every 1s.
+        const TARGET = "2.5 2.5 2.5";
+        requestAnimationFrame(() => mv.setAttribute("scale", TARGET));
+        driftGuard = setInterval(() => {
+          if (mv.getAttribute("scale") !== TARGET) mv.setAttribute("scale", TARGET);
+        }, 1000);
+      }
+
+      if (status === "not-presenting" || status === "failed") {
+        cleanup();
+      }
+    });
+
+    // activateAR() MUST be called synchronously inside the click handler.
+    // Delaying it (async/await) causes Chrome to lose the user gesture context.
+    const tryActivate = () => {
+      if (typeof mv.activateAR === "function") {
+        try {
+          void mv.activateAR();
+        } catch {
+          cleanup();
+        }
+      } else {
+        // Fallback: if script is still parsing, wait a tiny bit (might lose gesture, but better than nothing)
+        setTimeout(() => {
+          try { void mv.activateAR?.(); } catch { cleanup(); }
+        }, 100);
+      }
+    };
+    
+    tryActivate();
+
+    // Safety fallback: if AR never starts within 8s, clean up
+    setTimeout(() => {
+      if (document.body.contains(mv) && !mv.hasAttribute("ar-status")) {
+        cleanup();
+      }
+    }, 8000);
+  }, [dish.modelUrl, dish.name]);
+
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const show3D = dish.modelUrl && isPreviewActivated && isIntersecting;
