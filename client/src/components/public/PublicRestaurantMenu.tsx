@@ -322,6 +322,7 @@ export function PublicRestaurantMenu({
           <div className="max-w-4xl mx-auto px-6 py-4 flex flex-col gap-4">
             
             <div className="flex items-center justify-between">
+              <div className="flex-shrink-0">
                 <Image
                   src="/logo_aroma-removebg-preview.png"
                   alt="Aroma logo"
