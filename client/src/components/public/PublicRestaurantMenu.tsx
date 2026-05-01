@@ -360,7 +360,7 @@ export function PublicRestaurantMenu({
                       : "text-white/40 border-b border-transparent hover:text-white/60"
                   )}
                 >
-                  Chef's Special
+                  Chef&apos;s Special
                 </button>
                 <button
                   onClick={() => setCurrentMainTab("menu")}
@@ -387,7 +387,7 @@ export function PublicRestaurantMenu({
             {/* Section Header */}
             <div ref={titleRef} className="text-center mb-10 md:mb-16">
               <h1 className="text-[2.6rem] md:text-[3.5rem] text-white leading-tight font-normal" style={{ fontFamily: "'Great Vibes', cursive", letterSpacing: "1px" }}>
-                {currentMainTab === "special" ? "Chef's Special" : "The Menu"}
+                {currentMainTab === "special" ? "Chef&apos;s Special" : "The Menu"}
               </h1>
             </div>
 
@@ -441,46 +441,45 @@ export function PublicRestaurantMenu({
 
 }
 
-const DishMenuRow = memo(function DishMenuRow({ dish }: { dish: PublicDishPayload }) {
-  const dietaryType = dish.dietaryType;
+const DietaryIcon = ({ dietaryType }: { dietaryType: string | null | undefined }) => {
+  if (dietaryType === "VEG") return (
+    <span className="inline-flex items-center gap-1 ml-2 bg-emerald-500 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full">
+      <span className="flex items-center justify-center w-[9px] h-[9px] border border-white rounded-[1px]">
+        <span className="w-[4px] h-[4px] bg-white rounded-full" />
+      </span>
+      VEG
+    </span>
+  );
+  if (dietaryType === "NON_VEG") return (
+    <span className="inline-flex items-center gap-1 ml-2 bg-red-500 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full">
+      <span className="flex items-center justify-center w-[9px] h-[9px] border border-white rounded-[1px]">
+        <span className="w-[4px] h-[4px] bg-white rounded-full" />
+      </span>
+      NON-VEG
+    </span>
+  );
+  if (dietaryType === "BOTH") return (
+    <span className="inline-flex items-center gap-1 ml-2 bg-white/10 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full border border-white/20">
+      <span className="flex items-center justify-center w-[9px] h-[9px] border border-emerald-400 rounded-[1px]">
+        <span className="w-[4px] h-[4px] bg-emerald-400 rounded-full" />
+      </span>
+      <span className="flex items-center justify-center w-[9px] h-[9px] border border-red-400 rounded-[1px]">
+        <span className="w-[4px] h-[4px] bg-red-400 rounded-full" />
+      </span>
+      VEG & NON-VEG
+    </span>
+  );
+  return null;
+};
 
-  const DietaryIcon = () => {
-    if (dietaryType === "VEG") return (
-      <span className="inline-flex items-center gap-1 ml-2 bg-emerald-500 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full">
-        <span className="flex items-center justify-center w-[9px] h-[9px] border border-white rounded-[1px]">
-          <span className="w-[4px] h-[4px] bg-white rounded-full" />
-        </span>
-        VEG
-      </span>
-    );
-    if (dietaryType === "NON_VEG") return (
-      <span className="inline-flex items-center gap-1 ml-2 bg-red-500 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full">
-        <span className="flex items-center justify-center w-[9px] h-[9px] border border-white rounded-[1px]">
-          <span className="w-[4px] h-[4px] bg-white rounded-full" />
-        </span>
-        NON-VEG
-      </span>
-    );
-    if (dietaryType === "BOTH") return (
-      <span className="inline-flex items-center gap-1 ml-2 bg-white/10 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full border border-white/20">
-        <span className="flex items-center justify-center w-[9px] h-[9px] border border-emerald-400 rounded-[1px]">
-          <span className="w-[4px] h-[4px] bg-emerald-400 rounded-full" />
-        </span>
-        <span className="flex items-center justify-center w-[9px] h-[9px] border border-red-400 rounded-[1px]">
-          <span className="w-[4px] h-[4px] bg-red-400 rounded-full" />
-        </span>
-        VEG & NON-VEG
-      </span>
-    );
-    return null;
-  };
+const DishMenuRow = memo(function DishMenuRow({ dish }: { dish: PublicDishPayload }) {
 
   return (
     <article className="group cursor-pointer max-w-3xl mx-auto w-full">
       <div className="flex items-baseline justify-between w-full">
         <h4 className="text-[17px] md:text-[20px] font-bold text-white tracking-wide font-sans flex items-center flex-wrap gap-0">
           {dish.name}
-          <DietaryIcon />
+          <DietaryIcon dietaryType={dish.dietaryType} />
         </h4>
         
         <div className="flex-grow mx-3 md:mx-6 border-b border-dashed border-white/20 relative top-[-4px]" />
