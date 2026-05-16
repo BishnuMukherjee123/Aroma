@@ -559,6 +559,10 @@ export const MenuCard = memo(function MenuCard({
               e.stopPropagation();
               if (!dish.modelUrl) return;
               setIsArLaunching(true);
+
+              modelPrefetchQueue.prioritize(dish.modelUrl);
+              if (dish.lodUrl) modelPrefetchQueue.prioritize(dish.lodUrl);
+
               window.sessionStorage.setItem("aroma-returning-from-ar", "1");
               window.location.assign(`/r/${publicId}/ar/${dish.id}`);
             }}

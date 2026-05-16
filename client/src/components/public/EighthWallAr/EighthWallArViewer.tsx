@@ -219,18 +219,25 @@ export function EighthWallArViewer({
   const sceneRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
-    if (!backUrl) return;
+    if (!backUrl && !onClose) return;
 
     window.history.pushState({ aromaArBackTrap: true }, "", window.location.href);
 
     const handlePopState = () => {
       window.sessionStorage.removeItem("aroma-returning-from-ar");
-      window.location.replace(backUrl);
+      if (onClose) {
+        onClose();
+        return;
+      }
+
+      if (backUrl) {
+        window.location.replace(backUrl);
+      }
     };
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [backUrl]);
+  }, [backUrl, onClose]);
 
   useEffect(() => {
     let cancelled = false;
@@ -249,6 +256,7 @@ export function EighthWallArViewer({
       try {
         (sceneRef.current as (HTMLElement & { pause?: () => void }) | null)
           ?.pause?.();
+        window.XR8?.stop?.();
       } catch {
         // A-Frame may already be tearing down the scene.
       }
@@ -262,7 +270,14 @@ export function EighthWallArViewer({
           type="button"
           className="eighth-wall-ar-close"
           aria-label="Close AR view"
-          onClick={onClose}
+          onClick={() => {
+            if (window.history.state?.aromaArBackTrap) {
+              window.history.back();
+              return;
+            }
+
+            onClose();
+          }}
         >
           ×
         </button>

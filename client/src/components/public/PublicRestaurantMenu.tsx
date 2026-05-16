@@ -217,7 +217,6 @@ export function PublicRestaurantMenu({
     );
   }, [categories, normalizedSearch]);
 
-
   const filteredMenuCategories = useMemo(() => {
     if (!categories) return [];
     return categories.map(category => ({
@@ -304,7 +303,7 @@ export function PublicRestaurantMenu({
             smoothWheel: true,
             wheelMultiplier: 1,
           }
-    ); 
+    );
 
     const raf = (time: number) => { lenis.raf(time); rafId = requestAnimationFrame(raf); };
     rafId = requestAnimationFrame(raf);
@@ -479,7 +478,7 @@ export function PublicRestaurantMenu({
             )}
           </main>
         </div>
-      </div>
+    </div>
   );
 
 }
