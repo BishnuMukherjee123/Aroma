@@ -304,7 +304,7 @@ export function PublicRestaurantMenu({
             smoothWheel: true,
             wheelMultiplier: 1,
           }
-    );
+    ); 
 
     const raf = (time: number) => { lenis.raf(time); rafId = requestAnimationFrame(raf); };
     rafId = requestAnimationFrame(raf);
