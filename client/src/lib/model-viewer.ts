@@ -98,7 +98,7 @@ export async function launchDirectAr(options: {
   launcher.setAttribute("src", options.modelUrl);
   launcher.setAttribute("alt", options.alt);
   launcher.setAttribute("ar", "");
-  launcher.setAttribute("ar-modes", "webxr scene-viewer quick-look");
+  launcher.setAttribute("ar-modes", "scene-viewer webxr quick-look");
   launcher.setAttribute("camera-controls", "");
   launcher.setAttribute("interaction-prompt", "none");
   launcher.setAttribute("touch-action", "pan-y");

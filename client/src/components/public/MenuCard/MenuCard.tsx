@@ -34,14 +34,17 @@ const activeModelStore = {
 // custom element is fully upgraded and ready before the user clicks the button.
 // Creating it dynamically in the click handler causes activateAR() to silently
 // fail due to loss of user gesture context while waiting for element upgrade.
-let sharedArViewer: (HTMLElement & { activateAR?: () => void }) | null = null;
+let sharedArViewer:
+  | (HTMLElement & { activateAR?: () => Promise<void> | void })
+  | null = null;
 
 function initSharedArViewer() {
   if (typeof window === "undefined" || sharedArViewer) return;
   sharedArViewer = document.createElement("model-viewer") as any;
   sharedArViewer!.setAttribute("ar", "");
-  // webxr for Android, quick-look for iOS
-  sharedArViewer!.setAttribute("ar-modes", "webxr quick-look");
+  // Prefer Android Scene Viewer for a reliable native AR launch, then fall
+  // back to WebXR and iOS Quick Look where supported.
+  sharedArViewer!.setAttribute("ar-modes", "scene-viewer webxr quick-look");
   sharedArViewer!.setAttribute("ar-placement", "floor");
   sharedArViewer!.setAttribute("ar-scale", "fixed");
   sharedArViewer!.setAttribute("scale", "2.5 2.5 2.5");
@@ -298,6 +301,11 @@ export const MenuCard = memo(function MenuCard({
         (e as CustomEvent<{ status?: string }>).detail?.status ??
         mv.getAttribute("ar-status");
 
+      if (status === "session-started" || status === "object-placed") {
+        setIsArLaunching(false);
+        if (fallbackTimer !== null) { clearTimeout(fallbackTimer); fallbackTimer = null; }
+      }
+
       if (status === "object-placed") {
         // Clear fallback since AR successfully started
         if (fallbackTimer !== null) { clearTimeout(fallbackTimer); fallbackTimer = null; }
@@ -322,14 +330,24 @@ export const MenuCard = memo(function MenuCard({
     const tryActivate = () => {
       if (typeof mv.activateAR === "function") {
         try {
-          void mv.activateAR();
+          const activation = mv.activateAR();
+          if (activation && typeof activation.catch === "function") {
+            void activation.catch(() => cleanup());
+          }
         } catch {
           cleanup();
         }
       } else {
         // Fallback: if script is still parsing
         setTimeout(() => {
-          try { void mv.activateAR?.(); } catch { cleanup(); }
+          try {
+            const activation = mv.activateAR?.();
+            if (activation && typeof activation.catch === "function") {
+              void activation.catch(() => cleanup());
+            }
+          } catch {
+            cleanup();
+          }
         }, 100);
       }
     };
@@ -338,7 +356,8 @@ export const MenuCard = memo(function MenuCard({
 
     // Safety fallback: if AR never starts within 8s, clean up
     fallbackTimer = setTimeout(() => {
-      if (!mv.hasAttribute("ar-status") || mv.getAttribute("ar-status") === "not-presenting") {
+      const status = mv.getAttribute("ar-status");
+      if (status !== "session-started" && status !== "object-placed") {
         cleanup();
       }
     }, 8000);
