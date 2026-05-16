@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>A-Frame: Tap to Place Ground</title>
+  <meta itemprop="name" content="A-Frame: Tap to Place Ground">
+  <meta name="twitter:title" content="A-Frame: Tap to Place Ground">
+  <meta property="og:title" content="A-Frame: Tap to Place Ground">
+  <meta property="og:site_name" content="A-Frame: Tap to Place Ground">
+  <meta name="description" content="Tap or click the ground to place 3D models. Showcases raycasting, spawning objects, and importing a 3D model.">
+  <meta itemprop="description" content="Tap or click the ground to place 3D models. Showcases raycasting, spawning objects, and importing a 3D model.">
+  <meta property="og:description" content="Tap or click the ground to place 3D models. Showcases raycasting, spawning objects, and importing a 3D model.">
+  <meta name="twitter:description" content="Tap or click the ground to place 3D models. Showcases raycasting, spawning objects, and importing a 3D model.">
+  <meta property="og:image" content="https://8thwall.org/aframe-world-effects/assets/preview.gif"/>
+
+  <style>
+    /* Completely hide the 'powered by 8thwall' watermark from the loading screen */
+    #poweredby, .poweredby-img, #loadBackground > div:last-child {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+    }
+  </style>
+
+  <!-- 8th Wall scripts must load synchronously BEFORE React mounts -->
+  <script crossorigin="anonymous" src="/external/scripts/8frame-1.5.0.min.js"></script>
+  
+  <!-- Serve native NPM files directly from node_modules so WASM files route correctly -->
+  <script src="/node_modules/@8thwall/xrextras/dist/xrextras.js"></script>
+  <script src="/node_modules/@8thwall/landing-page/dist/landing-page.js"></script>
+  
+  <!-- POLYFILL: 8th Wall's engine expects document.currentScript to exist, but it is natively null inside ES Modules. -->
+  <!-- This tricks xr.js into finding its base URL so it can download its WASM files without crashing. -->
+  <script>
+    Object.defineProperty(document, 'currentScript', {
+      get: function() {
+        const fakeScript = document.createElement('script');
+        fakeScript.src = window.location.origin + "/node_modules/@8thwall/engine-binary/dist/xr.js";
+        fakeScript.setAttribute('data-preload-chunks', 'slam');
+        return fakeScript;
+      }
+    });
+  </script>
+  <script type="module" src="/node_modules/@8thwall/engine-binary/dist/xr.js" async="true" data-preload-chunks="slam"></script>
+</head>
+
+<body>
+  <div id="root"></div>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
+</html>

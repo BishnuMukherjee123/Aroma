@@ -557,7 +557,10 @@ export const MenuCard = memo(function MenuCard({
             disabled={isArLaunching}
             onClick={(e) => {
               e.stopPropagation();
-              void handleViewInAr();
+              if (!dish.modelUrl) return;
+              setIsArLaunching(true);
+              window.sessionStorage.setItem("aroma-returning-from-ar", "1");
+              window.location.assign(`/r/${publicId}/ar/${dish.id}`);
             }}
           >
             {isArLaunching ? (
@@ -679,7 +682,6 @@ export const MenuCard = memo(function MenuCard({
           ) : null}
         </div>
       </div>
-
 
     </div>
   );

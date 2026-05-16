@@ -81,6 +81,49 @@ export function PublicRestaurantMenu({
 
   const deferredSearch = useDeferredValue(search);
 
+  // The AR page boots 8th Wall/A-Frame, which can leave WebGL and rAF-based
+  // systems paused if Chrome restores this menu from BFCache. An unload handler
+  // opts this page out of BFCache so browser Back performs a normal reload.
+  useEffect(() => {
+    const preventBackForwardCache = () => {};
+    window.addEventListener("unload", preventBackForwardCache);
+
+    return () => {
+      window.removeEventListener("unload", preventBackForwardCache);
+    };
+  }, []);
+
+  // Keep a fallback reload guard for browsers that still restore this page.
+  useEffect(() => {
+    const reloadAfterArReturn = () => {
+      if (window.sessionStorage.getItem("aroma-returning-from-ar") !== "1") {
+        return;
+      }
+
+      window.sessionStorage.removeItem("aroma-returning-from-ar");
+      window.location.reload();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        reloadAfterArReturn();
+      }
+    };
+
+    const handlePageShow = () => {
+      reloadAfterArReturn();
+    };
+
+    reloadAfterArReturn();
+    window.addEventListener("pageshow", handlePageShow);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("pageshow", handlePageShow);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
   // Load restaurant data — skip fetch if SSR already provided it
   useEffect(() => {
     if (initialRestaurant && initialRestaurant.publicId === publicId) {
