@@ -142,7 +142,7 @@
     xrextras-pbr-environment
     xrextras-almost-there
     xrextras-coaching-overlay
-    renderer="colorManagement:true; physicallyCorrectLights:true; toneMapping:ACESFilmic; logarithmicDepthBuffer:true; antialias:true; precision:high;"
+    renderer="colorManagement:true; physicallyCorrectLights:true; toneMapping:ACESFilmic; logarithmicDepthBuffer:true; antialias:true; precision:high; shadowMapType:pcfsoft;"
     xrweb="
       allowedDevices: any;
       disableWorldTracking: false;
@@ -171,13 +171,20 @@
 
     <!--
       Directional light + shadow camera.
-      The shadow frustum (shadowCameraTop/Bottom/Right/Left) is widened to
-      match the 40×40 m bounds used in the official 8th Wall A-Frame example.
-      The previous 10×10 m bounds clipped shadows for larger placement scales,
-      so the floating dish appeared without a shadow underneath it.
+
+      With xrweb in absolute-scale mode, the dish is rendered in real-world
+      metres and never exceeds ~3 m even at the pinch ceiling. We size the
+      shadow frustum (shadowCamera*) to 10 m on each side, which means the
+      2048×2048 shadow map gets ~10 mm per shadow texel — sharp enough that
+      the edges blend smoothly when paired with the pcfsoft filter on the
+      renderer. A wider frustum (e.g. 40 m) spreads the same texels over a
+      bigger area and the shadow ends up looking like blocky pixel grids.
+
+      Intensity is kept at 1.0 so the shadow remains deep and dark like the
+      pre-stability version the user said looked good.
     -->
     <a-entity
-      light="type:directional; intensity:0.9; castShadow:true; shadowMapHeight:2048; shadowMapWidth:2048; shadowCameraTop:40; shadowCameraBottom:-40; shadowCameraRight:40; shadowCameraLeft:-40; target:#camera"
+      light="type:directional; intensity:1.0; castShadow:true; shadowMapHeight:2048; shadowMapWidth:2048; shadowCameraTop:10; shadowCameraBottom:-10; shadowCameraRight:10; shadowCameraLeft:-10; shadowBias:-0.0003; target:#camera"
       xrextras-attach="target:camera; offset:8 15 4"
       position="1 4.3 2.5"
       shadow
@@ -258,7 +265,7 @@
           // Float the model a few centimetres above the detected floor so it
           // doesn't z-fight with the ground plane and so the cast shadow has
           // room to render visibly underneath the dish.
-          var FLOAT_OFFSET_M = 0.30; // 30 cm
+          var FLOAT_OFFSET_M = 0.285; // 28.5 cm (= previous 0.30 × 0.95)
           el.setAttribute(
             'position',
             touchPoint.x + ' ' + (touchPoint.y + FLOAT_OFFSET_M) + ' ' + touchPoint.z
