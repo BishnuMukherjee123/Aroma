@@ -175,6 +175,32 @@
           if (promptEl) promptEl.style.display = 'none';
 
           var touchPoint = event.detail.intersection.point;
+
+          // ── Distance-aware sizing ──────────────────────────────────────────
+          // A model placed far from the camera renders smaller on-screen due
+          // to perspective. To keep apparent size roughly constant whether the
+          // user taps near (e.g. on their lap) or far (across the room), we
+          // multiply the base scale by (tapDistance / REF_DISTANCE).
+          //
+          // REF_DISTANCE is the "reference" tap distance at which the base
+          // scale renders correctly. 1.5 m roughly matches arm's-length on a
+          // table — the most common viewing scenario.
+          var REF_DISTANCE = 1.5;
+          var camEl = document.getElementById('camera');
+          var distanceFactor = 1;
+          if (camEl && camEl.object3D) {
+            var camPos = camEl.object3D.position;
+            var dx = touchPoint.x - camPos.x;
+            var dy = touchPoint.y - camPos.y;
+            var dz = touchPoint.z - camPos.z;
+            var dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+            distanceFactor = dist / REF_DISTANCE;
+            // Clamp so very near taps don't shrink the model to nothing and
+            // very far taps don't blow it up past the pinch ceiling.
+            if (distanceFactor < 0.6) distanceFactor = 0.6;
+            if (distanceFactor > 4)   distanceFactor = 4;
+          }
+
           var el = document.createElement('a-entity');
           self.spawnedEl = el;
 
@@ -187,6 +213,9 @@
             Math.random() * (Math.floor(self.data.max) - Math.ceil(self.data.min))
             + Math.ceil(self.data.min)
           );
+          // Apply the perspective-correction factor so dishes tapped further
+          // away spawn larger and look the same on-screen as nearby taps.
+          targetScale = targetScale * distanceFactor;
 
           el.setAttribute('visible', 'false');
           el.setAttribute('scale', '0.0001 0.0001 0.0001');
