@@ -103,17 +103,15 @@
 
     Stability tuning
     ─────────────────
-    • scale: absolute
-        ⮕ KEY FIX: locks the model's apparent size in real-world units.
-        Without this, 8th Wall uses "Responsive Scale" by default — the
-        scene resizes based on the device-camera height estimate, which
-        means the model appears to grow or shrink as the user tilts and
-        moves the phone. With absolute scale, the engine pins the model
-        to real-world dimensions and 8th Wall's coaching overlay briefly
-        prompts the user to move the phone back-and-forth so the engine
-        can establish a precise scale estimate. After that one-time scan,
-        the model never changes size again, regardless of camera motion.
-        Works identically on iPhone (iOS 14+) and Android.
+    • scale: responsive (default)
+        After testing absolute scale, the position-drift issue (dish appears
+        to float upward when the user moves the camera, because the engine
+        constantly re-estimates camera height in real-world units) was much
+        more disruptive than the gentle size variation that Responsive Scale
+        causes when the user gets closer or further from the surface.
+        Responsive Scale is the 8th Wall default and what their official
+        examples use. The dish stays anchored to the floor; size variation
+        is mild (~10-15% within a normal room).
     • disableWorldTracking: false  (explicit — default).
     • enableLighting: true         — feeds environment-light estimation back
       into the SLAM solver. The 8th Wall engine internally uses lighting
@@ -124,13 +122,6 @@
     • renderer="precision:high"    — higher-precision FP shaders. On iOS
       this reduces the sub-pixel position jitter that AlphaGo-style moiré
       patterns can induce on flat-shaded GLB surfaces.
-
-    Coaching overlay
-    ─────────────────
-    • xrextras-almost-there + xrextras-runtime-error already provide the
-      "almost there" / browser-not-supported screens. For absolute scale
-      we add `xrextras-coaching-overlay` so the user receives a polished
-      "move your phone back and forth" instruction during scale estimation.
   -->
   <a-scene
     id="ar-scene"
@@ -141,13 +132,11 @@
     xrextras-gesture-detector
     xrextras-pbr-environment
     xrextras-almost-there
-    xrextras-coaching-overlay
-    renderer="colorManagement:true; physicallyCorrectLights:true; toneMapping:ACESFilmic; logarithmicDepthBuffer:true; antialias:true; precision:high; shadowMapType:pcfsoft;"
+    renderer="colorManagement:true; physicallyCorrectLights:true; toneMapping:ACESFilmic; logarithmicDepthBuffer:true; antialias:true; precision:high;"
     xrweb="
       allowedDevices: any;
       disableWorldTracking: false;
       enableLighting: true;
-      scale: absolute;
       defaultEnvironmentFogIntensity: 0.5;
       defaultEnvironmentFloorTexture: #groundTex;
       defaultEnvironmentFloorColor: #FFF;
@@ -172,19 +161,17 @@
     <!--
       Directional light + shadow camera.
 
-      With xrweb in absolute-scale mode, the dish is rendered in real-world
-      metres and never exceeds ~3 m even at the pinch ceiling. We size the
-      shadow frustum (shadowCamera*) to 10 m on each side, which means the
-      2048×2048 shadow map gets ~10 mm per shadow texel — sharp enough that
-      the edges blend smoothly when paired with the pcfsoft filter on the
-      renderer. A wider frustum (e.g. 40 m) spreads the same texels over a
-      bigger area and the shadow ends up looking like blocky pixel grids.
-
-      Intensity is kept at 1.0 so the shadow remains deep and dark like the
-      pre-stability version the user said looked good.
+      Restored to the original settings that gave a visible, dark, grounded
+      shadow before any of the absolute-scale experiments:
+        • intensity 0.9          – deep enough to read on most surfaces
+        • shadow camera 40×40 m  – wide so the shadow doesn't clip even when
+                                   the user pinches the dish very large
+        • no pcfsoft / shadowBias / shadowRadius — those softened the shadow
+                                   so much it became invisible at the now-
+                                   tight 4 cm float offset.
     -->
     <a-entity
-      light="type:directional; intensity:1.0; castShadow:true; shadowMapHeight:2048; shadowMapWidth:2048; shadowCameraTop:10; shadowCameraBottom:-10; shadowCameraRight:10; shadowCameraLeft:-10; shadowBias:-0.0003; target:#camera"
+      light="type:directional; intensity:0.9; castShadow:true; shadowMapHeight:2048; shadowMapWidth:2048; shadowCameraTop:40; shadowCameraBottom:-40; shadowCameraRight:40; shadowCameraLeft:-40; target:#camera"
       xrextras-attach="target:camera; offset:8 15 4"
       position="1 4.3 2.5"
       shadow
@@ -222,20 +209,10 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      // Spawn scale.
-      //
-      // ⚠ This value's meaning depends on the xrweb scale mode:
-      //   • Responsive Scale (default): unitless multiplier of the model's
-      //     own glTF units. ~8 was a good fit experimentally.
-      //   • Absolute Scale (current setting): the model is interpreted in
-      //     real-world meters. Most dish GLBs are exported around 0.1–0.3 m
-      //     (~plate-sized) so a scale of ~3 keeps them about 30 cm wide,
-      //     which matches a real plate on a real table.
-      //
-      // 3 is the new default. Adjust here if the dish appears too small/big.
-      // Once placed, it will NOT change size as the user moves the phone —
-      // that's what absolute scale guarantees.
-      schema: { min: { default: 3 }, max: { default: 4 } },
+      // Spawn scale: 8.55 — the size the user dialled in for Responsive Scale
+      // mode after several rounds of fine-tuning. This is a unitless multiplier
+      // of the model's own glTF units, not real-world meters.
+      schema: { min: { default: 8.55 }, max: { default: 9.55 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
@@ -262,20 +239,29 @@
 
           ground.classList.remove('cantap');
 
-          // Float the model a few centimetres above the detected floor so it
-          // doesn't z-fight with the ground plane and so the cast shadow has
-          // room to render visibly underneath the dish.
-          var FLOAT_OFFSET_M = 0.285; // 28.5 cm (= previous 0.30 × 0.95)
+          // Use the schema's `min` directly as the deterministic base scale.
+          // (We no longer apply a distance factor — see the comment above
+          // about absolute-scale mode.)
+          var targetScale = self.data.min;
+
+          // Float the model above the detected floor.
+          //
+          // The offset is expressed as a fraction of the model's own
+          // placement scale (instead of a fixed scene-unit value). On a
+          // phone in real AR, Responsive Scale multiplies all scene units
+          // by the camera-height factor — but on desktop preview (no AR)
+          // the model renders at its raw scale (~8.55 units), so a flat
+          // 0.30 offset becomes invisible beneath it. Tying the offset to
+          // targetScale keeps the visual gap consistent across both.
+          //
+          // 0.20 = 20% of the model's bounding height. Increase for more
+          // floating, decrease for closer-to-floor.
+          var FLOAT_OFFSET_M = targetScale * 0.20;
           el.setAttribute(
             'position',
             touchPoint.x + ' ' + (touchPoint.y + FLOAT_OFFSET_M) + ' ' + touchPoint.z
           );
           el.setAttribute('rotation', '0 ' + (Math.random() * 360) + ' 0');
-
-          // Use the schema's `min` directly as the deterministic base scale.
-          // (We no longer apply a distance factor — see the comment above
-          // about absolute-scale mode.)
-          var targetScale = self.data.min;
 
           el.setAttribute('visible', 'false');
           el.setAttribute('scale', '0.0001 0.0001 0.0001');
@@ -298,12 +284,11 @@
             el.removeAttribute('animation');
             el.setAttribute('scale', targetScale + ' ' + targetScale + ' ' + targetScale);
             el.setAttribute('xrextras-two-finger-rotate', '');
-            // Pinch range — multipliers relative to the placement scale (3).
-            // min: 0.3  → can shrink to ~0.9 m  → tiny tabletop dish
-            // max: 4    → can grow to 12 m     → huge centerpiece
-            // Range chosen for absolute-scale meters. With `scale: absolute`,
-            // 1 unit ≈ 1 metre, so think of these as real-world dimensions.
-            el.setAttribute('xrextras-pinch-scale', 'min: 0.3; max: 4');
+            // Pinch range — multipliers relative to the placement scale (8.55).
+            // min: 0.25 → can shrink to ~25% (≈ scale 2.14)
+            // max: 8    → can grow to 8×    (≈ scale 68)
+            // ~32× total range, tuned for Responsive Scale mode.
+            el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 8');
 
             // ── No drift guard ────────────────────────────────────────────
             // We deliberately do NOT re-set the entity position after this
