@@ -209,10 +209,10 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      // Spawn scale: 8.55 — the size the user dialled in for Responsive Scale
-      // mode after several rounds of fine-tuning. This is a unitless multiplier
-      // of the model's own glTF units, not real-world meters.
-      schema: { min: { default: 8.55 }, max: { default: 9.55 } },
+      // Spawn scale: 22 — matches the "filling about half the screen" look
+      // the user requested (≈2.5× the previous 8.55). Unitless multiplier of
+      // the model's own glTF units, in Responsive Scale mode.
+      schema: { min: { default: 22 }, max: { default: 23 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
