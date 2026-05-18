@@ -20,6 +20,19 @@
   <title>View in AR – Aroma</title>
 
   <!--
+    Resource preload hints — start downloading all 8th Wall scripts in parallel
+    immediately when the HTML head is parsed. Without these, the four <script>
+    tags below load roughly sequentially because each is `defer`-equivalent
+    and HTTP/1.1 connections are serialised. With preload the browser issues
+    all requests at once, cutting the cold-camera-open time roughly in half.
+  -->
+  <link rel="preload" as="script" href="/8thwall/external/scripts/8frame-1.5.0.min.js" crossorigin="anonymous">
+  <link rel="preload" as="script" href="/8thwall/vendor/xrextras/xrextras.js" crossorigin="anonymous">
+  <link rel="preload" as="script" href="/8thwall/vendor/landing-page/landing-page.js" crossorigin="anonymous">
+  <link rel="preload" as="script" href="/8thwall/vendor/engine-binary/xr.js" crossorigin="anonymous">
+  <link rel="preload" as="script" href="/8thwall/vendor/engine-binary/xr-slam.js" crossorigin="anonymous">
+
+  <!--
     Script load order MUST match the official 8th Wall A-Frame example.
     All scripts are local (served from /8thwall/...) so they share an origin
     with the page. iOS WebKit refuses to grant camera permission across a
@@ -120,8 +133,15 @@
       cursor="fuse: false; rayOrigin: mouse;">
     </a-camera>
 
+    <!--
+      Directional light + shadow camera.
+      The shadow frustum (shadowCameraTop/Bottom/Right/Left) is widened to
+      match the 40×40 m bounds used in the official 8th Wall A-Frame example.
+      The previous 10×10 m bounds clipped shadows for larger placement scales,
+      so the floating dish appeared without a shadow underneath it.
+    -->
     <a-entity
-      light="type:directional; intensity:0.8; castShadow:true; shadowMapHeight:2048; shadowMapWidth:2048; shadowCameraTop:10; shadowCameraBottom:-10; shadowCameraRight:10; shadowCameraLeft:-10; target:#camera"
+      light="type:directional; intensity:0.9; castShadow:true; shadowMapHeight:2048; shadowMapWidth:2048; shadowCameraTop:40; shadowCameraBottom:-40; shadowCameraRight:40; shadowCameraLeft:-40; target:#camera"
       xrextras-attach="target:camera; offset:8 15 4"
       position="1 4.3 2.5"
       shadow
@@ -214,7 +234,14 @@
 
           ground.classList.remove('cantap');
 
-          el.setAttribute('position', touchPoint.x + ' ' + (touchPoint.y + 0.05) + ' ' + touchPoint.z);
+          // Float the model a few centimetres above the detected floor so it
+          // doesn't z-fight with the ground plane and so the cast shadow has
+          // room to render visibly underneath the dish.
+          var FLOAT_OFFSET_M = 0.30; // 30 cm
+          el.setAttribute(
+            'position',
+            touchPoint.x + ' ' + (touchPoint.y + FLOAT_OFFSET_M) + ' ' + touchPoint.z
+          );
           el.setAttribute('rotation', '0 ' + (Math.random() * 360) + ' 0');
 
           var targetScale = Math.floor(
@@ -257,6 +284,43 @@
             // max: 8    → can grow to 8×    (≈ scale 68)   – room-filling
             // ~32× total range. Plenty of headroom in both directions.
             el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 8');
+
+            // ── Drift guard ────────────────────────────────────────────────
+            // After placement, both ARCore and ARKit keep refining their
+            // SLAM world model — the floor estimate shifts a few cm over the
+            // first 1-2 seconds, and the dish appears to wobble or slide.
+            //
+            // We snapshot the position immediately after the spawn animation
+            // finishes and re-assert it every 200 ms for the next ~3 seconds,
+            // overwriting whatever drift the engine introduced. After 3 s the
+            // SLAM world has converged and the guard turns itself off.
+            //
+            // We intentionally DO NOT lock scale here — the user's pinch
+            // gesture must still be allowed to mutate scale freely.
+            var lockedX = touchPoint.x;
+            var lockedY = touchPoint.y + FLOAT_OFFSET_M;
+            var lockedZ = touchPoint.z;
+            var driftGuardTicks = 0;
+            var driftGuard = setInterval(function () {
+              driftGuardTicks += 1;
+              if (driftGuardTicks > 15) {            // 15 × 200 ms = 3 s
+                clearInterval(driftGuard);
+                return;
+              }
+              var pos = el.getAttribute('position');
+              // Only reassert if drift exceeds 1 cm — reduces React-layout
+              // churn from idempotent setAttribute calls.
+              if (
+                Math.abs(pos.x - lockedX) > 0.01 ||
+                Math.abs(pos.y - lockedY) > 0.01 ||
+                Math.abs(pos.z - lockedZ) > 0.01
+              ) {
+                el.setAttribute(
+                  'position',
+                  lockedX + ' ' + lockedY + ' ' + lockedZ
+                );
+              }
+            }, 200);
           });
         });
       }

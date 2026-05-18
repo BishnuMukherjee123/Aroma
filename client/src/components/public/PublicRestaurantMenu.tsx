@@ -82,9 +82,71 @@ export function PublicRestaurantMenu({
   const deferredSearch = useDeferredValue(search);
 
   // ── Return-from-AR reload guard ────────────────────────────────────────────
+  // ── Return-from-AR reload guard ────────────────────────────────────────────
   // The actual reload logic lives in <head> (layout.tsx) as an inline script
   // so it runs before React hydrates. BFCache restores can freeze React state,
   // so client-side checks inside useEffect are not 100 % reliable.
+
+  // ── 8th Wall script preloader ──────────────────────────────────────────────
+  // The biggest contributor to "slow camera open" is the cold download of the
+  // 8th Wall engine when the user taps the AR button:
+  //   • 8frame-1.5.0.min.js   ~  900 KB
+  //   • xrextras.js           ~  450 KB
+  //   • landing-page.js       ~  100 KB
+  //   • engine-binary/xr.js   ~ 1.2  MB
+  //   • engine-binary/xr-slam.js  + WASM ~ 1.5 MB
+  // Total cold-fetch on tap is ~3-4 MB, which on a typical 4G connection
+  // takes 2-4 s before the camera even tries to open.
+  //
+  // We start a low-priority background fetch the moment the menu page mounts.
+  // By the time the user actually taps the AR button, all the scripts are
+  // already in the HTTP cache and the static AR viewer can hand them to the
+  // service worker / browser instantly.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    // Run on idle so it doesn't compete with the menu's own first paint.
+    type IdleWindow = Window & {
+      requestIdleCallback?: (fn: () => void) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    const w = window as IdleWindow;
+    const idle = (cb: () => void): number =>
+      w.requestIdleCallback ? w.requestIdleCallback(cb) : window.setTimeout(cb, 1000);
+
+    const handle = idle(() => {
+      const urls = [
+        "/8thwall/external/scripts/8frame-1.5.0.min.js",
+        "/8thwall/vendor/xrextras/xrextras.js",
+        "/8thwall/vendor/landing-page/landing-page.js",
+        "/8thwall/vendor/engine-binary/xr.js",
+        "/8thwall/vendor/engine-binary/xr-slam.js",
+        "/ar-viewer/index.html",
+      ];
+
+      // Use <link rel="prefetch"> so the browser fetches at low priority
+      // and stores in the HTTP cache without executing.
+      urls.forEach((href) => {
+        const existing = document.querySelector(
+          `link[rel="prefetch"][href="${href}"]`,
+        );
+        if (existing) return;
+        const link = document.createElement("link");
+        link.rel = "prefetch";
+        link.href = href;
+        link.crossOrigin = "anonymous";
+        document.head.appendChild(link);
+      });
+    });
+
+    return () => {
+      if (w.cancelIdleCallback) {
+        w.cancelIdleCallback(handle);
+      } else {
+        window.clearTimeout(handle);
+      }
+    };
+  }, []);
 
   // Load restaurant data — skip fetch if SSR already provided it
   useEffect(() => {
