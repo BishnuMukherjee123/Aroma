@@ -159,11 +159,10 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      // Spawn scale: fixed at 11 (≈70% of the earlier 15 setting that the
-      // user said was correct in vertical/distant placements but slightly
-      // too large in horizontal/near placements).
+      // Spawn scale: fixed at 9 (= previous 11 × 0.8, per the user's request
+      // to reduce the horizontal starting size by 20%).
       // (min and max kept equal to remove randomness.)
-      schema: { min: { default: 11 }, max: { default: 12 } },
+      schema: { min: { default: 9 }, max: { default: 10 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
@@ -197,8 +196,13 @@
             distanceFactor = dist / REF_DISTANCE;
             // Clamp so very near taps don't shrink the model to nothing and
             // very far taps don't blow it up past the pinch ceiling.
-            if (distanceFactor < 0.6) distanceFactor = 0.6;
-            if (distanceFactor > 4)   distanceFactor = 4;
+            //
+            // Near-tap floor lowered to 0.48 (was 0.6) — the user asked for
+            // horizontal/close placements to be ~20% smaller while keeping
+            // vertical/distant placements at the same size. The far-tap cap
+            // stays at 4 so distant placements aren't affected.
+            if (distanceFactor < 0.48) distanceFactor = 0.48;
+            if (distanceFactor > 4)    distanceFactor = 4;
           }
 
           var el = document.createElement('a-entity');
@@ -238,11 +242,12 @@
             el.removeAttribute('animation');
             el.setAttribute('scale', targetScale + ' ' + targetScale + ' ' + targetScale);
             el.setAttribute('xrextras-two-finger-rotate', '');
-            // Pinch range — multipliers relative to the placement scale (11).
-            // min: 0.25 → can shrink to ~25% (≈ scale 2.75) – tiny tabletop
-            // max: 7    → can grow to 7×    (≈ scale 77)   – room-filling
-            // ~28× total range. Plenty of headroom in both directions.
-            el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 7');
+            // Pinch range — multipliers relative to the placement scale (9).
+            // min: 0.25 → can shrink to ~25% (≈ scale 2.25) – tiny tabletop
+            // max: 8    → can grow to 8×    (≈ scale 72)   – room-filling
+            // ~32× total range. Pinch ceiling raised to keep upscale headroom
+            // unchanged from before despite the smaller spawn.
+            el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 8');
           });
         });
       }
