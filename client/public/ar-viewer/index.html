@@ -205,7 +205,11 @@
             el.removeAttribute('animation');
             el.setAttribute('scale', targetScale + ' ' + targetScale + ' ' + targetScale);
             el.setAttribute('xrextras-two-finger-rotate', '');
-            el.setAttribute('xrextras-pinch-scale', 'min: 0.1; max: 5');
+            // Pinch range — these are RATIOS relative to the placement scale.
+            // Spawn scale is 5–8 (see schema), so max:5 here meant the user
+            // could only ever shrink the model. Widen so pinch-out actually
+            // grows it and pinch-in goes much smaller.
+            el.setAttribute('xrextras-pinch-scale', 'min: 0.05; max: 20');
           });
         });
       }
