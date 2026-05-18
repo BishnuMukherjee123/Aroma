@@ -159,11 +159,11 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      // Spawn scale: fixed at 14 so dishes look consistent regardless of which
-      // model the user picks. The previous random 5–8 range was too small for
-      // food on a table viewed from phone-arms-length distance.
-      // (min and max are kept equal here to remove the randomness.)
-      schema: { min: { default: 14 }, max: { default: 15 } },
+      // Spawn scale: fixed at 30 so dishes look like a real plate on the table
+      // when viewed from arm's length. The previous 14 was too small for most
+      // GLBs whose source units are sub-meter.
+      // (min and max kept equal here to remove randomness from the spawn size.)
+      schema: { min: { default: 30 }, max: { default: 31 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
@@ -209,13 +209,11 @@
             el.removeAttribute('animation');
             el.setAttribute('scale', targetScale + ' ' + targetScale + ' ' + targetScale);
             el.setAttribute('xrextras-two-finger-rotate', '');
-            // Pinch range — multipliers relative to the placement scale (14).
-            // min: 0.3  → can shrink to ~30% (≈ scale 4.2)
-            // max: 3    → can grow to 3×    (≈ scale 42)
-            // That gives a roughly 10× range from smallest to largest, which
-            // covers "tiny dish on the table" through "centerpiece-sized" without
-            // letting the model become unusable at either extreme.
-            el.setAttribute('xrextras-pinch-scale', 'min: 0.3; max: 3');
+            // Pinch range — multipliers relative to the placement scale (30).
+            // min: 0.2  → can shrink to ~20% (≈ scale 6)   – small dish
+            // max: 5    → can grow to 5×    (≈ scale 150) – huge centerpiece
+            // ~25× total range. Most users will land somewhere in the middle.
+            el.setAttribute('xrextras-pinch-scale', 'min: 0.2; max: 5');
           });
         });
       }
