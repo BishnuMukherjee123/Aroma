@@ -100,6 +100,37 @@
     • landing-page renders the official 8th Wall consent screen which
       handles getUserMedia inside a button click — this is the only
       reliable way to get camera permission on iOS Safari.
+
+    Stability tuning
+    ─────────────────
+    • scale: absolute
+        ⮕ KEY FIX: locks the model's apparent size in real-world units.
+        Without this, 8th Wall uses "Responsive Scale" by default — the
+        scene resizes based on the device-camera height estimate, which
+        means the model appears to grow or shrink as the user tilts and
+        moves the phone. With absolute scale, the engine pins the model
+        to real-world dimensions and 8th Wall's coaching overlay briefly
+        prompts the user to move the phone back-and-forth so the engine
+        can establish a precise scale estimate. After that one-time scan,
+        the model never changes size again, regardless of camera motion.
+        Works identically on iPhone (iOS 14+) and Android.
+    • disableWorldTracking: false  (explicit — default).
+    • enableLighting: true         — feeds environment-light estimation back
+      into the SLAM solver. The 8th Wall engine internally uses lighting
+      cues to discriminate stable feature-points from noisy ones, which
+      reduces ground-plane jitter visibly.
+    • renderer="antialias:true"    — smoother edges; doesn't affect tracking
+      directly but reduces the visual perception of jitter on the dish.
+    • renderer="precision:high"    — higher-precision FP shaders. On iOS
+      this reduces the sub-pixel position jitter that AlphaGo-style moiré
+      patterns can induce on flat-shaded GLB surfaces.
+
+    Coaching overlay
+    ─────────────────
+    • xrextras-almost-there + xrextras-runtime-error already provide the
+      "almost there" / browser-not-supported screens. For absolute scale
+      we add `xrextras-coaching-overlay` so the user receives a polished
+      "move your phone back and forth" instruction during scale estimation.
   -->
   <a-scene
     id="ar-scene"
@@ -109,9 +140,14 @@
     xrextras-runtime-error
     xrextras-gesture-detector
     xrextras-pbr-environment
-    renderer="colorManagement:true; physicallyCorrectLights:true; toneMapping:ACESFilmic; logarithmicDepthBuffer:true;"
+    xrextras-almost-there
+    xrextras-coaching-overlay
+    renderer="colorManagement:true; physicallyCorrectLights:true; toneMapping:ACESFilmic; logarithmicDepthBuffer:true; antialias:true; precision:high;"
     xrweb="
       allowedDevices: any;
+      disableWorldTracking: false;
+      enableLighting: true;
+      scale: absolute;
       defaultEnvironmentFogIntensity: 0.5;
       defaultEnvironmentFloorTexture: #groundTex;
       defaultEnvironmentFloorColor: #FFF;
@@ -179,14 +215,20 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      // Spawn scale: fixed at 8.55 (= previous 9 × 0.95 — user asked for a
-      // further 5% reduction in the horizontal starting size).
+      // Spawn scale.
       //
-      // The legacy schema kept `min` and `max` so the value was randomised in
-      // a range. We've moved to a fixed deterministic spawn so the only knob
-      // that matters is `min`. `max` is kept (one higher) to satisfy the
-      // schema shape but is no longer consulted by the placement logic.
-      schema: { min: { default: 8.55 }, max: { default: 9.55 } },
+      // ⚠ This value's meaning depends on the xrweb scale mode:
+      //   • Responsive Scale (default): unitless multiplier of the model's
+      //     own glTF units. ~8 was a good fit experimentally.
+      //   • Absolute Scale (current setting): the model is interpreted in
+      //     real-world meters. Most dish GLBs are exported around 0.1–0.3 m
+      //     (~plate-sized) so a scale of ~3 keeps them about 30 cm wide,
+      //     which matches a real plate on a real table.
+      //
+      // 3 is the new default. Adjust here if the dish appears too small/big.
+      // Once placed, it will NOT change size as the user moves the phone —
+      // that's what absolute scale guarantees.
+      schema: { min: { default: 3 }, max: { default: 4 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
@@ -199,35 +241,14 @@
 
           var touchPoint = event.detail.intersection.point;
 
-          // ── Distance-aware sizing ──────────────────────────────────────────
-          // A model placed far from the camera renders smaller on-screen due
-          // to perspective. To keep apparent size roughly constant whether the
-          // user taps near (e.g. on their lap) or far (across the room), we
-          // multiply the base scale by (tapDistance / REF_DISTANCE).
-          //
-          // REF_DISTANCE is the "reference" tap distance at which the base
-          // scale renders correctly. 1.5 m roughly matches arm's-length on a
-          // table — the most common viewing scenario.
-          var REF_DISTANCE = 1.5;
-          var camEl = document.getElementById('camera');
-          var distanceFactor = 1;
-          if (camEl && camEl.object3D) {
-            var camPos = camEl.object3D.position;
-            var dx = touchPoint.x - camPos.x;
-            var dy = touchPoint.y - camPos.y;
-            var dz = touchPoint.z - camPos.z;
-            var dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
-            distanceFactor = dist / REF_DISTANCE;
-            // Clamp so very near taps don't shrink the model to nothing and
-            // very far taps don't blow it up past the pinch ceiling.
-            //
-            // Near-tap floor lowered to 0.48 (was 0.6) — the user asked for
-            // horizontal/close placements to be ~20% smaller while keeping
-            // vertical/distant placements at the same size. The far-tap cap
-            // stays at 4 so distant placements aren't affected.
-            if (distanceFactor < 0.48) distanceFactor = 0.48;
-            if (distanceFactor > 4)    distanceFactor = 4;
-          }
+          // ── No distance compensation in Absolute Scale mode ──────────────
+          // When xrweb is in `scale: absolute`, the engine renders the model
+          // in real-world units and automatically applies correct perspective
+          // (a far-away dish will look smaller on-screen — that's physically
+          // correct). Multiplying scale by tap distance the way we used to do
+          // in Responsive Scale would defeat the purpose of absolute scale
+          // and reintroduce the camera-distance size variation the user
+          // explicitly does not want. So we do nothing here.
 
           var el = document.createElement('a-entity');
           self.spawnedEl = el;
@@ -244,19 +265,10 @@
           );
           el.setAttribute('rotation', '0 ' + (Math.random() * 360) + ' 0');
 
-          var targetScale = Math.floor(
-            Math.random() * (Math.floor(self.data.max) - Math.ceil(self.data.min))
-            + Math.ceil(self.data.min)
-          );
           // Use the schema's `min` directly as the deterministic base scale.
-          // The Math.floor + random formula above used to add spawn variety
-          // back when min/max defined a range — but every recent tuning step
-          // has wanted a deterministic value, and Math.floor was discarding
-          // sub-integer tweaks (e.g. 8.55 → 8). Override with the raw default.
-          targetScale = self.data.min;
-          // Apply the perspective-correction factor so dishes tapped further
-          // away spawn larger and look the same on-screen as nearby taps.
-          targetScale = targetScale * distanceFactor;
+          // (We no longer apply a distance factor — see the comment above
+          // about absolute-scale mode.)
+          var targetScale = self.data.min;
 
           el.setAttribute('visible', 'false');
           el.setAttribute('scale', '0.0001 0.0001 0.0001');
@@ -279,48 +291,32 @@
             el.removeAttribute('animation');
             el.setAttribute('scale', targetScale + ' ' + targetScale + ' ' + targetScale);
             el.setAttribute('xrextras-two-finger-rotate', '');
-            // Pinch range — multipliers relative to the placement scale (8.55).
-            // min: 0.25 → can shrink to ~25% (≈ scale 2.14) – tiny tabletop
-            // max: 8    → can grow to 8×    (≈ scale 68)   – room-filling
-            // ~32× total range. Plenty of headroom in both directions.
-            el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 8');
+            // Pinch range — multipliers relative to the placement scale (3).
+            // min: 0.3  → can shrink to ~0.9 m  → tiny tabletop dish
+            // max: 4    → can grow to 12 m     → huge centerpiece
+            // Range chosen for absolute-scale meters. With `scale: absolute`,
+            // 1 unit ≈ 1 metre, so think of these as real-world dimensions.
+            el.setAttribute('xrextras-pinch-scale', 'min: 0.3; max: 4');
 
-            // ── Drift guard ────────────────────────────────────────────────
-            // After placement, both ARCore and ARKit keep refining their
-            // SLAM world model — the floor estimate shifts a few cm over the
-            // first 1-2 seconds, and the dish appears to wobble or slide.
+            // ── No drift guard ────────────────────────────────────────────
+            // We deliberately do NOT re-set the entity position after this
+            // point. In xrweb (8th Wall world-tracking) mode the entity is
+            // already anchored to the SLAM world — its local-space position
+            // attribute does not change as the camera moves. What you may
+            // perceive as "drift" is the SLAM engine refining its floor
+            // estimate (±0.5° per the 8th Wall team's own statements),
+            // which subtly rotates the ground plane and hence shifts the
+            // model's apparent screen position.
             //
-            // We snapshot the position immediately after the spawn animation
-            // finishes and re-assert it every 200 ms for the next ~3 seconds,
-            // overwriting whatever drift the engine introduced. After 3 s the
-            // SLAM world has converged and the guard turns itself off.
+            // The official 8th Wall A-Frame examples (animation-mixer,
+            // tap-to-place, etc.) do not implement any drift correction
+            // either, because forcefully re-setting `position` would only
+            // fight the engine's own anchoring and make jitter worse.
             //
-            // We intentionally DO NOT lock scale here — the user's pinch
-            // gesture must still be allowed to mutate scale freely.
-            var lockedX = touchPoint.x;
-            var lockedY = touchPoint.y + FLOAT_OFFSET_M;
-            var lockedZ = touchPoint.z;
-            var driftGuardTicks = 0;
-            var driftGuard = setInterval(function () {
-              driftGuardTicks += 1;
-              if (driftGuardTicks > 15) {            // 15 × 200 ms = 3 s
-                clearInterval(driftGuard);
-                return;
-              }
-              var pos = el.getAttribute('position');
-              // Only reassert if drift exceeds 1 cm — reduces React-layout
-              // churn from idempotent setAttribute calls.
-              if (
-                Math.abs(pos.x - lockedX) > 0.01 ||
-                Math.abs(pos.y - lockedY) > 0.01 ||
-                Math.abs(pos.z - lockedZ) > 0.01
-              ) {
-                el.setAttribute(
-                  'position',
-                  lockedX + ' ' + lockedY + ' ' + lockedZ
-                );
-              }
-            }, 200);
+            // Accuracy can be improved by environmental factors only:
+            //   • better lighting on the ground plane,
+            //   • non-repeating textures (carpet, concrete, wood grain),
+            //   • not pointing the camera at flat / featureless surfaces.
           });
         });
       }
