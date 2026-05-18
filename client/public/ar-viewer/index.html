@@ -159,7 +159,11 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      schema: { min: { default: 5 }, max: { default: 8 } },
+      // Spawn scale: fixed at 14 so dishes look consistent regardless of which
+      // model the user picks. The previous random 5–8 range was too small for
+      // food on a table viewed from phone-arms-length distance.
+      // (min and max are kept equal here to remove the randomness.)
+      schema: { min: { default: 14 }, max: { default: 15 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
@@ -205,11 +209,13 @@
             el.removeAttribute('animation');
             el.setAttribute('scale', targetScale + ' ' + targetScale + ' ' + targetScale);
             el.setAttribute('xrextras-two-finger-rotate', '');
-            // Pinch range — these are RATIOS relative to the placement scale.
-            // Spawn scale is 5–8 (see schema), so max:5 here meant the user
-            // could only ever shrink the model. Widen so pinch-out actually
-            // grows it and pinch-in goes much smaller.
-            el.setAttribute('xrextras-pinch-scale', 'min: 0.05; max: 20');
+            // Pinch range — multipliers relative to the placement scale (14).
+            // min: 0.3  → can shrink to ~30% (≈ scale 4.2)
+            // max: 3    → can grow to 3×    (≈ scale 42)
+            // That gives a roughly 10× range from smallest to largest, which
+            // covers "tiny dish on the table" through "centerpiece-sized" without
+            // letting the model become unusable at either extreme.
+            el.setAttribute('xrextras-pinch-scale', 'min: 0.3; max: 3');
           });
         });
       }
