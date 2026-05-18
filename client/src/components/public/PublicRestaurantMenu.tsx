@@ -70,59 +70,21 @@ export function PublicRestaurantMenu({
   const [search, setSearch] = useState("");
   const [activeViewId, setActiveViewId] = useState<string>("");
   const [currentMainTab, setCurrentMainTab] = useState<"special" | "menu">("special");
-  
+
   // Use refs instead of state for layout values that change on every scroll/resize frame.
   // This prevents React re-renders during scroll, which is the primary cause of jitter.
   const headerHeightRef = useRef(118);
-  
+
   const headerRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLElement>(null);
 
   const deferredSearch = useDeferredValue(search);
 
-  // The AR page boots 8th Wall/A-Frame, which can leave WebGL and rAF-based
-  // systems paused if Chrome restores this menu from BFCache. An unload handler
-  // opts this page out of BFCache so browser Back performs a normal reload.
-  useEffect(() => {
-    const preventBackForwardCache = () => {};
-    window.addEventListener("unload", preventBackForwardCache);
-
-    return () => {
-      window.removeEventListener("unload", preventBackForwardCache);
-    };
-  }, []);
-
-  // Keep a fallback reload guard for browsers that still restore this page.
-  useEffect(() => {
-    const reloadAfterArReturn = () => {
-      if (window.sessionStorage.getItem("aroma-returning-from-ar") !== "1") {
-        return;
-      }
-
-      window.sessionStorage.removeItem("aroma-returning-from-ar");
-      window.location.reload();
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        reloadAfterArReturn();
-      }
-    };
-
-    const handlePageShow = () => {
-      reloadAfterArReturn();
-    };
-
-    reloadAfterArReturn();
-    window.addEventListener("pageshow", handlePageShow);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener("pageshow", handlePageShow);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
+  // ── Return-from-AR reload guard ────────────────────────────────────────────
+  // The actual reload logic lives in <head> (layout.tsx) as an inline script
+  // so it runs before React hydrates. BFCache restores can freeze React state,
+  // so client-side checks inside useEffect are not 100 % reliable.
 
   // Load restaurant data — skip fetch if SSR already provided it
   useEffect(() => {
@@ -241,15 +203,11 @@ export function PublicRestaurantMenu({
     0,
   );
 
-  // Scroll Initialization — Lenis on desktop, native on mobile
+  // Scroll Initialization — Lenis smooth scroll
   useEffect(() => {
     const header = headerRef.current;
     if (!header) return;
 
-    // ── Detect touch/mobile ─────────────────────────────────────────────────
-    // Mobile "Aw, Snap!" crashes are caused by Lenis's continuous rAF loop
-    // competing with WebGL contexts for mobile RAM. On touch devices the browser
-    // already scrolls on a separate GPU compositor thread — faster than any JS.
     const isTouchDevice =
       window.matchMedia('(hover: none) and (pointer: coarse)').matches;
 
@@ -257,7 +215,6 @@ export function PublicRestaurantMenu({
     let isHidden = false;
     let rafId: number;
 
-    // ── Shared measurement logic ────────────────────────────────────────────
     const updateMeasurements = () => {
       const main = mainRef.current;
       const navHeight = header.offsetHeight;
@@ -273,7 +230,6 @@ export function PublicRestaurantMenu({
     const resizeObserver = new ResizeObserver(updateMeasurements);
     resizeObserver.observe(header);
 
-    // ── Shared navbar hide/show (direct DOM, zero React re-renders) ─────────
     const handleScroll = (scroll: number, direction: number) => {
       if (scroll <= cachedThreshold) {
         if (isHidden) { isHidden = false; header.style.transform = 'translateY(0)'; }
@@ -284,20 +240,15 @@ export function PublicRestaurantMenu({
       }
     };
 
-    // ── Unified Lenis smooth scroll (desktop + mobile) ───────────────────────
-    // Mobile gets a lighter config: shorter duration + faster lerp so the rAF
-    // loop finishes each frame faster and competes less with WebGL contexts.
     const lenis = new Lenis(
       isTouchDevice
         ? {
-            // Mobile — fast, native-feeling inertia with minimal JS overhead
             duration: 1.0,
             lerp: 0.12,
-            smoothWheel: false,   // no mousewheel on touch devices
+            smoothWheel: false,
             touchMultiplier: 30,
           }
         : {
-            // Desktop — cinematic slow deceleration
             duration: 1.5,
             lerp: 0.08,
             smoothWheel: true,
@@ -312,10 +263,25 @@ export function PublicRestaurantMenu({
       handleScroll(scroll, direction);
     });
 
+    // ── BFCache resume ─────────────────────────────────────────────────────
+    // Restart the Lenis rAF loop if the page is restored from BFCache.
+    // This runs alongside window.location.reload() (from the BFCache guard
+    // above) so the page is interactive during the brief reload delay.
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(raf);
+        updateMeasurements();
+        header.style.transform = 'translateY(0)';
+      }
+    };
+    window.addEventListener('pageshow', handlePageShow);
+
     return () => {
       lenis.destroy();
       resizeObserver.disconnect();
       cancelAnimationFrame(rafId);
+      window.removeEventListener('pageshow', handlePageShow);
     };
 
   }, []);
@@ -348,21 +314,18 @@ export function PublicRestaurantMenu({
     <div className="min-h-screen bg-[#0f0f0f] text-on-background flex flex-col">
       <div className="flex-grow">
         {/* ── TopNavBar ──────────────────────────────────────────────────────── */}
-        <header 
+        <header
           ref={headerRef}
           className="fixed top-0 left-0 right-0 z-50 border-b border-white/5"
           style={{
-            // Fully opaque — eliminates backdrop-filter blur which forces a GPU re-composite
-            // on EVERY scroll frame and is the primary cause of scroll jitter.
             backgroundColor: "rgb(15, 15, 15)",
-            // Initial transform — Lenis scroll handler updates this directly via DOM (no re-renders)
             transform: 'translateY(0)',
             transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-            willChange: "transform", // hints browser to GPU-composite this layer
+            willChange: "transform",
           }}
         >
           <div className="max-w-4xl mx-auto px-6 py-4 flex flex-col gap-4">
-            
+
             <div className="flex items-center justify-between">
               <div className="flex-shrink-0">
                 <Image
@@ -379,7 +342,7 @@ export function PublicRestaurantMenu({
                   className="w-[78px] md:w-[104px] lg:w-[130px] h-auto object-contain"
                 />
               </div>
-                
+
                 <div className="relative flex-grow max-w-[200px] ml-4">
                   <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-white/40 text-sm">search</span>
                   <input
@@ -420,16 +383,16 @@ export function PublicRestaurantMenu({
           </header>
 
           {/* ── Main Content Canvas ───────────────────────────────────────────── */}
-          <main 
+          <main
             ref={mainRef}
             className="w-full max-w-screen-2xl mx-auto px-[2vw] md:px-[4%] lg:px-[7%] 2xl:px-[9%] pb-8 md:pb-16"
             style={{ paddingTop: `${headerHeightRef.current + 20}px` }}
           >
-            
+
             {/* Section Header */}
             <div ref={titleRef} className="text-center mb-10 md:mb-16">
               <h1 className="text-[2.6rem] md:text-[3.5rem] text-white leading-tight font-normal" style={{ fontFamily: "'Great Vibes', cursive", letterSpacing: "1px" }}>
-                {currentMainTab === "special" ? "Chef&apos;s Special" : "The Menu"}
+                {currentMainTab === "special" ? "Chef's Special" : "The Menu"}
               </h1>
             </div>
 
@@ -508,7 +471,7 @@ const DietaryIcon = ({ dietaryType }: { dietaryType: string | null | undefined }
       <span className="flex items-center justify-center w-[9px] h-[9px] border border-red-400 rounded-[1px]">
         <span className="w-[4px] h-[4px] bg-red-400 rounded-full" />
       </span>
-      VEG & NON-VEG
+      VEG &amp; NON-VEG
     </span>
   );
   return null;
@@ -523,14 +486,14 @@ const DishMenuRow = memo(function DishMenuRow({ dish }: { dish: PublicDishPayloa
           {dish.name}
           <DietaryIcon dietaryType={dish.dietaryType} />
         </h4>
-        
+
         <div className="flex-grow mx-3 md:mx-6 border-b border-dashed border-white/20 relative top-[-4px]" />
-        
+
         <span className="text-[17px] md:text-[20px] font-bold text-white whitespace-nowrap font-sans">
           {formatPrice(dish.price, dish.currency).replace('.00', '')}
         </span>
       </div>
-      
+
       {dish.description && (
         <p className="mt-2 text-[10px] md:text-[11px] uppercase tracking-widest text-menu-dish-desc italic leading-relaxed max-w-[85%] font-serif">
           {dish.description}
@@ -539,3 +502,5 @@ const DishMenuRow = memo(function DishMenuRow({ dish }: { dish: PublicDishPayloa
     </article>
   );
 });
+
+

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,6 +29,38 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@400;600;700;800&display=swap"
         />
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+        {/*
+          Inline AR-return reload guard.
+          Uses next/script (raw <script> in JSX is ignored by React on the
+          client and triggers a runtime warning). strategy="beforeInteractive"
+          guarantees this runs before React hydrates so a stale BFCache
+          restore is replaced with a fresh menu page.
+        */}
+        <Script
+          id="aroma-ar-return-reload"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var key = 'aroma-ar-active';
+                var restore = function() {
+                  try {
+                    if (sessionStorage.getItem(key) === '1') {
+                      sessionStorage.removeItem(key);
+                      window.location.reload();
+                    }
+                  } catch (e) {}
+                };
+                // CASE A: normal navigation back – run immediately before React hydrates
+                restore();
+                // CASE B: BFCache restore – pageshow fires before React wakes up
+                window.addEventListener('pageshow', function(event) {
+                  if (event.persisted) restore();
+                });
+              })();
+            `,
+          }}
+        />
       </head>
       <body className="min-h-screen bg-background text-on-surface antialiased">
         {children}

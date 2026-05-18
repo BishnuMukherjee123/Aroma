@@ -33,3 +33,5 @@ server/src/generated/
 
 # Local logs
 *.log
+
+nul

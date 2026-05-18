@@ -254,15 +254,16 @@ export const MenuCard = memo(function MenuCard({
     };
   }, [dish.id]);
 
-  // Reset launching state when returning to this page.
-  // We reset on EVERY pageshow (not just persisted=true) so the button
-  // becomes clickable again whether the browser used BFCache or not.
-  // Defense-in-depth alongside the inline reload script in app/layout.tsx,
-  // which fires window.location.reload() when "aroma-ar-active" is set.
+  // Reset launching state when returning to this page via the browser back button (BFCache)
   useEffect(() => {
-    const reset = () => setIsArLaunching(false);
-    window.addEventListener("pageshow", reset);
-    return () => window.removeEventListener("pageshow", reset);
+    const handlePageShow = (event: PageTransitionEvent) => {
+      // event.persisted is true if the page was restored from the back/forward cache
+      if (event.persisted) {
+        setIsArLaunching(false);
+      }
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
   }, []);
 
   // "See it on your table" — launches WebXR AR directly from the menu page.
@@ -500,7 +501,7 @@ export const MenuCard = memo(function MenuCard({
               </>
             ) : (
               <>
-                <span>&#128230;</span> AR View
+                <span>📦</span> AR View
               </>
             )}
           </div> */}
@@ -558,29 +559,8 @@ export const MenuCard = memo(function MenuCard({
               e.stopPropagation();
               if (!dish.modelUrl) return;
               setIsArLaunching(true);
-              // Key MUST match the inline script in app/layout.tsx, which
-              // reads "aroma-ar-active" to decide whether to reload the menu
-              // after the user comes back from the AR page. Mismatch leaves
-              // the menu in stale BFCache state and the button stuck disabled.
-              window.sessionStorage.setItem("aroma-ar-active", "1");
-              // Navigate STRAIGHT to the static AR viewer.
-              //
-              // We deliberately bypass /r/[id]/ar/[id]/page.tsx here. That
-              // page is a Server Component that issues a 307 redirect to the
-              // same static URL we're navigating to now. iOS Safari does NOT
-              // reliably preserve the user-activation flag across HTTP 307
-              // redirects — when 8th Wall asks for camera permission, the
-              // request is silently denied and the scene renders the GLB
-              // against a black background (no camera passthrough).
-              //
-              // Going direct keeps the user-gesture context intact, which is
-              // what iOS Safari requires for getUserMedia to succeed.
-              const backUrl = `/r/${publicId}`;
-              const arUrl =
-                `/ar-viewer/index.html?model=${encodeURIComponent(dish.modelUrl)}` +
-                `&back=${encodeURIComponent(backUrl)}` +
-                `&_cb=${Date.now()}`;
-              window.location.assign(arUrl);
+              window.sessionStorage.setItem("aroma-returning-from-ar", "1");
+              window.location.assign(`/r/${publicId}/ar/${dish.id}`);
             }}
           >
             {isArLaunching ? (

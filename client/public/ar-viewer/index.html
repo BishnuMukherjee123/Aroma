@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!--
+    iOS Safari notes
+    ────────────────
+    1. viewport-fit=cover prevents the safe-area inset from punching black
+       bars into the camera passthrough.
+    2. We DO NOT use Cache-Control: no-store here. iOS Safari treats no-store
+       pages as "non-persistable" which can interact badly with permission
+       dialogs and break BFCache restoration.
+    3. The 8th Wall engine reads document.currentScript when xr.js is fetched
+       to locate its sibling WASM files (xr-slam.js, xr-face.js). Plain
+       <script> tags expose currentScript correctly so no shim is needed —
+       only the ES-module variant requires the shim used in the React route.
+  -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+
+  <title>View in AR – Aroma</title>
+
+  <!--
+    Script load order MUST match the official 8th Wall A-Frame example.
+    All scripts are local (served from /8thwall/...) so they share an origin
+    with the page. iOS WebKit refuses to grant camera permission across a
+    cross-origin script chain that initiates getUserMedia.
+
+    DO NOT reorder these. xrextras depends on AFRAME, landing-page depends
+    on xrextras, and xr.js loads last (async) so AFRAME parses the scene
+    while the engine warms up in parallel.
+  -->
+  <script crossorigin="anonymous" src="/8thwall/external/scripts/8frame-1.5.0.min.js"></script>
+  <script src="/8thwall/vendor/xrextras/xrextras.js" crossorigin="anonymous"></script>
+  <script src="/8thwall/vendor/landing-page/landing-page.js" crossorigin="anonymous"></script>
+  <script src="/8thwall/vendor/engine-binary/xr.js" crossorigin="anonymous" async data-preload-chunks="slam"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      /* On iOS, allowing the page to scroll causes the camera canvas to
+         momentarily detach when the URL bar collapses — keep it locked. */
+      overflow: hidden;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* ── "Tap To Place Model" prompt ─────────────────────────────────── */
+    .over {
+      position: fixed; inset: 0;
+      z-index: 10;
+      pointer-events: none;
+      display: flex; align-items: flex-end; justify-content: center;
+      padding-bottom: 12vh;
+      color: #fff;
+      font-size: 1.5rem;
+      font-weight: 600;
+      text-shadow: 0 0 8px rgba(0,0,0,0.8);
+    }
+
+    /* ── Hide 8th Wall watermark ─────────────────────────────────────── */
+    #poweredby, .poweredby-img, #loadBackground > div:last-child {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Tap-to-place prompt -->
+  <div class="over">
+    <span id="promptText">Tap To Place Model</span>
+  </div>
+
+  <!--
+    <a-scene> attributes worth knowing
+    ──────────────────────────────────
+    • allowedDevices: any
+        Critical for iOS. Without it 8th Wall blocks devices it doesn't
+        explicitly recognise — and Safari user-agents change frequently.
+    • xrweb supplies the camera passthrough + SLAM tracking.
+    • landing-page renders the official 8th Wall consent screen which
+      handles getUserMedia inside a button click — this is the only
+      reliable way to get camera permission on iOS Safari.
+  -->
+  <a-scene
+    id="ar-scene"
+    tap-place
+    landing-page
+    xrextras-loading
+    xrextras-runtime-error
+    xrextras-gesture-detector
+    xrextras-pbr-environment
+    renderer="colorManagement:true; physicallyCorrectLights:true; toneMapping:ACESFilmic; logarithmicDepthBuffer:true;"
+    xrweb="
+      allowedDevices: any;
+      defaultEnvironmentFogIntensity: 0.5;
+      defaultEnvironmentFloorTexture: #groundTex;
+      defaultEnvironmentFloorColor: #FFF;
+      defaultEnvironmentSkyBottomColor: #B4C4CC;
+      defaultEnvironmentSkyTopColor: #5ac8fa;
+      defaultEnvironmentSkyGradientStrength: 0.5;"
+  >
+    <a-assets>
+      <img id="groundTex" src="/8thwall/assets/sand.jpg">
+      <!-- src filled by JS once URL params are read -->
+      <a-asset-item id="dishModel" src=""></a-asset-item>
+    </a-assets>
+
+    <!-- Camera positioned to match working 8th Wall example -->
+    <a-camera
+      id="camera"
+      position="0 8 8"
+      raycaster="objects: .cantap"
+      cursor="fuse: false; rayOrigin: mouse;">
+    </a-camera>
+
+    <a-entity
+      light="type:directional; intensity:0.8; castShadow:true; shadowMapHeight:2048; shadowMapWidth:2048; shadowCameraTop:10; shadowCameraBottom:-10; shadowCameraRight:10; shadowCameraLeft:-10; target:#camera"
+      xrextras-attach="target:camera; offset:8 15 4"
+      position="1 4.3 2.5"
+      shadow
+    ></a-entity>
+
+    <a-light type="ambient" intensity="0.3"></a-light>
+    <a-light type="hemisphere" ground-color="#333" intensity="0.8"></a-light>
+
+    <a-box
+      id="ground"
+      class="cantap"
+      scale="1000 2 1000"
+      position="0 -0.99 0"
+      material="shader:shadow; transparent:true; opacity:0.7"
+      shadow
+    ></a-box>
+  </a-scene>
+
+  <script>
+    // ── BFCache guard ──────────────────────────────────────────────────────────
+    // 8th Wall engine state (camera, WASM, WebGL) does NOT survive a BFCache
+    // restore. Force a full reload so scripts re-execute from scratch.
+    window.addEventListener('pageshow', function (event) {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+
+    // ── Read URL params ────────────────────────────────────────────────────────
+    var params  = new URLSearchParams(window.location.search);
+    var modelUrl = params.get('model') || '';
+
+    var assetItem = document.getElementById('dishModel');
+    if (assetItem) assetItem.setAttribute('src', modelUrl);
+
+    // ── tap-place component ────────────────────────────────────────────────────
+    var tapPlaceComponent = {
+      schema: { min: { default: 5 }, max: { default: 8 } },
+      init: function () {
+        var ground   = document.getElementById('ground');
+        var promptEl = document.getElementById('promptText');
+        this.spawnedEl = null;
+        var self = this;
+
+        ground.addEventListener('click', function (event) {
+          if (self.spawnedEl) return;
+          if (promptEl) promptEl.style.display = 'none';
+
+          var touchPoint = event.detail.intersection.point;
+          var el = document.createElement('a-entity');
+          self.spawnedEl = el;
+
+          ground.classList.remove('cantap');
+
+          el.setAttribute('position', touchPoint.x + ' ' + (touchPoint.y + 0.05) + ' ' + touchPoint.z);
+          el.setAttribute('rotation', '0 ' + (Math.random() * 360) + ' 0');
+
+          var targetScale = Math.floor(
+            Math.random() * (Math.floor(self.data.max) - Math.ceil(self.data.min))
+            + Math.ceil(self.data.min)
+          );
+
+          el.setAttribute('visible', 'false');
+          el.setAttribute('scale', '0.0001 0.0001 0.0001');
+          el.setAttribute('shadow', { receive: false, cast: true });
+          el.setAttribute('class', 'cantap');
+          el.setAttribute('gltf-model', '#dishModel');
+          self.el.sceneEl.appendChild(el);
+
+          el.addEventListener('model-loaded', function () {
+            el.setAttribute('visible', 'true');
+            el.setAttribute('animation', {
+              property: 'scale',
+              to: targetScale + ' ' + targetScale + ' ' + targetScale,
+              easing: 'easeOutElastic',
+              dur: 800
+            });
+          });
+
+          el.addEventListener('animationcomplete', function () {
+            el.removeAttribute('animation');
+            el.setAttribute('scale', targetScale + ' ' + targetScale + ' ' + targetScale);
+            el.setAttribute('xrextras-two-finger-rotate', '');
+            el.setAttribute('xrextras-pinch-scale', 'min: 0.1; max: 5');
+          });
+        });
+      }
+    };
+
+    // ── Register component once AFRAME is ready ───────────────────────────────
+    function registerTapPlace() {
+      if (window.AFRAME && !AFRAME.components['tap-place']) {
+        AFRAME.registerComponent('tap-place', tapPlaceComponent);
+      }
+    }
+
+    if (window.AFRAME) {
+      registerTapPlace();
+    } else {
+      window.addEventListener('load', registerTapPlace);
+    }
+  </script>
+</body>
+</html>
