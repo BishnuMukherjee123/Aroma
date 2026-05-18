@@ -159,11 +159,11 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      // Spawn scale: fixed at 30 so dishes look like a real plate on the table
-      // when viewed from arm's length. The previous 14 was too small for most
-      // GLBs whose source units are sub-meter.
-      // (min and max kept equal here to remove randomness from the spawn size.)
-      schema: { min: { default: 30 }, max: { default: 31 } },
+      // Spawn scale: fixed at 15. The previous 30 was too large in both
+      // horizontal and vertical orientations once the perspective compensation
+      // (see distanceFactor below) kicked in.
+      // (min and max kept equal to remove randomness.)
+      schema: { min: { default: 15 }, max: { default: 16 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
@@ -238,11 +238,11 @@
             el.removeAttribute('animation');
             el.setAttribute('scale', targetScale + ' ' + targetScale + ' ' + targetScale);
             el.setAttribute('xrextras-two-finger-rotate', '');
-            // Pinch range — multipliers relative to the placement scale (30).
-            // min: 0.2  → can shrink to ~20% (≈ scale 6)   – small dish
-            // max: 5    → can grow to 5×    (≈ scale 150) – huge centerpiece
-            // ~25× total range. Most users will land somewhere in the middle.
-            el.setAttribute('xrextras-pinch-scale', 'min: 0.2; max: 5');
+            // Pinch range — multipliers relative to the placement scale (15).
+            // min: 0.25 → can shrink to ~25% (≈ scale 3.75) – tiny tabletop
+            // max: 6    → can grow to 6×    (≈ scale 90)   – room-filling
+            // ~24× total range. Most users will land somewhere in the middle.
+            el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 6');
           });
         });
       }
