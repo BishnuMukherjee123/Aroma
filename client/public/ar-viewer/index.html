@@ -159,11 +159,11 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      // Spawn scale: fixed at 15. The previous 30 was too large in both
-      // horizontal and vertical orientations once the perspective compensation
-      // (see distanceFactor below) kicked in.
+      // Spawn scale: fixed at 11 (≈70% of the earlier 15 setting that the
+      // user said was correct in vertical/distant placements but slightly
+      // too large in horizontal/near placements).
       // (min and max kept equal to remove randomness.)
-      schema: { min: { default: 15 }, max: { default: 16 } },
+      schema: { min: { default: 11 }, max: { default: 12 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
@@ -238,11 +238,11 @@
             el.removeAttribute('animation');
             el.setAttribute('scale', targetScale + ' ' + targetScale + ' ' + targetScale);
             el.setAttribute('xrextras-two-finger-rotate', '');
-            // Pinch range — multipliers relative to the placement scale (15).
-            // min: 0.25 → can shrink to ~25% (≈ scale 3.75) – tiny tabletop
-            // max: 6    → can grow to 6×    (≈ scale 90)   – room-filling
-            // ~24× total range. Most users will land somewhere in the middle.
-            el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 6');
+            // Pinch range — multipliers relative to the placement scale (11).
+            // min: 0.25 → can shrink to ~25% (≈ scale 2.75) – tiny tabletop
+            // max: 7    → can grow to 7×    (≈ scale 77)   – room-filling
+            // ~28× total range. Plenty of headroom in both directions.
+            el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 7');
           });
         });
       }
