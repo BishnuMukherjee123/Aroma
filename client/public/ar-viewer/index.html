@@ -159,10 +159,14 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      // Spawn scale: fixed at 9 (= previous 11 × 0.8, per the user's request
-      // to reduce the horizontal starting size by 20%).
-      // (min and max kept equal to remove randomness.)
-      schema: { min: { default: 9 }, max: { default: 10 } },
+      // Spawn scale: fixed at 8.55 (= previous 9 × 0.95 — user asked for a
+      // further 5% reduction in the horizontal starting size).
+      //
+      // The legacy schema kept `min` and `max` so the value was randomised in
+      // a range. We've moved to a fixed deterministic spawn so the only knob
+      // that matters is `min`. `max` is kept (one higher) to satisfy the
+      // schema shape but is no longer consulted by the placement logic.
+      schema: { min: { default: 8.55 }, max: { default: 9.55 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
@@ -217,6 +221,12 @@
             Math.random() * (Math.floor(self.data.max) - Math.ceil(self.data.min))
             + Math.ceil(self.data.min)
           );
+          // Use the schema's `min` directly as the deterministic base scale.
+          // The Math.floor + random formula above used to add spawn variety
+          // back when min/max defined a range — but every recent tuning step
+          // has wanted a deterministic value, and Math.floor was discarding
+          // sub-integer tweaks (e.g. 8.55 → 8). Override with the raw default.
+          targetScale = self.data.min;
           // Apply the perspective-correction factor so dishes tapped further
           // away spawn larger and look the same on-screen as nearby taps.
           targetScale = targetScale * distanceFactor;
@@ -242,11 +252,10 @@
             el.removeAttribute('animation');
             el.setAttribute('scale', targetScale + ' ' + targetScale + ' ' + targetScale);
             el.setAttribute('xrextras-two-finger-rotate', '');
-            // Pinch range — multipliers relative to the placement scale (9).
-            // min: 0.25 → can shrink to ~25% (≈ scale 2.25) – tiny tabletop
-            // max: 8    → can grow to 8×    (≈ scale 72)   – room-filling
-            // ~32× total range. Pinch ceiling raised to keep upscale headroom
-            // unchanged from before despite the smaller spawn.
+            // Pinch range — multipliers relative to the placement scale (8.55).
+            // min: 0.25 → can shrink to ~25% (≈ scale 2.14) – tiny tabletop
+            // max: 8    → can grow to 8×    (≈ scale 68)   – room-filling
+            // ~32× total range. Plenty of headroom in both directions.
             el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 8');
           });
         });
