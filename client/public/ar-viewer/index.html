@@ -132,6 +132,96 @@
       white-space: nowrap;
     }
 
+    /*
+      Placement-success toast. Appears top-centre below the dish-name pill
+      the moment the model finishes loading, then auto-dismisses after a
+      short hold. Green tint to read as a positive confirmation.
+
+      Two-keyframe entrance (slide-down + fade-in) and matching exit so
+      the toast feels intentional rather than just popping in/out.
+    */
+    .ar-toast {
+      position: absolute;
+      top: calc(env(safe-area-inset-top, 0px) + 76px);
+      left: 50%;
+      background: linear-gradient(180deg, #34c172 0%, #29a560 100%);
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      padding: 12px 18px;
+      border-radius: 14px;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+      max-width: calc(100% - 32px);
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 25;
+
+      /* Hidden default state */
+      opacity: 0;
+      transform: translateX(-50%) translateY(-14px) scale(0.96);
+      transition:
+        opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .ar-toast.is-visible {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0) scale(1);
+    }
+
+    /*
+      Bottom action bar — Reset and Menu buttons. Sits above the iOS home
+      indicator. Buttons share the same pill style as the rest of the UI.
+    */
+    .ar-actions {
+      position: absolute;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      padding: 0 16px;
+      pointer-events: none;
+    }
+    .ar-action-btn {
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 22px;
+      border: 1px solid rgba(255, 255, 255, 0.10);
+      border-radius: 999px;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+      transition: opacity 0.3s, transform 0.2s, background-color 0.2s;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      white-space: nowrap;
+    }
+    .ar-action-btn:active { transform: scale(0.96); }
+
+    .ar-reset {
+      background: linear-gradient(180deg, #d05050 0%, #b03e3e 100%);
+    }
+    .ar-menu {
+      background: rgba(20, 20, 20, 0.65);
+    }
+
+    /* Hidden until the dish is placed; revealed alongside the toast. */
+    .ar-actions {
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
+    }
+    .ar-actions.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
     /* Faded-out state — applied via JS once the dish is placed */
     .ar-ui-pill.is-hidden {
       opacity: 0;
@@ -163,6 +253,31 @@
     <div class="ar-ui-pill ar-hint" id="arHint">
       <span aria-hidden="true">👆</span>
       <span>Tap a surface to place the dish</span>
+    </div>
+    <!--
+      Placement-success toast. Hidden by default, briefly shown after the
+      dish finishes loading. Wording reflects all interactions actually
+      available to the user (drag is intentionally NOT mentioned because
+      we don't ship a drag handler).
+    -->
+    <div class="ar-toast" id="arToast" role="status" aria-live="polite">
+      ✓ Placed! Pinch to scale
+    </div>
+
+    <!--
+      Bottom action bar — Reset clears the placed dish so the user can
+      retry placement; Menu returns to the menu page. Both are hidden
+      until placement, then fade in alongside the success toast.
+    -->
+    <div class="ar-actions" id="arActions">
+      <button class="ar-action-btn ar-reset" id="arReset" type="button">
+        <span aria-hidden="true">↻</span>
+        <span>Reset</span>
+      </button>
+      <button class="ar-action-btn ar-menu" id="arMenu" type="button">
+        <span aria-hidden="true">📋</span>
+        <span>Menu</span>
+      </button>
     </div>
   </div>
 
@@ -323,6 +438,26 @@
       });
     }
 
+    // Menu button — same destination as the close button, just a second
+    // affordance the user-flow screenshot asked for.
+    var menuBtn = document.getElementById('arMenu');
+    if (menuBtn) {
+      menuBtn.addEventListener('click', function () {
+        window.location.replace(backUrl);
+      });
+    }
+
+    // Reset button — removes the spawned dish, re-arms tap-place, and shows
+    // the "tap a surface" hint again so the user can pick a new spot.
+    // The actual entity removal lives in the tap-place component because it
+    // owns the spawnedEl reference; we expose a custom event for it.
+    var resetBtn = document.getElementById('arReset');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function () {
+        document.dispatchEvent(new Event('aroma-ar-reset'));
+      });
+    }
+
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
       // Spawn scale: 19.8 (= previous 22 × 0.9, per the user's request to
@@ -334,6 +469,25 @@
         var promptEl = document.getElementById('promptText');
         this.spawnedEl = null;
         var self = this;
+
+        // Reset listener — wired to the bottom Reset button. Clears the
+        // currently-placed entity so the user can tap a new spot. We restore
+        // the ground's `.cantap` class (removed in the click handler), bring
+        // back the on-screen tap hint, and hide the action bar + toast.
+        document.addEventListener('aroma-ar-reset', function () {
+          if (self.spawnedEl && self.spawnedEl.parentNode) {
+            self.spawnedEl.parentNode.removeChild(self.spawnedEl);
+          }
+          self.spawnedEl = null;
+          ground.classList.add('cantap');
+          if (promptEl) promptEl.style.display = '';
+          var hint = document.getElementById('arHint');
+          if (hint) hint.classList.remove('is-hidden');
+          var actions = document.getElementById('arActions');
+          if (actions) actions.classList.remove('is-visible');
+          var toast = document.getElementById('arToast');
+          if (toast) toast.classList.remove('is-visible');
+        });
 
         ground.addEventListener('click', function (event) {
           if (self.spawnedEl) return;
@@ -375,10 +529,9 @@
           // becomes invisible beneath it. Tying the offset to targetScale
           // keeps the visual gap consistent across both.
           //
-          // 0.13 = 13% of the model's bounding height (= previous 0.20 ×
-          // ~0.66, since the user asked to drop the gap from 30 → 20 in
-          // their relative scale).
-          var FLOAT_OFFSET_M = targetScale * 0.13;
+          // 0.07 = 7% of the model's bounding height — tight visible gap of
+          // roughly 10–12 cm between the dish and the surface.
+          var FLOAT_OFFSET_M = targetScale * 0.07;
           el.setAttribute(
             'position',
             touchPoint.x + ' ' + (touchPoint.y + FLOAT_OFFSET_M) + ' ' + touchPoint.z
@@ -405,6 +558,27 @@
               easing: 'easeOutQuad',
               dur: 350
             });
+
+            // Reveal the action bar (Reset + Menu) — these stay until the
+            // user explicitly resets or leaves AR.
+            var actionsEl = document.getElementById('arActions');
+            if (actionsEl) actionsEl.classList.add('is-visible');
+
+            // Show the "Placed! Pinch to scale" toast with an animated
+            // entrance, hold for 1.5 s, then animate out. We deliberately
+            // wait until the model is loaded (not just tapped) so the
+            // toast and the dish appear together.
+            var toastEl = document.getElementById('arToast');
+            if (toastEl) {
+              // Add the visible class on the next frame so the browser
+              // applies the transition (instead of jumping to end state).
+              requestAnimationFrame(function () {
+                toastEl.classList.add('is-visible');
+              });
+              setTimeout(function () {
+                toastEl.classList.remove('is-visible');
+              }, 1500);
+            }
           });
 
           el.addEventListener('animationcomplete', function () {
