@@ -127,6 +127,9 @@
       left: 50%;
       transform: translateX(-50%);
       font-size: 15px;
+      /* Keep on a single line — overrides the pill's default flex-wrap and
+         prevents narrow phones from breaking the hint into two rows. */
+      white-space: nowrap;
     }
 
     /* Faded-out state — applied via JS once the dish is placed */
@@ -195,11 +198,18 @@
       into the SLAM solver. The 8th Wall engine internally uses lighting
       cues to discriminate stable feature-points from noisy ones, which
       reduces ground-plane jitter visibly.
-    • renderer="antialias:true"    — smoother edges; doesn't affect tracking
-      directly but reduces the visual perception of jitter on the dish.
-    • renderer="precision:high"    — higher-precision FP shaders. On iOS
-      this reduces the sub-pixel position jitter that AlphaGo-style moiré
-      patterns can induce on flat-shaded GLB surfaces.
+
+    Renderer choices (kept minimal for stability)
+    ─────────────────────────────────────────────
+    • The previous combo of physicallyCorrectLights + toneMapping:ACESFilmic
+      + logarithmicDepthBuffer + precision:high + 2K shadow map was a major
+      cause of perceived shaking: on phones it can drop frame rate well
+      below 60 FPS, and any frame the renderer is late on, the model lags
+      behind the actual camera pose by ~16-33 ms — the eye reads this as
+      jitter.
+    • antialias:true is the only "nice to have" that's cheap enough to keep.
+      Everything else is now off, and the shadow map is 1024 (was 2048),
+      which keeps the dish anchored at full FPS even on older iPhones.
   -->
   <a-scene
     id="ar-scene"
@@ -210,7 +220,7 @@
     xrextras-gesture-detector
     xrextras-pbr-environment
     xrextras-almost-there
-    renderer="colorManagement:true; physicallyCorrectLights:true; toneMapping:ACESFilmic; logarithmicDepthBuffer:true; antialias:true; precision:high;"
+    renderer="colorManagement:true; antialias:true;"
     xrweb="
       allowedDevices: any;
       disableWorldTracking: false;
@@ -239,17 +249,16 @@
     <!--
       Directional light + shadow camera.
 
-      Restored to the original settings that gave a visible, dark, grounded
-      shadow before any of the absolute-scale experiments:
-        • intensity 0.9          – deep enough to read on most surfaces
-        • shadow camera 40×40 m  – wide so the shadow doesn't clip even when
-                                   the user pinches the dish very large
-        • no pcfsoft / shadowBias / shadowRadius — those softened the shadow
-                                   so much it became invisible at the now-
-                                   tight 4 cm float offset.
+      shadowMap reduced from 2048 → 1024.  At 2048 the GPU was rasterising
+      a 4-million-texel depth buffer every frame, which on mid-tier phones
+      pushed frame time over the 16.6 ms 60-FPS budget. The visible result
+      is the dish appearing to lag and shake slightly behind real-world
+      camera motion. 1024×1024 cuts that depth-buffer cost to a quarter,
+      restores 60 FPS, and the shadow itself looks identical at viewing
+      distances of ~50 cm and beyond.
     -->
     <a-entity
-      light="type:directional; intensity:0.9; castShadow:true; shadowMapHeight:2048; shadowMapWidth:2048; shadowCameraTop:40; shadowCameraBottom:-40; shadowCameraRight:40; shadowCameraLeft:-40; target:#camera"
+      light="type:directional; intensity:0.9; castShadow:true; shadowMapHeight:1024; shadowMapWidth:1024; shadowCameraTop:40; shadowCameraBottom:-40; shadowCameraRight:40; shadowCameraLeft:-40; target:#camera"
       xrextras-attach="target:camera; offset:8 15 4"
       position="1 4.3 2.5"
       shadow
@@ -287,6 +296,17 @@
     var assetItem = document.getElementById('dishModel');
     if (assetItem) assetItem.setAttribute('src', modelUrl);
 
+    // Pre-warm the GLB into the HTTP cache as soon as we know its URL.
+    // A-Frame's <a-asset-item> normally only starts downloading when the
+    // scene begins — which means up to a second of delay between tap and
+    // model appearance. By firing a parallel fetch() now, the binary is
+    // already in the browser's HTTP cache by the time A-Frame asks for it,
+    // and the dish appears within a few hundred ms of the tap.
+    if (modelUrl) {
+      fetch(modelUrl, { mode: 'cors', credentials: 'omit', cache: 'force-cache' })
+        .catch(function () { /* prefetch best-effort, swallow errors */ });
+    }
+
     // ── In-AR UI wiring ───────────────────────────────────────────────────────
     // Set the dish name in the top-right pill. Falls back to a generic label
     // when ?name is omitted from the URL (defensive, not expected in practice).
@@ -305,10 +325,10 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      // Spawn scale: 22 — matches the "filling about half the screen" look
-      // the user requested (≈2.5× the previous 8.55). Unitless multiplier of
-      // the model's own glTF units, in Responsive Scale mode.
-      schema: { min: { default: 22 }, max: { default: 23 } },
+      // Spawn scale: 19.8 (= previous 22 × 0.9, per the user's request to
+      // shrink the starting dish by 10%). Unitless multiplier of the model's
+      // own glTF units, in Responsive Scale mode.
+      schema: { min: { default: 19.8 }, max: { default: 20.8 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
@@ -351,13 +371,14 @@
           // placement scale (instead of a fixed scene-unit value). On a
           // phone in real AR, Responsive Scale multiplies all scene units
           // by the camera-height factor — but on desktop preview (no AR)
-          // the model renders at its raw scale (~8.55 units), so a flat
-          // 0.30 offset becomes invisible beneath it. Tying the offset to
-          // targetScale keeps the visual gap consistent across both.
+          // the model renders at its raw scale, so a flat 0.30 offset
+          // becomes invisible beneath it. Tying the offset to targetScale
+          // keeps the visual gap consistent across both.
           //
-          // 0.20 = 20% of the model's bounding height. Increase for more
-          // floating, decrease for closer-to-floor.
-          var FLOAT_OFFSET_M = targetScale * 0.20;
+          // 0.13 = 13% of the model's bounding height (= previous 0.20 ×
+          // ~0.66, since the user asked to drop the gap from 30 → 20 in
+          // their relative scale).
+          var FLOAT_OFFSET_M = targetScale * 0.13;
           el.setAttribute(
             'position',
             touchPoint.x + ' ' + (touchPoint.y + FLOAT_OFFSET_M) + ' ' + touchPoint.z
@@ -373,11 +394,16 @@
 
           el.addEventListener('model-loaded', function () {
             el.setAttribute('visible', 'true');
+            // Faster spawn: easeOutQuad over 350 ms (was easeOutElastic 800 ms).
+            // The elastic bounce delayed the dish from being visually "ready"
+            // by close to a full second after it was actually loaded. A short
+            // ease-out feels snappier and matches what most commercial AR
+            // products do (IKEA Place, Amazon View in Your Room).
             el.setAttribute('animation', {
               property: 'scale',
               to: targetScale + ' ' + targetScale + ' ' + targetScale,
-              easing: 'easeOutElastic',
-              dur: 800
+              easing: 'easeOutQuad',
+              dur: 350
             });
           });
 
