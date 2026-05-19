@@ -460,10 +460,10 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      // Spawn scale: 19.8 (= previous 22 × 0.9, per the user's request to
-      // shrink the starting dish by 10%). Unitless multiplier of the model's
+      // Spawn scale: 23.4 (= previous 19.8 × 1.18, per the user's request to
+      // bump the starting dish 18% bigger). Unitless multiplier of the model's
       // own glTF units, in Responsive Scale mode.
-      schema: { min: { default: 19.8 }, max: { default: 20.8 } },
+      schema: { min: { default: 23.4 }, max: { default: 24.4 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
