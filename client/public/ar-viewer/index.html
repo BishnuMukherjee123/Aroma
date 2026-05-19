@@ -10,50 +10,69 @@
     2. We DO NOT use Cache-Control: no-store here. iOS Safari treats no-store
        pages as "non-persistable" which can interact badly with permission
        dialogs and break BFCache restoration.
-    3. The 8th Wall engine reads document.currentScript when xr.js is fetched
-       to locate its sibling WASM files (xr-slam.js, xr-face.js). Plain
-       <script> tags expose currentScript correctly so no shim is needed —
-       only the ES-module variant requires the shim used in the React route.
+    3. This file is served as raw HTML from /public/ (NOT built by Next.js).
+       8th Wall + iOS Safari requires synchronous <script> tags in <head>
+       and a non-bundled `document.currentScript` — both of which only work
+       reliably outside the Next.js bundler. See
+       app/r/[restaurant_id]/ar/[dish_id]/page.tsx for the redirect.
   -->
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 
   <title>View in AR – Aroma</title>
 
   <!--
-    Resource preload hints — start downloading all 8th Wall scripts in parallel
-    immediately when the HTML head is parsed. Without these, the four <script>
-    tags below load roughly sequentially because each is `defer`-equivalent
-    and HTTP/1.1 connections are serialised. With preload the browser issues
-    all requests at once, cutting the cold-camera-open time roughly in half.
+    Importmap — must come BEFORE any module that imports `three` or
+    `three/addons/`. We pin to a stable Three.js LTS branch served via
+    UNPKG so this static HTML file (which Next.js does NOT bundle) can
+    use bare specifiers like `import * as THREE from 'three'`.
+
+    iOS Safari note: native importmap support is iOS 16.4+. We load the
+    es-module-shims polyfill BEFORE the importmap declaration so older
+    iPhones (still ~30 % of installed base) can run this file too.
   -->
-  <link rel="preload" as="script" href="/8thwall/external/scripts/8frame-1.5.0.min.js" crossorigin="anonymous">
+  <!--
+    es-module-shims must run before ANY module/importmap is parsed.
+    `async` is intentionally omitted so it blocks parsing until ready.
+    `data-import-maps-check-uri` (and friends) are not needed; defaults
+    are fine.
+  -->
+  <script src="https://ga.jspm.io/npm:[email protected]/dist/es-module-shims.js" crossorigin="anonymous"></script>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "three":         "https://unpkg.com/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+
+  <!--
+    8th Wall scripts — loaded for the camera-pipeline path on touch devices.
+    Even on desktop they're loaded but never started (we never call XR8.run()
+    on desktop), so they're inert. Keeping them here unconditionally avoids
+    a second round-trip on phones that need them.
+
+    Three.js scene is built either way; on mobile XR8.Threejs.pipelineModule()
+    creates the renderer + scene + camera and we attach our content to those,
+    on desktop we create our own.
+  -->
+  <script src="/8thwall/vendor/xrextras/xrextras.js" crossorigin="anonymous"></script>
+  <script src="/8thwall/vendor/landing-page/landing-page.js" crossorigin="anonymous"></script>
+  <script src="/8thwall/vendor/engine-binary/xr.js" crossorigin="anonymous" async data-preload-chunks="slam"></script>
+
+  <!-- Resource preload hints — start downloading 8th Wall scripts in
+       parallel as soon as <head> is parsed. -->
   <link rel="preload" as="script" href="/8thwall/vendor/xrextras/xrextras.js" crossorigin="anonymous">
   <link rel="preload" as="script" href="/8thwall/vendor/landing-page/landing-page.js" crossorigin="anonymous">
   <link rel="preload" as="script" href="/8thwall/vendor/engine-binary/xr.js" crossorigin="anonymous">
   <link rel="preload" as="script" href="/8thwall/vendor/engine-binary/xr-slam.js" crossorigin="anonymous">
-
-  <!--
-    Script load order MUST match the official 8th Wall A-Frame example.
-    All scripts are local (served from /8thwall/...) so they share an origin
-    with the page. iOS WebKit refuses to grant camera permission across a
-    cross-origin script chain that initiates getUserMedia.
-
-    DO NOT reorder these. xrextras depends on AFRAME, landing-page depends
-    on xrextras, and xr.js loads last (async) so AFRAME parses the scene
-    while the engine warms up in parallel.
-  -->
-  <script crossorigin="anonymous" src="/8thwall/external/scripts/8frame-1.5.0.min.js"></script>
-  <script src="/8thwall/vendor/xrextras/xrextras.js" crossorigin="anonymous"></script>
-  <script src="/8thwall/vendor/landing-page/landing-page.js" crossorigin="anonymous"></script>
-  <script src="/8thwall/vendor/engine-binary/xr.js" crossorigin="anonymous" async data-preload-chunks="slam"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     html, body {
       width: 100%; height: 100%;
-      /* On iOS, allowing the page to scroll causes the camera canvas to
-         momentarily detach when the URL bar collapses — keep it locked. */
       overflow: hidden;
       background: #000;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -62,14 +81,23 @@
       user-select: none;
     }
 
-    /* ── In-AR UI overlays ─────────────────────────────────────────────
-       Three pill-shaped controls sit on top of the camera feed:
-         • close button (top-left)
-         • dish name pill (top-right)
-         • "Tap a surface to place the dish" hint (bottom-centre, hides
-           after the user places the dish)
-       All use a frosted-glass dark style to read on any background.
-    */
+    #camerafeed {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+    }
+
+    /* Hide 8th Wall watermark */
+    #poweredby, .poweredby-img, #loadBackground > div:last-child {
+      display: none !important;
+      visibility: hidden !important;
+      opacity: 0 !important;
+    }
+
+    /* ── In-AR UI overlays ──────────────────────────────────────────── */
     .ar-ui {
       position: fixed; inset: 0;
       z-index: 20;
@@ -96,7 +124,6 @@
 
     .ar-close {
       position: absolute;
-      top: env(safe-area-inset-top, 0) ;
       top: calc(env(safe-area-inset-top, 0px) + 16px);
       left: 16px;
       width: 44px;
@@ -106,7 +133,6 @@
       font-size: 22px;
       line-height: 1;
       cursor: pointer;
-      user-select: none;
     }
 
     .ar-title {
@@ -127,19 +153,13 @@
       left: 50%;
       transform: translateX(-50%);
       font-size: 15px;
-      /* Keep on a single line — overrides the pill's default flex-wrap and
-         prevents narrow phones from breaking the hint into two rows. */
       white-space: nowrap;
     }
 
-    /*
-      Placement-success toast. Appears top-centre below the dish-name pill
-      the moment the model finishes loading, then auto-dismisses after a
-      short hold. Green tint to read as a positive confirmation.
+    .ar-ui-pill.is-hidden { opacity: 0; transform: translate(0, 6px); pointer-events: none; }
+    .ar-hint.is-hidden    { transform: translate(-50%, 6px); }
 
-      Two-keyframe entrance (slide-down + fade-in) and matching exit so
-      the toast feels intentional rather than just popping in/out.
-    */
+    /* Toast */
     .ar-toast {
       position: absolute;
       top: calc(env(safe-area-inset-top, 0px) + 76px);
@@ -156,7 +176,6 @@
       pointer-events: none;
       z-index: 25;
 
-      /* Hidden default state */
       opacity: 0;
       transform: translateX(-50%) translateY(-14px) scale(0.96);
       transition:
@@ -168,21 +187,21 @@
       transform: translateX(-50%) translateY(0) scale(1);
     }
 
-    /*
-      Bottom action bar — Reset and Menu buttons. Sits above the iOS home
-      indicator. Buttons share the same pill style as the rest of the UI.
-    */
+    /* Bottom action bar */
     .ar-actions {
       position: absolute;
       bottom: calc(env(safe-area-inset-bottom, 0px) + 24px);
-      left: 0;
-      right: 0;
+      left: 0; right: 0;
       display: flex;
       justify-content: center;
       gap: 12px;
       padding: 0 16px;
       pointer-events: none;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.35s ease, transform 0.35s ease;
     }
+    .ar-actions.is-visible { opacity: 1; transform: translateY(0); }
     .ar-action-btn {
       pointer-events: auto;
       display: inline-flex;
@@ -203,50 +222,32 @@
       white-space: nowrap;
     }
     .ar-action-btn:active { transform: scale(0.96); }
+    .ar-reset { background: linear-gradient(180deg, #d05050 0%, #b03e3e 100%); }
+    .ar-menu  { background: rgba(20, 20, 20, 0.65); }
 
-    .ar-reset {
-      background: linear-gradient(180deg, #d05050 0%, #b03e3e 100%);
-    }
-    .ar-menu {
-      background: rgba(20, 20, 20, 0.65);
-    }
-
-    /* Hidden until the dish is placed; revealed alongside the toast. */
-    .ar-actions {
-      opacity: 0;
-      transform: translateY(8px);
-      transition: opacity 0.35s ease, transform 0.35s ease;
-    }
-    .ar-actions.is-visible {
-      opacity: 1;
-      transform: translateY(0);
-    }
-
-    /* Faded-out state — applied via JS once the dish is placed */
-    .ar-ui-pill.is-hidden {
-      opacity: 0;
-      transform: translate(var(--tx, 0), 6px);
+    /* Loading-spinner placeholder */
+    .ar-placeholder-overlay {
+      position: absolute;
+      width: 64px;
+      height: 64px;
+      border: 3px solid rgba(90, 215, 255, 0.85);
+      border-top-color: transparent;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      animation: ar-ph-spin 1.2s linear infinite;
       pointer-events: none;
+      z-index: 15;
+      box-shadow: 0 0 24px rgba(90, 215, 255, 0.4);
     }
-    .ar-hint.is-hidden { transform: translate(-50%, 6px); }
-
-    /*
-      The original "Tap To Place Model" prompt overlay is now replaced by the
-      bottom hint pill above. We hide its container so it doesn't double up.
-    */
-    .over { display: none; }
-
-    /* ── Hide 8th Wall watermark ─────────────────────────────────────── */
-    #poweredby, .poweredby-img, #loadBackground > div:last-child {
-      display: none !important;
-      visibility: hidden !important;
-      opacity: 0 !important;
+    @keyframes ar-ph-spin {
+      to { transform: translate(-50%, -50%) rotate(360deg); }
     }
   </style>
 </head>
 
 <body>
-  <!-- ── In-AR UI overlay (close button, dish name, tap hint) ─────────── -->
+  <canvas id="camerafeed"></canvas>
+
   <div class="ar-ui" id="arUi">
     <button class="ar-ui-pill ar-close" id="arClose" aria-label="Close AR view">×</button>
     <div class="ar-ui-pill ar-title" id="arTitle">View in AR</div>
@@ -254,21 +255,9 @@
       <span aria-hidden="true">👆</span>
       <span>Tap a surface to place the dish</span>
     </div>
-    <!--
-      Placement-success toast. Hidden by default, briefly shown after the
-      dish finishes loading. Wording reflects all interactions actually
-      available to the user (drag is intentionally NOT mentioned because
-      we don't ship a drag handler).
-    -->
     <div class="ar-toast" id="arToast" role="status" aria-live="polite">
       ✓ Placed! Pinch to scale
     </div>
-
-    <!--
-      Bottom action bar — Reset clears the placed dish so the user can
-      retry placement; Menu returns to the menu page. Both are hidden
-      until placement, then fade in alongside the success toast.
-    -->
     <div class="ar-actions" id="arActions">
       <button class="ar-action-btn ar-reset" id="arReset" type="button">
         <span aria-hidden="true">↻</span>
@@ -281,459 +270,565 @@
     </div>
   </div>
 
-  <!-- Legacy tap-to-place prompt (now hidden via CSS, see .over { display:none }) -->
-  <div class="over">
-    <span id="promptText">Tap To Place Model</span>
-  </div>
-
-  <!--
-    <a-scene> attributes worth knowing
-    ──────────────────────────────────
-    • allowedDevices: any
-        Critical for iOS. Without it 8th Wall blocks devices it doesn't
-        explicitly recognise — and Safari user-agents change frequently.
-    • xrweb supplies the camera passthrough + SLAM tracking.
-    • landing-page renders the official 8th Wall consent screen which
-      handles getUserMedia inside a button click — this is the only
-      reliable way to get camera permission on iOS Safari.
-
-    Stability tuning
-    ─────────────────
-    • scale: responsive (default)
-        After testing absolute scale, the position-drift issue (dish appears
-        to float upward when the user moves the camera, because the engine
-        constantly re-estimates camera height in real-world units) was much
-        more disruptive than the gentle size variation that Responsive Scale
-        causes when the user gets closer or further from the surface.
-        Responsive Scale is the 8th Wall default and what their official
-        examples use. The dish stays anchored to the floor; size variation
-        is mild (~10-15% within a normal room).
-    • disableWorldTracking: false  (explicit — default).
-    • enableLighting: true         — feeds environment-light estimation back
-      into the SLAM solver. The 8th Wall engine internally uses lighting
-      cues to discriminate stable feature-points from noisy ones, which
-      reduces ground-plane jitter visibly.
-
-    Renderer choices (kept minimal for stability)
-    ─────────────────────────────────────────────
-    • The previous combo of physicallyCorrectLights + toneMapping:ACESFilmic
-      + logarithmicDepthBuffer + precision:high + 2K shadow map was a major
-      cause of perceived shaking: on phones it can drop frame rate well
-      below 60 FPS, and any frame the renderer is late on, the model lags
-      behind the actual camera pose by ~16-33 ms — the eye reads this as
-      jitter.
-    • antialias:true is the only "nice to have" that's cheap enough to keep.
-      Everything else is now off, and the shadow map is 1024 (was 2048),
-      which keeps the dish anchored at full FPS even on older iPhones.
-  -->
-  <a-scene
-    id="ar-scene"
-    tap-place
-    landing-page
-    xrextras-loading
-    xrextras-runtime-error
-    xrextras-gesture-detector
-    xrextras-pbr-environment
-    xrextras-almost-there
-    renderer="colorManagement:true; antialias:true;"
-    xrweb="
-      allowedDevices: any;
-      disableWorldTracking: false;
-      enableLighting: true;
-      defaultEnvironmentFogIntensity: 0.5;
-      defaultEnvironmentFloorTexture: #groundTex;
-      defaultEnvironmentFloorColor: #FFF;
-      defaultEnvironmentSkyBottomColor: #B4C4CC;
-      defaultEnvironmentSkyTopColor: #5ac8fa;
-      defaultEnvironmentSkyGradientStrength: 0.5;"
-  >
-    <a-assets>
-      <img id="groundTex" src="/8thwall/assets/sand.jpg">
-      <!-- src filled by JS once URL params are read -->
-      <a-asset-item id="dishModel" src=""></a-asset-item>
-    </a-assets>
-
-    <!-- Camera positioned to match working 8th Wall example -->
-    <a-camera
-      id="camera"
-      position="0 8 8"
-      raycaster="objects: .cantap"
-      cursor="fuse: false; rayOrigin: mouse;">
-    </a-camera>
-
-    <!--
-      Lighting & shadow strategy (revised after the directional-shadow look
-      came out as a hard rectangular smear on AR placements).
-
-      Removed: the directional light with castShadow:true. With xrextras-attach
-      tying the light to the camera, every frame the shadow frustum was
-      re-projecting the dish's silhouette from a low angle, and the 40×40 m
-      shadow camera bounds clipped the projected footprint into a hard
-      rectangle that was visible on the floor next to the dish.
-
-      Replaced with: ambient + hemisphere lights only (no real shadow
-      casting). The visual "ground shadow" is now provided by a procedural
-      soft-shadow disc spawned alongside the dish, which always sits
-      directly under the model regardless of camera angle, scale, or the
-      SLAM floor estimate.
-    -->
-    <a-entity
-      light="type:directional; intensity:0.7; target:#camera"
-      xrextras-attach="target:camera; offset:8 15 4"
-      position="1 4.3 2.5"
-    ></a-entity>
-
-    <a-light type="ambient" intensity="0.45"></a-light>
-    <a-light type="hemisphere" ground-color="#333" intensity="0.9"></a-light>
-
-    <!--
-      Ground plane.
-
-      Used for tap-place raycasting only; no shadow shader needed since we
-      moved away from real-time shadow casting and use a procedural disc
-      under each placed dish (see _placeDish in the script).
-
-      Material is fully transparent (opacity: 0) so the user just sees
-      their real floor through it, while the ground still receives the
-      raycaster intersection that drives the click handler.
-    -->
-    <a-box
-      id="ground"
-      class="cantap"
-      scale="1000 2 1000"
-      position="0 -0.99 0"
-      material="shader:flat; transparent:true; opacity:0"
-    ></a-box>
-  </a-scene>
-
   <script>
-    // ── BFCache guard ──────────────────────────────────────────────────────────
-    // 8th Wall engine state (camera, WASM, WebGL) does NOT survive a BFCache
-    // restore. Force a full reload so scripts re-execute from scratch.
-    window.addEventListener('pageshow', function (event) {
-      if (event.persisted) {
-        window.location.reload();
-      }
+    // ── BFCache guard ──────────────────────────────────────────────────
+    window.addEventListener('pageshow', function (e) {
+      if (e.persisted) window.location.reload();
     });
+  </script>
 
-    // ── Read URL params ────────────────────────────────────────────────────────
-    var params  = new URLSearchParams(window.location.search);
-    var modelUrl = params.get('model') || '';
-    var dishName = params.get('name') || '';
-    var backUrl  = params.get('back') || '/';
+  <script type="module">
+    // ──────────────────────────────────────────────────────────────────────
+    // Aroma AR viewer — Three.js based.
+    //
+    //   • Mobile (touch device) : 8th Wall pipeline owns Three.js scene/
+    //                             renderer/camera. Real camera passthrough,
+    //                             SLAM tracking, raycaster placement.
+    //   • Desktop (non-touch)   : Self-managed Three.js scene with a sky
+    //                             gradient + sand floor "playground"
+    //                             (mimics A-Frame's xrweb defaultEnvironment).
+    //
+    // The shared parts — lighting, dish placement, gestures, UI —
+    // live in helpers callable from either path.
+    // ──────────────────────────────────────────────────────────────────────
 
-    var assetItem = document.getElementById('dishModel');
-    if (assetItem) assetItem.setAttribute('src', modelUrl);
+    import * as THREE from 'three';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 
-    // Pre-warm the GLB into the HTTP cache as soon as we know its URL.
-    // A-Frame's <a-asset-item> normally only starts downloading when the
-    // scene begins — which means up to a second of delay between tap and
-    // model appearance. By firing a parallel fetch() now, the binary is
-    // already in the browser's HTTP cache by the time A-Frame asks for it,
-    // and the dish appears within a few hundred ms of the tap.
+    // 8th Wall's XR8.Threejs.pipelineModule() reads window.THREE on init.
+    // Without this assignment the mobile pipeline silently fails to bind
+    // the renderer/scene/camera, so onStart() never fires and the camera
+    // stays black on iOS even when permission is granted.
+    window.THREE = THREE;
+
+    // ── URL params ─────────────────────────────────────────────────────────
+    const params   = new URLSearchParams(window.location.search);
+    const modelUrl = params.get('model') || '';
+    const dishName = params.get('name')  || '';
+    const backUrl  = params.get('back')  || '/';
+
+    // ── DOM refs & UI wiring ──────────────────────────────────────────────
+    const canvas    = document.getElementById('camerafeed');
+    const titleEl   = document.getElementById('arTitle');
+    const hintEl    = document.getElementById('arHint');
+    const toastEl   = document.getElementById('arToast');
+    const actionsEl = document.getElementById('arActions');
+    const closeBtn  = document.getElementById('arClose');
+    const menuBtn   = document.getElementById('arMenu');
+    const resetBtn  = document.getElementById('arReset');
+
+    titleEl.textContent = dishName || 'View in AR';
+    closeBtn.addEventListener('click', () => window.location.replace(backUrl));
+    menuBtn .addEventListener('click', () => window.location.replace(backUrl));
+
+    // ── Spawn parameters ──────────────────────────────────────────────────
+    // Two scales because mobile AR (responsive-scale) and desktop (raw)
+    // render the same number very differently.
+    const BASE_SCALE_MOBILE  = 38;    // tuned for A-Frame xrweb responsive scale
+    const BASE_SCALE_DESKTOP = 1.5;   // 1 unit ≈ 1 m, so plate ~30 cm wide
+    const FLOAT_OFFSET_M     = 0.10;  // 10 cm absolute float above the floor
+    const PINCH_MIN          = 0.25;
+    const PINCH_MAX          = 8;
+
+    // ── Module-level state, mutated by both code paths ────────────────────
+    let scene, camera, renderer;
+    let groundPlane, shadowReceiver;
+    let dishMesh = null, shadowMesh = null;
+    let prewarmedScene = null;
+    let modelReady = false;
+    let pendingPlace = null;
+    let placeholderEl = null;
+
+    // Active spawn scale — picked by the boot path. Mobile uses the larger
+    // value because xrweb's responsive-scale system scales the whole scene
+    // by the camera-height factor; desktop renders at raw units so it
+    // needs the smaller value to look like a plate, not a swimming pool.
+    let activeBaseScale = BASE_SCALE_MOBILE;
+
+    // ── HTTP-cache prewarm of the GLB ─────────────────────────────────────
     if (modelUrl) {
       fetch(modelUrl, { mode: 'cors', credentials: 'omit', cache: 'force-cache' })
-        .catch(function () { /* prefetch best-effort, swallow errors */ });
+        .catch(() => {});
     }
 
-    // ── Soft contact-shadow texture ─────────────────────────────────────────
-    // We removed the real-time directional shadow because it produced a hard
-    // rectangular cutoff on AR placements (the 40 m shadow frustum couldn't
-    // follow the dish reliably as it scaled up). Instead, every placed dish
-    // gets a procedural radial-gradient disc directly under it, which always
-    // sits exactly where the dish is and always looks correct regardless of
-    // camera angle, scale, or SLAM drift.
-    //
-    // Texture is generated once in JS (no HTTP request) and re-used for
-    // every placement.
-    var shadowTextureUrl = (function () {
-      var size = 256;
-      var canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
-      var ctx = canvas.getContext('2d');
-      var grad = ctx.createRadialGradient(
-        size / 2, size / 2, 0,
-        size / 2, size / 2, size / 2
-      );
-      // Stronger core, slower falloff so the visible halo around the plate
-      // reads as a real grounding shadow rather than a faint rim.
-      grad.addColorStop(0.0, 'rgba(0,0,0,0.85)');
-      grad.addColorStop(0.4, 'rgba(0,0,0,0.55)');
-      grad.addColorStop(0.7, 'rgba(0,0,0,0.20)');
-      grad.addColorStop(1.0, 'rgba(0,0,0,0.00)');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, size, size);
-      return canvas.toDataURL('image/png');
-    })();
+    // ──────────────────────────────────────────────────────────────────────
+    // GLB loader — kicked off as soon as we know the URL, not when the user
+    // taps. This is what makes the placement appear "instant" on warm cache.
+    // ──────────────────────────────────────────────────────────────────────
+    const gltfLoader  = new GLTFLoader();
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
+    gltfLoader.setDRACOLoader(dracoLoader);
 
-    // ── In-AR UI wiring ───────────────────────────────────────────────────────
-    // Set the dish name in the top-right pill. Falls back to a generic label
-    // when ?name is omitted from the URL (defensive, not expected in practice).
-    var titleEl = document.getElementById('arTitle');
-    if (titleEl) titleEl.textContent = dishName || 'View in AR';
-
-    // Close button — returns to the menu page using the back URL passed by
-    // MenuCard. window.location.replace so we don't leave an extra entry in
-    // the browser history stack.
-    var closeBtn = document.getElementById('arClose');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', function () {
-        window.location.replace(backUrl);
-      });
-    }
-
-    // Menu button — same destination as the close button, just a second
-    // affordance the user-flow screenshot asked for.
-    var menuBtn = document.getElementById('arMenu');
-    if (menuBtn) {
-      menuBtn.addEventListener('click', function () {
-        window.location.replace(backUrl);
-      });
-    }
-
-    // Reset button — removes the spawned dish, re-arms tap-place, and shows
-    // the "tap a surface" hint again so the user can pick a new spot.
-    // The actual entity removal lives in the tap-place component because it
-    // owns the spawnedEl reference; we expose a custom event for it.
-    var resetBtn = document.getElementById('arReset');
-    if (resetBtn) {
-      resetBtn.addEventListener('click', function () {
-        document.dispatchEvent(new Event('aroma-ar-reset'));
-      });
-    }
-
-    // ── tap-place component ────────────────────────────────────────────────────
-    var tapPlaceComponent = {
-      // Spawn scale: 38 (= previous 23.4 × 1.62) — bumped substantially after
-      // the user reported the dish reading too small in real-world AR even at
-      // 23.4. The new size puts a "plate" at roughly 25-30 cm wide visually.
-      schema: { min: { default: 38 }, max: { default: 39 } },
-      init: function () {
-        var ground   = document.getElementById('ground');
-        var promptEl = document.getElementById('promptText');
-        this.spawnedEl = null;
-        this.placeholderEl = null;
-        this.modelReady = false;
-        this.pendingPlacement = null;  // {x, y, z, rot, scale}
-        var self = this;
-
-        // ── Pre-warm the GLB in the GPU ──────────────────────────────────────
-        // We mount a hidden entity with gltf-model="#dishModel" the moment the
-        // scene initialises — long before the user is likely to tap. This
-        // forces A-Frame to download + decode + upload the geometry/textures
-        // to the GPU in parallel with camera warm-up. By the time the user
-        // taps, the model is usually fully resident in GPU memory and the
-        // visible spawn is instantaneous.
-        //
-        // The pre-warm entity is invisible (opacity:0, scale:0.0001) and far
-        // off-screen, so it adds zero perceived render cost.
-        var prewarm = document.createElement('a-entity');
-        prewarm.setAttribute('gltf-model', '#dishModel');
-        prewarm.setAttribute('position', '-9999 -9999 -9999');
-        prewarm.setAttribute('scale', '0.0001 0.0001 0.0001');
-        prewarm.setAttribute('visible', 'false');
-        prewarm.addEventListener('model-loaded', function () {
-          self.modelReady = true;
-          // If the user already tapped (placeholder is showing) — promote
-          // the placeholder to a real dish now.
-          if (self.pendingPlacement) {
-            self._placeDish(self.pendingPlacement);
-            self.pendingPlacement = null;
-          }
-        });
-        // Mount once the scene is ready so A-Frame's asset-item is connected.
-        this.el.sceneEl.addEventListener('loaded', function () {
-          self.el.sceneEl.appendChild(prewarm);
-        }, { once: true });
-
-        // ── Instant placeholder ─────────────────────────────────────────────
-        // The moment the user taps, we spawn a glowing flat disc at the tap
-        // point. This gives immediate feedback that the tap registered and
-        // shows where the dish will appear. The disc rotates and pulses for
-        // a "loading" feel until the GLB is ready, then is replaced by the
-        // actual dish entity.
-        this._spawnPlaceholder = function (touchPoint, targetScale) {
-          var ring = document.createElement('a-ring');
-          ring.setAttribute('rotation', '-90 0 0');
-          // Sized relative to the dish so it always frames the placement
-          // area regardless of how big the dish will end up.
-          ring.setAttribute('radius-inner', targetScale * 0.10);
-          ring.setAttribute('radius-outer', targetScale * 0.16);
-          ring.setAttribute(
-            'position',
-            touchPoint.x + ' ' + (touchPoint.y + 0.01) + ' ' + touchPoint.z
-          );
-          // Bright cyan-white emissive so it reads on any background.
-          ring.setAttribute('material',
-            'shader: flat; color: #5ad7ff; opacity: 0.85; transparent: true; side: double;');
-          // Continuously rotate to read as a "loading" affordance.
-          ring.setAttribute('animation__spin',
-            'property: rotation; to: -90 360 0; loop: true; dur: 1500; easing: linear;');
-          // Subtle pulse so even at rest the disc feels alive.
-          ring.setAttribute('animation__pulse',
-            'property: material.opacity; to: 0.4; dir: alternate; loop: true; dur: 600; easing: easeInOutQuad;');
-          self.el.sceneEl.appendChild(ring);
-          self.placeholderEl = ring;
-        };
-
-        this._removePlaceholder = function () {
-          if (self.placeholderEl && self.placeholderEl.parentNode) {
-            self.placeholderEl.parentNode.removeChild(self.placeholderEl);
-          }
-          self.placeholderEl = null;
-        };
-
-        // ── Dish placement (called either immediately on tap if the model
-        //    is already ready, or deferred until model-loaded fires) ─────
-        this._placeDish = function (params) {
-          self._removePlaceholder();
-
-          // Procedural ground shadow — a flat disc with a radial-gradient
-          // texture, sized larger than the plate so a clear soft halo
-          // extends past the plate's edge. Without that overshoot, the
-          // shadow reads as just a thin rim under the plate (looks fake).
-          var shadow = document.createElement('a-circle');
-          shadow.setAttribute('rotation', '-90 0 0');
-          shadow.setAttribute('radius', params.scale * 0.95);
-          shadow.setAttribute('material',
-            'src: ' + shadowTextureUrl +
-            '; transparent: true; opacity: 0.95; depthWrite: false; alphaTest: 0.005;');
-          // Sit just above the floor at the tap point (NOT under the dish's
-          // float offset — the shadow belongs to the surface, not the dish).
-          shadow.setAttribute('position',
-            params.x + ' ' + ((params.y - params.scale * 0.07) + 0.001) + ' ' + params.z);
-          self.el.sceneEl.appendChild(shadow);
-          self.shadowEl = shadow;
-
-          var el = document.createElement('a-entity');
-          self.spawnedEl = el;
-          el.setAttribute(
-            'position',
-            params.x + ' ' + params.y + ' ' + params.z
-          );
-          el.setAttribute('rotation', '0 ' + params.rot + ' 0');
-          el.setAttribute('visible', 'false');
-          el.setAttribute('scale', '0.0001 0.0001 0.0001');
-          el.setAttribute('class', 'cantap');
-          el.setAttribute('gltf-model', '#dishModel');
-          self.el.sceneEl.appendChild(el);
-
-          var revealAndAnimate = function () {
-            el.setAttribute('visible', 'true');
-            el.setAttribute('animation', {
-              property: 'scale',
-              to: params.scale + ' ' + params.scale + ' ' + params.scale,
-              easing: 'easeOutQuad',
-              dur: 350
-            });
-
-            var actionsEl = document.getElementById('arActions');
-            if (actionsEl) actionsEl.classList.add('is-visible');
-
-            var toastEl = document.getElementById('arToast');
-            if (toastEl) {
-              requestAnimationFrame(function () {
-                toastEl.classList.add('is-visible');
-              });
-              setTimeout(function () {
-                toastEl.classList.remove('is-visible');
-              }, 1500);
+    function loadModel() {
+      if (!modelUrl) return;
+      gltfLoader.load(
+        modelUrl,
+        (gltf) => {
+          gltf.scene.traverse((child) => {
+            if (child.isMesh) {
+              child.castShadow = true;
+              child.receiveShadow = false;
+              child.frustumCulled = false;
             }
-          };
-
-          // model-loaded may fire essentially instantly because the GLB
-          // already lives in GPU memory thanks to the pre-warm entity.
-          el.addEventListener('model-loaded', revealAndAnimate, { once: true });
-
-          el.addEventListener('animationcomplete', function () {
-            el.removeAttribute('animation');
-            el.setAttribute('scale', params.scale + ' ' + params.scale + ' ' + params.scale);
-            el.setAttribute('xrextras-two-finger-rotate', '');
-            el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 8');
           });
-        };
-
-        // Reset listener — wired to the bottom Reset button. Clears the
-        // currently-placed entity so the user can tap a new spot. We restore
-        // the ground's `.cantap` class (removed in the click handler), bring
-        // back the on-screen tap hint, and hide the action bar + toast.
-        document.addEventListener('aroma-ar-reset', function () {
-          if (self.spawnedEl && self.spawnedEl.parentNode) {
-            self.spawnedEl.parentNode.removeChild(self.spawnedEl);
-          }
-          self.spawnedEl = null;
-          if (self.shadowEl && self.shadowEl.parentNode) {
-            self.shadowEl.parentNode.removeChild(self.shadowEl);
-          }
-          self.shadowEl = null;
-          self._removePlaceholder();
-          self.pendingPlacement = null;
-          ground.classList.add('cantap');
-          if (promptEl) promptEl.style.display = '';
-          var hint = document.getElementById('arHint');
-          if (hint) hint.classList.remove('is-hidden');
-          var actions = document.getElementById('arActions');
-          if (actions) actions.classList.remove('is-visible');
-          var toast = document.getElementById('arToast');
-          if (toast) toast.classList.remove('is-visible');
-        });
-
-        ground.addEventListener('click', function (event) {
-          if (self.spawnedEl) return;
-          if (promptEl) promptEl.style.display = 'none';
-
-          // Hide the on-screen "tap a surface" hint pill — placement is
-          // happening, the user no longer needs the instruction.
-          var hintEl = document.getElementById('arHint');
-          if (hintEl) hintEl.classList.add('is-hidden');
-
-          var touchPoint = event.detail.intersection.point;
-
-          ground.classList.remove('cantap');
-
-          // Resolve the spawn parameters once.
-          var targetScale = self.data.min;
-          // 0.07 = 7% of the model's bounding height — tight visible gap of
-          // roughly 10–12 cm between the dish and the surface.
-          var FLOAT_OFFSET_M = targetScale * 0.07;
-          var randomYRotation = Math.random() * 360;
-          var params = {
-            x: touchPoint.x,
-            y: touchPoint.y + FLOAT_OFFSET_M,
-            z: touchPoint.z,
-            rot: randomYRotation,
-            scale: targetScale,
-          };
-
-          if (self.modelReady) {
-            // Fast path — the GLB is already decoded and on the GPU thanks
-            // to the pre-warm entity. Place the dish straight away.
-            self._placeDish(params);
-          } else {
-            // Slow-network path — the GLB is still downloading. Show the
-            // glowing placeholder ring at the tap point so the user gets
-            // immediate visual feedback. As soon as model-loaded fires on
-            // the pre-warm entity, _placeDish swaps the placeholder for
-            // the real dish.
-            self._spawnPlaceholder(touchPoint, targetScale);
-            self.pendingPlacement = params;
-          }
-        });
-      }
-    };
-
-    // ── Register component once AFRAME is ready ───────────────────────────────
-    function registerTapPlace() {
-      if (window.AFRAME && !AFRAME.components['tap-place']) {
-        AFRAME.registerComponent('tap-place', tapPlaceComponent);
-      }
+          prewarmedScene = gltf.scene;
+          modelReady = true;
+          if (pendingPlace) { placeDish(pendingPlace); pendingPlace = null; }
+        },
+        undefined,
+        (err) => console.warn('[aroma] GLB load failed:', err)
+      );
     }
 
-    if (window.AFRAME) {
-      registerTapPlace();
+    // ──────────────────────────────────────────────────────────────────────
+    // Scene-building helpers — same calls work for both AR and desktop
+    // because they only touch the scene we hand them.
+    // ──────────────────────────────────────────────────────────────────────
+    function addLighting(targetScene) {
+      // Directional light with cast-shadow ON. With Three.js we get a real
+      // PCF-soft shadow under the dish, which was the original motivation
+      // for moving away from A-Frame.
+      const dir = new THREE.DirectionalLight(0xffffff, 1.1);
+      dir.position.set(2.5, 6, 3);
+      dir.castShadow = true;
+      dir.shadow.mapSize.set(1024, 1024);
+      dir.shadow.bias = -0.0005;
+      const d = 12;
+      dir.shadow.camera.left   = -d;
+      dir.shadow.camera.right  =  d;
+      dir.shadow.camera.top    =  d;
+      dir.shadow.camera.bottom = -d;
+      dir.shadow.camera.near   = 0.1;
+      dir.shadow.camera.far    = 50;
+      dir.shadow.radius        = 4;
+      targetScene.add(dir);
+
+      targetScene.add(new THREE.AmbientLight(0xffffff, 0.45));
+      targetScene.add(new THREE.HemisphereLight(0xffffff, 0x333333, 0.55));
+    }
+
+    function addRaycastAndShadowPlane(targetScene) {
+      const groundGeo = new THREE.PlaneGeometry(2000, 2000);
+      groundGeo.rotateX(-Math.PI / 2);
+      groundPlane = new THREE.Mesh(
+        groundGeo, new THREE.MeshBasicMaterial({ visible: false })
+      );
+      targetScene.add(groundPlane);
+
+      const shadowGeo = new THREE.PlaneGeometry(2000, 2000);
+      shadowGeo.rotateX(-Math.PI / 2);
+      shadowReceiver = new THREE.Mesh(
+        shadowGeo, new THREE.ShadowMaterial({ opacity: 0.45 })
+      );
+      shadowReceiver.position.y = 0.001;
+      shadowReceiver.receiveShadow = true;
+      targetScene.add(shadowReceiver);
+    }
+
+    /**
+     * Adds the "playground" backdrop — sky gradient dome + curved sand
+     * ground + matching fog. Mimics what A-Frame's xrweb defaultEnvironment*
+     * parameters generate automatically.
+     *
+     * The original A-Frame playground produces a small curved-feeling world:
+     * a finite circular ground that fades into the sky at the horizon. Our
+     * earlier 2000 m flat plane went way past the fog so the floor+sky meet
+     * at a hard line. The fix is a smaller, dome-shaped ground that the fog
+     * clips smoothly.
+     */
+    function addPlayground(targetScene) {
+      const SKY_TOP    = new THREE.Color(0x5ac8fa);
+      const SKY_BOTTOM = new THREE.Color(0xb4c4cc);
+
+      // Fog tinted to the sky's bottom colour. Density tuned so the floor
+      // disappears smoothly around 60–80 m (FogExp2 reaches ~95 % at
+      // ~3/density). Same range as the A-Frame playground.
+      targetScene.fog = new THREE.FogExp2(SKY_BOTTOM.getHex(), 0.025);
+
+      // Sky gradient via a custom shader on an inverted sphere.
+      const skyGeo = new THREE.SphereGeometry(500, 32, 16);
+      skyGeo.scale(-1, 1, 1);
+      const skyMat = new THREE.ShaderMaterial({
+        side: THREE.BackSide,
+        depthWrite: false,
+        fog: false,
+        uniforms: {
+          topColor:    { value: SKY_TOP },
+          bottomColor: { value: SKY_BOTTOM },
+          offset:      { value: 33 },
+          exponent:    { value: 0.6 },
+        },
+        vertexShader: `
+          varying vec3 vWorldPosition;
+          void main() {
+            vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+            vWorldPosition = worldPosition.xyz;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform vec3 topColor;
+          uniform vec3 bottomColor;
+          uniform float offset;
+          uniform float exponent;
+          varying vec3 vWorldPosition;
+          void main() {
+            float h = normalize(vWorldPosition + vec3(0.0, offset, 0.0)).y;
+            gl_FragColor = vec4(mix(bottomColor, topColor, max(pow(max(h, 0.0), exponent), 0.0)), 1.0);
+          }
+        `,
+      });
+      targetScene.add(new THREE.Mesh(skyGeo, skyMat));
+
+      // ── Curved ground ───────────────────────────────────────────────────
+      // A 200 m radius circle, sized so the fog (ends ~120 m) clips it well
+      // before its real edge — that's what produces a smooth horizon. The
+      // circle is placed on the floor plane (y = 0) and the dish gets
+      // placed on top of it.
+      //
+      // Why a circle and not a square: the fog falloff is radial. A square
+      // would show its corners poking through the fog at 45° angles.
+      const sandTex = new THREE.TextureLoader().load('/8thwall/assets/sand.jpg');
+      sandTex.wrapS = sandTex.wrapT = THREE.RepeatWrapping;
+      sandTex.repeat.set(80, 80);
+      sandTex.colorSpace = THREE.SRGBColorSpace;
+
+      const groundGeo = new THREE.CircleGeometry(200, 96);
+      groundGeo.rotateX(-Math.PI / 2);
+      const groundMat = new THREE.MeshStandardMaterial({
+        map: sandTex,
+        roughness: 1.0,
+        metalness: 0.0,
+      });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.position.y = -0.002;
+      ground.receiveShadow = true;
+      targetScene.add(ground);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Placement
+    // ──────────────────────────────────────────────────────────────────────
+    function placeDish(p) {
+      removePlaceholder();
+      if (!scene || !prewarmedScene) return;
+
+      const dish = prewarmedScene.clone(true);
+      dish.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = false;
+          child.frustumCulled = false;
+        }
+      });
+      dish.position.set(p.x, p.y, p.z);
+      dish.rotation.y = p.rot;
+
+      const target = p.scale;
+      const start  = 0.0001;
+      dish.scale.set(start, start, start);
+      scene.add(dish);
+      dishMesh = dish;
+
+      const t0 = performance.now();
+      const dur = 350;
+      const tick = () => {
+        const t = Math.min(1, (performance.now() - t0) / dur);
+        const e = 1 - (1 - t) * (1 - t);  // easeOutQuad
+        const s = start + (target - start) * e;
+        dish.scale.set(s, s, s);
+        if (t < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+
+      actionsEl.classList.add('is-visible');
+      requestAnimationFrame(() => toastEl.classList.add('is-visible'));
+      setTimeout(() => toastEl.classList.remove('is-visible'), 1500);
+    }
+
+    resetBtn.addEventListener('click', () => {
+      if (dishMesh && scene) {
+        scene.remove(dishMesh);
+        dishMesh.traverse((child) => {
+          if (child.isMesh) {
+            child.geometry?.dispose();
+            if (Array.isArray(child.material)) {
+              child.material.forEach((m) => m.dispose());
+            } else {
+              child.material?.dispose();
+            }
+          }
+        });
+        dishMesh = null;
+      }
+      if (shadowMesh && scene) { scene.remove(shadowMesh); shadowMesh = null; }
+      removePlaceholder();
+      pendingPlace = null;
+      hintEl.classList.remove('is-hidden');
+      actionsEl.classList.remove('is-visible');
+      toastEl.classList.remove('is-visible');
+    });
+
+    function showPlaceholder(screenX, screenY) {
+      if (placeholderEl) return;
+      const el = document.createElement('div');
+      el.className = 'ar-placeholder-overlay';
+      el.style.left = screenX + 'px';
+      el.style.top  = screenY + 'px';
+      document.body.appendChild(el);
+      placeholderEl = el;
+    }
+    function removePlaceholder() {
+      if (placeholderEl?.parentNode) {
+        placeholderEl.parentNode.removeChild(placeholderEl);
+      }
+      placeholderEl = null;
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Tap/click → place
+    // ──────────────────────────────────────────────────────────────────────
+    function setupPlacementInput() {
+      const raycaster = new THREE.Raycaster();
+      const ndc = new THREE.Vector2();
+
+      // Universal pointer handler — works for both touch and mouse since we
+      // listen on `click` (which fires after any tap or click).
+      const onClick = (clientX, clientY) => {
+        if (dishMesh) return;
+        if (!scene || !groundPlane || !camera) return;
+        const rect = canvas.getBoundingClientRect();
+        ndc.x =  ((clientX - rect.left) / rect.width)  * 2 - 1;
+        ndc.y = -((clientY - rect.top)  / rect.height) * 2 + 1;
+        raycaster.setFromCamera(ndc, camera);
+        const hits = raycaster.intersectObject(groundPlane, false);
+        if (hits.length === 0) return;
+        const hit = hits[0].point;
+        const targetScale = activeBaseScale;
+        const params = {
+          x: hit.x,
+          y: hit.y + FLOAT_OFFSET_M,
+          z: hit.z,
+          rot: Math.random() * Math.PI * 2,
+          scale: targetScale,
+        };
+        hintEl.classList.add('is-hidden');
+        if (modelReady) placeDish(params);
+        else { showPlaceholder(clientX, clientY); pendingPlace = params; }
+      };
+
+      // Track touch start so we can distinguish tap from drag (gesture
+      // detection). For mouse we use plain click.
+      let tapStartX = 0, tapStartY = 0, tapStartTime = 0;
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        tapStartX = e.touches[0].clientX;
+        tapStartY = e.touches[0].clientY;
+        tapStartTime = performance.now();
+      }, { passive: true });
+      canvas.addEventListener('touchend', (e) => {
+        if (e.changedTouches.length !== 1) return;
+        const t = e.changedTouches[0];
+        if (Math.abs(t.clientX - tapStartX) > 10) return;
+        if (Math.abs(t.clientY - tapStartY) > 10) return;
+        if (performance.now() - tapStartTime > 600) return;
+        onClick(t.clientX, t.clientY);
+      }, { passive: true });
+
+      canvas.addEventListener('click', (e) => onClick(e.clientX, e.clientY));
+    }
+
+    // ── Two-finger pinch + rotate ─────────────────────────────────────────
+    function setupGestures() {
+      let active = false;
+      let startDist = 0, startAngle = 0;
+      let startScale = 0, startRotY = 0;
+      const distance = (a, b) => Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+      const angle    = (a, b) => Math.atan2(b.clientY - a.clientY, b.clientX - a.clientX);
+
+      canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 2 || !dishMesh) return;
+        active = true;
+        startDist  = distance(e.touches[0], e.touches[1]);
+        startAngle = angle(e.touches[0], e.touches[1]);
+        startScale = dishMesh.scale.x;
+        startRotY  = dishMesh.rotation.y;
+      }, { passive: true });
+
+      canvas.addEventListener('touchmove', (e) => {
+        if (!active || e.touches.length !== 2 || !dishMesh) return;
+        const d = distance(e.touches[0], e.touches[1]);
+        const a = angle(e.touches[0], e.touches[1]);
+        const factor = d / startDist;
+        const min = startScale * PINCH_MIN;
+        const max = startScale * PINCH_MAX;
+        const s = THREE.MathUtils.clamp(startScale * factor, min, max);
+        dishMesh.scale.set(s, s, s);
+        dishMesh.rotation.y = startRotY + (a - startAngle);
+      }, { passive: true });
+
+      canvas.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) active = false;
+      }, { passive: true });
+
+      // Mouse-wheel zoom for desktop preview.
+      canvas.addEventListener('wheel', (e) => {
+        if (!dishMesh) return;
+        e.preventDefault();
+        const factor = e.deltaY < 0 ? 1.05 : 0.95;
+        const newScale = THREE.MathUtils.clamp(
+          dishMesh.scale.x * factor,
+          activeBaseScale * PINCH_MIN,
+          activeBaseScale * PINCH_MAX
+        );
+        dishMesh.scale.set(newScale, newScale, newScale);
+      }, { passive: false });
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // Bootstrap — choose AR or desktop based on device capability
+    //
+    // We can't rely on `(pointer: coarse)` alone:
+    //   • iPad in "Request Desktop Website" mode reports `pointer: fine`
+    //     even though it has a real rear camera and SLAM works.
+    //   • 2-in-1 Windows laptops with touchscreens report `pointer: coarse`
+    //     even though they have no rear camera and SLAM does NOT work.
+    //
+    // The reliable signal is whether the device is iOS / Android (mobile
+    // user agent) AND has navigator.mediaDevices for camera access. We
+    // combine UA detection with a touch capability check.
+    // ──────────────────────────────────────────────────────────────────────
+    const ua = navigator.userAgent;
+    const isIOS =
+      /iPad|iPhone|iPod/.test(ua) ||
+      // iPad on iOS 13+ identifies as "Macintosh" with touch — the only
+      // way to detect it is the platform + touchpoints combo.
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/.test(ua);
+    const isMobile  = isIOS || isAndroid;
+    const hasCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+
+    console.log('[aroma-ar] boot', {
+      isIOS, isAndroid, isMobile, hasCamera,
+      modelUrl, hasXR8: !!window.XR8,
+    });
+
+    if (isMobile && hasCamera) {
+      bootMobileAR();
     } else {
-      window.addEventListener('load', registerTapPlace);
+      bootDesktopPreview();
+    }
+
+    /**
+     * Mobile AR path — wires our scene additions into the 8th Wall pipeline.
+     * 8th Wall owns the renderer, scene, and camera; we just attach content.
+     */
+    function bootMobileAR() {
+      const initScenePipelineModule = () => ({
+        name: 'aromathreejsinit',
+        onStart: ({ canvas: xrCanvas }) => {
+          const xrScene = XR8.Threejs.xrScene();
+          scene    = xrScene.scene;
+          camera   = xrScene.camera;
+          renderer = xrScene.renderer;
+
+          renderer.shadowMap.enabled = true;
+          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+          renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+          addLighting(scene);
+          addRaycastAndShadowPlane(scene);
+          // No playground on mobile — the real camera feed IS the backdrop.
+
+          camera.position.set(0, 3, 0);
+
+          XR8.XrController.updateCameraProjectionMatrix({
+            origin: camera.position,
+            facing: camera.quaternion,
+          });
+
+          // Prevent native scrolling on canvas so gestures aren't hijacked.
+          xrCanvas.addEventListener('touchmove', (e) => e.preventDefault(),
+            { passive: false });
+
+          loadModel();
+        },
+      });
+
+      const onxrloaded = () => {
+        XR8.addCameraPipelineModules([
+          XR8.GlTextureRenderer.pipelineModule(),
+          XR8.Threejs.pipelineModule(),
+          XR8.XrController.pipelineModule(),
+          LandingPage.pipelineModule(),
+          XRExtras.FullWindowCanvas.pipelineModule(),
+          XRExtras.Loading.pipelineModule(),
+          XRExtras.RuntimeError.pipelineModule(),
+          initScenePipelineModule(),
+        ]);
+        setupPlacementInput();
+        setupGestures();
+        XR8.run({ canvas, allowedDevices: 'any' });
+      };
+
+      if (window.XR8) onxrloaded();
+      else window.addEventListener('xrloaded', onxrloaded);
+    }
+
+    /**
+     * Desktop preview path — own renderer, own render loop, full playground.
+     * Mimics what A-Frame's xrweb defaultEnvironment* gave us automatically.
+     */
+    function bootDesktopPreview() {
+      console.log('[aroma-ar] desktop preview booting');
+      // Desktop renders the GLB at raw units so plates need a much smaller
+      // scale than the responsive-scaled mobile path.
+      activeBaseScale = BASE_SCALE_DESKTOP;
+      renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      renderer.setClearColor(0xb4c4cc, 1);  // horizon colour fallback
+
+      scene  = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(
+        60, window.innerWidth / window.innerHeight, 0.1, 1000
+      );
+      // Eye-level view of the playground. y=2 puts us at "human standing"
+      // height. Looking slightly down (lookAt y=0.5) frames the foreground
+      // sand in the bottom half and the sky+horizon in the top half.
+      camera.position.set(0, 2.5, 8);
+      camera.lookAt(0, 0.5, 0);
+
+      addPlayground(scene);
+      addLighting(scene);
+      addRaycastAndShadowPlane(scene);
+
+      console.log('[aroma-ar] desktop scene ready', {
+        sceneChildren: scene.children.length,
+        canvasSize: [renderer.domElement.width, renderer.domElement.height],
+      });
+
+      setupPlacementInput();
+      setupGestures();
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight, false);
+      });
+
+      const tick = () => {
+        renderer.render(scene, camera);
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+
+      loadModel();
     }
   </script>
 </body>
