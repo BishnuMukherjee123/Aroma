@@ -362,33 +362,47 @@
     </a-camera>
 
     <!--
-      Directional light + shadow camera.
+      Lighting & shadow strategy (revised after the directional-shadow look
+      came out as a hard rectangular smear on AR placements).
 
-      shadowMap reduced from 2048 → 1024.  At 2048 the GPU was rasterising
-      a 4-million-texel depth buffer every frame, which on mid-tier phones
-      pushed frame time over the 16.6 ms 60-FPS budget. The visible result
-      is the dish appearing to lag and shake slightly behind real-world
-      camera motion. 1024×1024 cuts that depth-buffer cost to a quarter,
-      restores 60 FPS, and the shadow itself looks identical at viewing
-      distances of ~50 cm and beyond.
+      Removed: the directional light with castShadow:true. With xrextras-attach
+      tying the light to the camera, every frame the shadow frustum was
+      re-projecting the dish's silhouette from a low angle, and the 40×40 m
+      shadow camera bounds clipped the projected footprint into a hard
+      rectangle that was visible on the floor next to the dish.
+
+      Replaced with: ambient + hemisphere lights only (no real shadow
+      casting). The visual "ground shadow" is now provided by a procedural
+      soft-shadow disc spawned alongside the dish, which always sits
+      directly under the model regardless of camera angle, scale, or the
+      SLAM floor estimate.
     -->
     <a-entity
-      light="type:directional; intensity:0.9; castShadow:true; shadowMapHeight:1024; shadowMapWidth:1024; shadowCameraTop:40; shadowCameraBottom:-40; shadowCameraRight:40; shadowCameraLeft:-40; target:#camera"
+      light="type:directional; intensity:0.7; target:#camera"
       xrextras-attach="target:camera; offset:8 15 4"
       position="1 4.3 2.5"
-      shadow
     ></a-entity>
 
-    <a-light type="ambient" intensity="0.3"></a-light>
-    <a-light type="hemisphere" ground-color="#333" intensity="0.8"></a-light>
+    <a-light type="ambient" intensity="0.45"></a-light>
+    <a-light type="hemisphere" ground-color="#333" intensity="0.9"></a-light>
 
+    <!--
+      Ground plane.
+
+      Used for tap-place raycasting only; no shadow shader needed since we
+      moved away from real-time shadow casting and use a procedural disc
+      under each placed dish (see _placeDish in the script).
+
+      Material is fully transparent (opacity: 0) so the user just sees
+      their real floor through it, while the ground still receives the
+      raycaster intersection that drives the click handler.
+    -->
     <a-box
       id="ground"
       class="cantap"
       scale="1000 2 1000"
       position="0 -0.99 0"
-      material="shader:shadow; transparent:true; opacity:0.7"
-      shadow
+      material="shader:flat; transparent:true; opacity:0"
     ></a-box>
   </a-scene>
 
@@ -421,6 +435,35 @@
       fetch(modelUrl, { mode: 'cors', credentials: 'omit', cache: 'force-cache' })
         .catch(function () { /* prefetch best-effort, swallow errors */ });
     }
+
+    // ── Soft contact-shadow texture ─────────────────────────────────────────
+    // We removed the real-time directional shadow because it produced a hard
+    // rectangular cutoff on AR placements (the 40 m shadow frustum couldn't
+    // follow the dish reliably as it scaled up). Instead, every placed dish
+    // gets a procedural radial-gradient disc directly under it, which always
+    // sits exactly where the dish is and always looks correct regardless of
+    // camera angle, scale, or SLAM drift.
+    //
+    // Texture is generated once in JS (no HTTP request) and re-used for
+    // every placement.
+    var shadowTextureUrl = (function () {
+      var size = 256;
+      var canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      var ctx = canvas.getContext('2d');
+      var grad = ctx.createRadialGradient(
+        size / 2, size / 2, 0,
+        size / 2, size / 2, size / 2
+      );
+      grad.addColorStop(0.0, 'rgba(0,0,0,0.55)');
+      grad.addColorStop(0.5, 'rgba(0,0,0,0.22)');
+      grad.addColorStop(0.9, 'rgba(0,0,0,0.04)');
+      grad.addColorStop(1.0, 'rgba(0,0,0,0.00)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, size, size);
+      return canvas.toDataURL('image/png');
+    })();
 
     // ── In-AR UI wiring ───────────────────────────────────────────────────────
     // Set the dish name in the top-right pill. Falls back to a generic label
@@ -460,15 +503,151 @@
 
     // ── tap-place component ────────────────────────────────────────────────────
     var tapPlaceComponent = {
-      // Spawn scale: 23.4 (= previous 19.8 × 1.18, per the user's request to
-      // bump the starting dish 18% bigger). Unitless multiplier of the model's
-      // own glTF units, in Responsive Scale mode.
-      schema: { min: { default: 23.4 }, max: { default: 24.4 } },
+      // Spawn scale: 38 (= previous 23.4 × 1.62) — bumped substantially after
+      // the user reported the dish reading too small in real-world AR even at
+      // 23.4. The new size puts a "plate" at roughly 25-30 cm wide visually.
+      schema: { min: { default: 38 }, max: { default: 39 } },
       init: function () {
         var ground   = document.getElementById('ground');
         var promptEl = document.getElementById('promptText');
         this.spawnedEl = null;
+        this.placeholderEl = null;
+        this.modelReady = false;
+        this.pendingPlacement = null;  // {x, y, z, rot, scale}
         var self = this;
+
+        // ── Pre-warm the GLB in the GPU ──────────────────────────────────────
+        // We mount a hidden entity with gltf-model="#dishModel" the moment the
+        // scene initialises — long before the user is likely to tap. This
+        // forces A-Frame to download + decode + upload the geometry/textures
+        // to the GPU in parallel with camera warm-up. By the time the user
+        // taps, the model is usually fully resident in GPU memory and the
+        // visible spawn is instantaneous.
+        //
+        // The pre-warm entity is invisible (opacity:0, scale:0.0001) and far
+        // off-screen, so it adds zero perceived render cost.
+        var prewarm = document.createElement('a-entity');
+        prewarm.setAttribute('gltf-model', '#dishModel');
+        prewarm.setAttribute('position', '-9999 -9999 -9999');
+        prewarm.setAttribute('scale', '0.0001 0.0001 0.0001');
+        prewarm.setAttribute('visible', 'false');
+        prewarm.addEventListener('model-loaded', function () {
+          self.modelReady = true;
+          // If the user already tapped (placeholder is showing) — promote
+          // the placeholder to a real dish now.
+          if (self.pendingPlacement) {
+            self._placeDish(self.pendingPlacement);
+            self.pendingPlacement = null;
+          }
+        });
+        // Mount once the scene is ready so A-Frame's asset-item is connected.
+        this.el.sceneEl.addEventListener('loaded', function () {
+          self.el.sceneEl.appendChild(prewarm);
+        }, { once: true });
+
+        // ── Instant placeholder ─────────────────────────────────────────────
+        // The moment the user taps, we spawn a glowing flat disc at the tap
+        // point. This gives immediate feedback that the tap registered and
+        // shows where the dish will appear. The disc rotates and pulses for
+        // a "loading" feel until the GLB is ready, then is replaced by the
+        // actual dish entity.
+        this._spawnPlaceholder = function (touchPoint, targetScale) {
+          var ring = document.createElement('a-ring');
+          ring.setAttribute('rotation', '-90 0 0');
+          // Sized relative to the dish so it always frames the placement
+          // area regardless of how big the dish will end up.
+          ring.setAttribute('radius-inner', targetScale * 0.10);
+          ring.setAttribute('radius-outer', targetScale * 0.16);
+          ring.setAttribute(
+            'position',
+            touchPoint.x + ' ' + (touchPoint.y + 0.01) + ' ' + touchPoint.z
+          );
+          // Bright cyan-white emissive so it reads on any background.
+          ring.setAttribute('material',
+            'shader: flat; color: #5ad7ff; opacity: 0.85; transparent: true; side: double;');
+          // Continuously rotate to read as a "loading" affordance.
+          ring.setAttribute('animation__spin',
+            'property: rotation; to: -90 360 0; loop: true; dur: 1500; easing: linear;');
+          // Subtle pulse so even at rest the disc feels alive.
+          ring.setAttribute('animation__pulse',
+            'property: material.opacity; to: 0.4; dir: alternate; loop: true; dur: 600; easing: easeInOutQuad;');
+          self.el.sceneEl.appendChild(ring);
+          self.placeholderEl = ring;
+        };
+
+        this._removePlaceholder = function () {
+          if (self.placeholderEl && self.placeholderEl.parentNode) {
+            self.placeholderEl.parentNode.removeChild(self.placeholderEl);
+          }
+          self.placeholderEl = null;
+        };
+
+        // ── Dish placement (called either immediately on tap if the model
+        //    is already ready, or deferred until model-loaded fires) ─────
+        this._placeDish = function (params) {
+          self._removePlaceholder();
+
+          // Procedural ground shadow — a flat disc with a radial-gradient
+          // texture, sized relative to the dish so it always frames the
+          // model regardless of how far the user later pinch-scales it.
+          var shadow = document.createElement('a-circle');
+          shadow.setAttribute('rotation', '-90 0 0');
+          shadow.setAttribute('radius', params.scale * 0.55);
+          shadow.setAttribute('material',
+            'src: ' + shadowTextureUrl +
+            '; transparent: true; opacity: 0.85; depthWrite: false; alphaTest: 0.01;');
+          shadow.setAttribute('position',
+            params.x + ' ' + (params.y - params.scale * 0.07 + 0.001) + ' ' + params.z);
+          self.el.sceneEl.appendChild(shadow);
+          self.shadowEl = shadow;
+
+          var el = document.createElement('a-entity');
+          self.spawnedEl = el;
+          el.setAttribute(
+            'position',
+            params.x + ' ' + params.y + ' ' + params.z
+          );
+          el.setAttribute('rotation', '0 ' + params.rot + ' 0');
+          el.setAttribute('visible', 'false');
+          el.setAttribute('scale', '0.0001 0.0001 0.0001');
+          el.setAttribute('class', 'cantap');
+          el.setAttribute('gltf-model', '#dishModel');
+          self.el.sceneEl.appendChild(el);
+
+          var revealAndAnimate = function () {
+            el.setAttribute('visible', 'true');
+            el.setAttribute('animation', {
+              property: 'scale',
+              to: params.scale + ' ' + params.scale + ' ' + params.scale,
+              easing: 'easeOutQuad',
+              dur: 350
+            });
+
+            var actionsEl = document.getElementById('arActions');
+            if (actionsEl) actionsEl.classList.add('is-visible');
+
+            var toastEl = document.getElementById('arToast');
+            if (toastEl) {
+              requestAnimationFrame(function () {
+                toastEl.classList.add('is-visible');
+              });
+              setTimeout(function () {
+                toastEl.classList.remove('is-visible');
+              }, 1500);
+            }
+          };
+
+          // model-loaded may fire essentially instantly because the GLB
+          // already lives in GPU memory thanks to the pre-warm entity.
+          el.addEventListener('model-loaded', revealAndAnimate, { once: true });
+
+          el.addEventListener('animationcomplete', function () {
+            el.removeAttribute('animation');
+            el.setAttribute('scale', params.scale + ' ' + params.scale + ' ' + params.scale);
+            el.setAttribute('xrextras-two-finger-rotate', '');
+            el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 8');
+          });
+        };
 
         // Reset listener — wired to the bottom Reset button. Clears the
         // currently-placed entity so the user can tap a new spot. We restore
@@ -479,6 +658,12 @@
             self.spawnedEl.parentNode.removeChild(self.spawnedEl);
           }
           self.spawnedEl = null;
+          if (self.shadowEl && self.shadowEl.parentNode) {
+            self.shadowEl.parentNode.removeChild(self.shadowEl);
+          }
+          self.shadowEl = null;
+          self._removePlaceholder();
+          self.pendingPlacement = null;
           ground.classList.add('cantap');
           if (promptEl) promptEl.style.display = '';
           var hint = document.getElementById('arHint');
@@ -500,117 +685,35 @@
 
           var touchPoint = event.detail.intersection.point;
 
-          // ── No distance compensation in Absolute Scale mode ──────────────
-          // When xrweb is in `scale: absolute`, the engine renders the model
-          // in real-world units and automatically applies correct perspective
-          // (a far-away dish will look smaller on-screen — that's physically
-          // correct). Multiplying scale by tap distance the way we used to do
-          // in Responsive Scale would defeat the purpose of absolute scale
-          // and reintroduce the camera-distance size variation the user
-          // explicitly does not want. So we do nothing here.
-
-          var el = document.createElement('a-entity');
-          self.spawnedEl = el;
-
           ground.classList.remove('cantap');
 
-          // Use the schema's `min` directly as the deterministic base scale.
-          // (We no longer apply a distance factor — see the comment above
-          // about absolute-scale mode.)
+          // Resolve the spawn parameters once.
           var targetScale = self.data.min;
-
-          // Float the model above the detected floor.
-          //
-          // The offset is expressed as a fraction of the model's own
-          // placement scale (instead of a fixed scene-unit value). On a
-          // phone in real AR, Responsive Scale multiplies all scene units
-          // by the camera-height factor — but on desktop preview (no AR)
-          // the model renders at its raw scale, so a flat 0.30 offset
-          // becomes invisible beneath it. Tying the offset to targetScale
-          // keeps the visual gap consistent across both.
-          //
           // 0.07 = 7% of the model's bounding height — tight visible gap of
           // roughly 10–12 cm between the dish and the surface.
           var FLOAT_OFFSET_M = targetScale * 0.07;
-          el.setAttribute(
-            'position',
-            touchPoint.x + ' ' + (touchPoint.y + FLOAT_OFFSET_M) + ' ' + touchPoint.z
-          );
-          el.setAttribute('rotation', '0 ' + (Math.random() * 360) + ' 0');
+          var randomYRotation = Math.random() * 360;
+          var params = {
+            x: touchPoint.x,
+            y: touchPoint.y + FLOAT_OFFSET_M,
+            z: touchPoint.z,
+            rot: randomYRotation,
+            scale: targetScale,
+          };
 
-          el.setAttribute('visible', 'false');
-          el.setAttribute('scale', '0.0001 0.0001 0.0001');
-          el.setAttribute('shadow', { receive: false, cast: true });
-          el.setAttribute('class', 'cantap');
-          el.setAttribute('gltf-model', '#dishModel');
-          self.el.sceneEl.appendChild(el);
-
-          el.addEventListener('model-loaded', function () {
-            el.setAttribute('visible', 'true');
-            // Faster spawn: easeOutQuad over 350 ms (was easeOutElastic 800 ms).
-            // The elastic bounce delayed the dish from being visually "ready"
-            // by close to a full second after it was actually loaded. A short
-            // ease-out feels snappier and matches what most commercial AR
-            // products do (IKEA Place, Amazon View in Your Room).
-            el.setAttribute('animation', {
-              property: 'scale',
-              to: targetScale + ' ' + targetScale + ' ' + targetScale,
-              easing: 'easeOutQuad',
-              dur: 350
-            });
-
-            // Reveal the action bar (Reset + Menu) — these stay until the
-            // user explicitly resets or leaves AR.
-            var actionsEl = document.getElementById('arActions');
-            if (actionsEl) actionsEl.classList.add('is-visible');
-
-            // Show the "Placed! Pinch to scale" toast with an animated
-            // entrance, hold for 1.5 s, then animate out. We deliberately
-            // wait until the model is loaded (not just tapped) so the
-            // toast and the dish appear together.
-            var toastEl = document.getElementById('arToast');
-            if (toastEl) {
-              // Add the visible class on the next frame so the browser
-              // applies the transition (instead of jumping to end state).
-              requestAnimationFrame(function () {
-                toastEl.classList.add('is-visible');
-              });
-              setTimeout(function () {
-                toastEl.classList.remove('is-visible');
-              }, 1500);
-            }
-          });
-
-          el.addEventListener('animationcomplete', function () {
-            el.removeAttribute('animation');
-            el.setAttribute('scale', targetScale + ' ' + targetScale + ' ' + targetScale);
-            el.setAttribute('xrextras-two-finger-rotate', '');
-            // Pinch range — multipliers relative to the placement scale (8.55).
-            // min: 0.25 → can shrink to ~25% (≈ scale 2.14)
-            // max: 8    → can grow to 8×    (≈ scale 68)
-            // ~32× total range, tuned for Responsive Scale mode.
-            el.setAttribute('xrextras-pinch-scale', 'min: 0.25; max: 8');
-
-            // ── No drift guard ────────────────────────────────────────────
-            // We deliberately do NOT re-set the entity position after this
-            // point. In xrweb (8th Wall world-tracking) mode the entity is
-            // already anchored to the SLAM world — its local-space position
-            // attribute does not change as the camera moves. What you may
-            // perceive as "drift" is the SLAM engine refining its floor
-            // estimate (±0.5° per the 8th Wall team's own statements),
-            // which subtly rotates the ground plane and hence shifts the
-            // model's apparent screen position.
-            //
-            // The official 8th Wall A-Frame examples (animation-mixer,
-            // tap-to-place, etc.) do not implement any drift correction
-            // either, because forcefully re-setting `position` would only
-            // fight the engine's own anchoring and make jitter worse.
-            //
-            // Accuracy can be improved by environmental factors only:
-            //   • better lighting on the ground plane,
-            //   • non-repeating textures (carpet, concrete, wood grain),
-            //   • not pointing the camera at flat / featureless surfaces.
-          });
+          if (self.modelReady) {
+            // Fast path — the GLB is already decoded and on the GPU thanks
+            // to the pre-warm entity. Place the dish straight away.
+            self._placeDish(params);
+          } else {
+            // Slow-network path — the GLB is still downloading. Show the
+            // glowing placeholder ring at the tap point so the user gets
+            // immediate visual feedback. As soon as model-loaded fires on
+            // the pre-warm entity, _placeDish swaps the placeholder for
+            // the real dish.
+            self._spawnPlaceholder(touchPoint, targetScale);
+            self.pendingPlacement = params;
+          }
         });
       }
     };
