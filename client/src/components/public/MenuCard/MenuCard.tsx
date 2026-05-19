@@ -578,6 +578,7 @@ export const MenuCard = memo(function MenuCard({
               const backUrl = `/r/${publicId}`;
               const arUrl =
                 `/ar-viewer/index.html?model=${encodeURIComponent(dish.modelUrl)}` +
+                `&name=${encodeURIComponent(dish.name)}` +
                 `&back=${encodeURIComponent(backUrl)}` +
                 `&_cb=${Date.now()}`;
               window.location.assign(arUrl);
