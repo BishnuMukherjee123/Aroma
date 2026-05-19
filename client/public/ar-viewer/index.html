@@ -295,6 +295,7 @@
     import * as THREE from 'three';
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+    import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
     // 8th Wall's XR8.Threejs.pipelineModule() reads window.THREE on init.
     // Without this assignment the mobile pipeline silently fails to bind
@@ -325,7 +326,7 @@
     // ── Spawn parameters ──────────────────────────────────────────────────
     // Two scales because mobile AR (responsive-scale) and desktop (raw)
     // render the same number very differently.
-    const BASE_SCALE_MOBILE  = 38;    // tuned for A-Frame xrweb responsive scale
+    const BASE_SCALE_MOBILE  = 22.8;  // 38 × 0.6 — user requested 40% smaller starting size
     const BASE_SCALE_DESKTOP = 1.5;   // 1 unit ≈ 1 m, so plate ~30 cm wide
     const FLOAT_OFFSET_M     = 0.10;  // 10 cm absolute float above the floor
     const PINCH_MIN          = 0.25;
@@ -353,9 +354,98 @@
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // GLB loader — kicked off as soon as we know the URL, not when the user
-    // taps. This is what makes the placement appear "instant" on warm cache.
+    // Renderer / scene quality config — same on AR and desktop so visuals
+    // are identical wherever you preview.
     // ──────────────────────────────────────────────────────────────────────
+    function configureRenderer(r) {
+      r.shadowMap.enabled = true;
+      r.shadowMap.type = THREE.PCFSoftShadowMap;
+      r.outputColorSpace = THREE.SRGBColorSpace;
+      // ACES Filmic is what every modern AR/3D viewer (model-viewer,
+      // Sketchfab, IKEA Place) uses — keeps highlights from blowing out and
+      // shadows from crushing to black, so PBR materials render naturally.
+      r.toneMapping = THREE.ACESFilmicToneMapping;
+      r.toneMappingExposure = 1.0;
+      // Anisotropy = sharper textures at oblique angles. Capped to the
+      // device's max so we don't ask for more than the GPU can deliver.
+      r.maxTextureAnisotropy = r.capabilities.getMaxAnisotropy();
+    }
+
+    /**
+     * Builds a small environment map from Three.js's built-in RoomEnvironment.
+     * GLB files use PBR materials (PhysicallyCorrectMaterial), which look
+     * flat and plasticky without something to reflect. RoomEnvironment is
+     * a procedural box of soft area lights that ships with Three.js — it
+     * gives every glossy/metallic surface plausible reflections at zero
+     * runtime cost. Same approach <model-viewer> uses internally.
+     */
+    function buildEnvironment(r) {
+      const pmrem = new THREE.PMREMGenerator(r);
+      const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+      pmrem.dispose();
+      return env;
+    }
+
+    function applyEnvironment(targetScene, env) {
+      targetScene.environment = env;
+      // Don't set scene.background — we use the sky-dome shader on desktop
+      // and the camera feed on mobile.
+    }
+
+    /**
+     * Walks a loaded GLTF scene and applies texture/material polish:
+     *   • castShadow on every mesh
+     *   • disable frustum culling (xrweb's camera moves a lot, causing
+     *     spurious culling pops)
+     *   • set anisotropy on all textures so they stay sharp at angles
+     *   • flag emissive/normal/AO maps with the right color space, since
+     *     not every GLB exporter writes them correctly
+     */
+    function polishGltfScene(root, anisotropy) {
+      root.traverse((child) => {
+        if (!child.isMesh) return;
+        child.castShadow = true;
+        child.receiveShadow = false;
+        child.frustumCulled = false;
+
+        const setTextureProps = (tex, isColor) => {
+          if (!tex) return;
+          tex.anisotropy = anisotropy;
+          if (isColor) tex.colorSpace = THREE.SRGBColorSpace;
+          // Mipmaps are essential for crisp distant rendering. Some GLBs
+          // ship without them generated.
+          tex.minFilter = THREE.LinearMipmapLinearFilter;
+          tex.magFilter = THREE.LinearFilter;
+          tex.generateMipmaps = true;
+          tex.needsUpdate = true;
+        };
+
+        const m = child.material;
+        if (Array.isArray(m)) {
+          m.forEach((mm) => fixMaterialMaps(mm, setTextureProps));
+        } else {
+          fixMaterialMaps(m, setTextureProps);
+        }
+      });
+    }
+
+    function fixMaterialMaps(material, setProps) {
+      if (!material) return;
+      // Diffuse / albedo: sRGB
+      setProps(material.map,            true);
+      setProps(material.emissiveMap,    true);
+      // Linear (data) maps: keep linear color space
+      setProps(material.normalMap,      false);
+      setProps(material.roughnessMap,   false);
+      setProps(material.metalnessMap,   false);
+      setProps(material.aoMap,          false);
+      // Slight nudge — most GLB exports look better with their own
+      // env-map intensity bumped slightly.
+      if (material.envMapIntensity !== undefined) {
+        material.envMapIntensity = 1.0;
+      }
+      material.needsUpdate = true;
+    }
     const gltfLoader  = new GLTFLoader();
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.7/');
@@ -366,13 +456,13 @@
       gltfLoader.load(
         modelUrl,
         (gltf) => {
-          gltf.scene.traverse((child) => {
-            if (child.isMesh) {
-              child.castShadow = true;
-              child.receiveShadow = false;
-              child.frustumCulled = false;
-            }
-          });
+          // Polish texture/material settings on every mesh — sets anisotropy,
+          // ensures correct color spaces, fixes missing mipmaps, etc. The
+          // anisotropy value comes from whatever renderer configureRenderer()
+          // put on it (mobile vs desktop). If renderer isn't ready yet,
+          // fall back to a sane 4x.
+          const aniso = renderer?.maxTextureAnisotropy || 4;
+          polishGltfScene(gltf.scene, aniso);
           prewarmedScene = gltf.scene;
           modelReady = true;
           if (pendingPlace) { placeDish(pendingPlace); pendingPlace = null; }
@@ -734,9 +824,8 @@
           camera   = xrScene.camera;
           renderer = xrScene.renderer;
 
-          renderer.shadowMap.enabled = true;
-          renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-          renderer.outputColorSpace = THREE.SRGBColorSpace;
+          configureRenderer(renderer);
+          applyEnvironment(scene, buildEnvironment(renderer));
 
           addLighting(scene);
           addRaycastAndShadowPlane(scene);
@@ -789,12 +878,11 @@
       renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
       renderer.setPixelRatio(window.devicePixelRatio);
       renderer.setSize(window.innerWidth, window.innerHeight, false);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-      renderer.outputColorSpace = THREE.SRGBColorSpace;
+      configureRenderer(renderer);
       renderer.setClearColor(0xb4c4cc, 1);  // horizon colour fallback
 
       scene  = new THREE.Scene();
+      applyEnvironment(scene, buildEnvironment(renderer));
       camera = new THREE.PerspectiveCamera(
         60, window.innerWidth / window.innerHeight, 0.1, 1000
       );
