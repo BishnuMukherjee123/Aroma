@@ -463,6 +463,16 @@
           // fall back to a sane 4x.
           const aniso = renderer?.maxTextureAnisotropy || 4;
           polishGltfScene(gltf.scene, aniso);
+
+          // Measure the model so we know how far below its origin the bottom
+          // of the geometry sits. We use this in placeDish() to ensure the
+          // visible float gap actually lands above the surface — without it,
+          // GLBs whose origin sits at the geometric centre or near the top
+          // of the bounding box get planted partly through the floor.
+          const bbox = new THREE.Box3().setFromObject(gltf.scene);
+          gltf.scene.userData.bboxMinY = bbox.min.y;
+          gltf.scene.userData.bboxHeight = bbox.max.y - bbox.min.y;
+
           prewarmedScene = gltf.scene;
           modelReady = true;
           if (pendingPlace) { placeDish(pendingPlace); pendingPlace = null; }
@@ -613,7 +623,22 @@
           child.frustumCulled = false;
         }
       });
-      dish.position.set(p.x, p.y, p.z);
+
+      // The float offset (FLOAT_OFFSET_M) is meant to be the visible gap
+      // between the bottom of the GLB geometry and the surface. But the
+      // GLB's origin is wherever the artist put it — for many dish models
+      // the origin is at the geometric centre, so the visible bottom of
+      // the plate sits at (origin.y + bbox.min.y * scale).
+      //
+      // To put the visible bottom at floor + FLOAT_OFFSET_M, we offset the
+      // origin's Y by the negative of the scaled bbox.min.y. That way:
+      //   • bbox.min.y < 0 (origin above bottom) → push origin UP by |min.y * scale|
+      //   • bbox.min.y > 0 (origin below bottom) → pull origin DOWN
+      // Either way the plate's actual underside ends up at the requested gap.
+      const minY = prewarmedScene.userData.bboxMinY ?? 0;
+      const liftY = -minY * p.scale;
+
+      dish.position.set(p.x, p.y + liftY, p.z);
       dish.rotation.y = p.rot;
 
       const target = p.scale;
