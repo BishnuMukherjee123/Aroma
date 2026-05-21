@@ -328,7 +328,7 @@
     // render the same number very differently.
     const BASE_SCALE_MOBILE  = 13.68; // 22.8 × 0.6 — user requested another 40% reduction
     const BASE_SCALE_DESKTOP = 1.5;   // 1 unit ≈ 1 m, so plate ~30 cm wide
-    const FLOAT_OFFSET_M     = 0.11;  // 11 cm absolute float above the floor (was 10 cm, +10%)
+    const FLOAT_OFFSET_M     = 0.12;  // 12 cm absolute float above the floor (was 11 cm, +7%)
     const PINCH_MIN          = 0.25;
     const PINCH_MAX          = 8;
 
@@ -641,19 +641,21 @@
       dish.position.set(p.x, p.y + liftY, p.z);
       dish.rotation.y = p.rot;
 
+      // Ensure consistent scaling: normalize model to 1, then apply target scale dynamically
       const target = p.scale;
-      const start  = 0.0001;
+      const start  = 0.1;
       dish.scale.set(start, start, start);
       scene.add(dish);
       dishMesh = dish;
 
+      // Animate to exactly target scale
       const t0 = performance.now();
       const dur = 350;
       const tick = () => {
         const t = Math.min(1, (performance.now() - t0) / dur);
-        const e = 1 - (1 - t) * (1 - t);  // easeOutQuad
-        const s = start + (target - start) * e;
-        dish.scale.set(s, s, s);
+        const ease = 1 - Math.pow(1 - t, 3);
+        const currentScale = start + ease * (target - start);
+        dish.scale.set(currentScale, currentScale, currentScale);
         if (t < 1) requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
