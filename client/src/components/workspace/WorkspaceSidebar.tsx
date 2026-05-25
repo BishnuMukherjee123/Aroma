@@ -39,7 +39,7 @@ export function WorkspaceSidebar({
     portalVariant === "owner" ? ownerWorkspaceNav : managerWorkspaceNav;
 
   return (
-    <aside className="hidden h-screen w-64 flex-col border-r border-white/75 bg-slate-50/94 px-4 py-4 shadow-[0_8px_34px_rgba(18,28,42,0.05)] backdrop-blur md:fixed md:left-0 md:top-0 md:flex">
+    <aside className="hidden w-64 flex-col border-none bg-[#f7f7f7] px-4 py-4 rounded-[1.25rem] md:fixed md:left-[16px] md:top-[16px] md:flex" style={{ height: 'calc(100vh - 32px)' }}>
       <div className="px-2 py-2">
         <h1 className="text-xl font-bold tracking-[-0.04em] text-on-surface">
           {getPortalTitle(portalVariant)}

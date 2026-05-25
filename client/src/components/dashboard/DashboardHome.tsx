@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { useAuthSession } from "@/hooks/use-auth-session";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardTopbar } from "./DashboardTopbar";
+import { LoadingScreen } from "@/components/ui/LoadingScreen";
 
 type RestaurantBundle = {
   summary: RestaurantCardData;
@@ -102,6 +103,8 @@ export function DashboardHome({
   const [lifecyclePendingRestaurantId, setLifecyclePendingRestaurantId] =
     useState<string | null>(null);
   const [dashboardError, setDashboardError] = useState<string | null>(null);
+  const [sidebarActiveKey, setSidebarActiveKey] = useState<string>("overview");
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   useEffect(() => {
     if (session.status !== "authenticated") {
@@ -190,40 +193,31 @@ export function DashboardHome({
         hasOwnerMembership(session.user.memberships)))
   ) {
     return (
-      <div className="auth-grid flex min-h-screen items-center justify-center">
-        <div className="rounded-[1.35rem] bg-white/90 px-8 py-7 shadow-[0_18px_40px_rgba(18,28,42,0.08)]">
-          <div className="mx-auto spinner-sm border-primary/30 border-t-primary" />
-          <p className="mt-4 text-sm font-semibold text-on-surface-variant">
-            Redirecting to the correct portal...
-          </p>
-        </div>
-      </div>
+      <LoadingScreen
+        message="Redirecting to the correct portal..."
+        className="dashboard-shell"
+      />
     );
   }
 
   if (session.status === "loading" || isBootstrapping) {
     return (
-      <div className="auth-grid flex min-h-screen items-center justify-center">
-        <div className="rounded-[1.35rem] bg-white/90 px-8 py-7 shadow-[0_18px_40px_rgba(18,28,42,0.08)]">
-          <div className="mx-auto spinner-sm border-primary/30 border-t-primary" />
-          <p className="mt-4 text-sm font-semibold text-on-surface-variant">
-            Loading control room...
-          </p>
-        </div>
-      </div>
+      <LoadingScreen
+        message="Loading control room..."
+        className="dashboard-shell"
+      />
     );
   }
 
   if (session.status === "unauthenticated") {
     return (
-      <div className="auth-grid flex min-h-screen items-center justify-center">
-        <div className="rounded-[1.35rem] bg-white/90 px-8 py-7 shadow-[0_18px_40px_rgba(18,28,42,0.08)]">
-          <p className="text-sm font-semibold text-error">{session.message}</p>
-          <p className="mt-2 text-sm text-on-surface-variant">
-            Redirecting you back to the login page.
-          </p>
-        </div>
-      </div>
+      <LoadingScreen
+        message={session.message ?? "Redirecting you back to the login page."}
+        className="dashboard-shell"
+        spinnerColor="#dc2626"
+        spinnerTrackColor="#fecaca"
+        textColor="#dc2626"
+      />
     );
   }
 
@@ -422,10 +416,19 @@ export function DashboardHome({
     : null;
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="dashboard-shell min-h-screen">
       <DashboardSidebar
         createPanelRef={createPanelRef}
         portalVariant={portalVariant}
+        activeKey={sidebarActiveKey}
+        onNavChange={(key) => {
+          setSidebarActiveKey(key);
+          // If clicking "New Location" in sidebar, open the create modal
+          if (key === "create") {
+            setShowCreateModal(true);
+            return;
+          }
+        }}
       />
 
       <main className="min-h-screen md:ml-64">
@@ -434,60 +437,288 @@ export function DashboardHome({
           portalVariant={portalVariant}
         />
 
-        <div className="mx-auto max-w-7xl space-y-10 px-6 py-8 md:px-8">
-          <section className="space-y-3 animate-auth-fade-up">
-            <h1 className="text-[3.4rem] font-extrabold leading-none tracking-[-0.06em] text-on-surface">
-              {portalVariant === "owner"
-                ? "Control Room"
-                : "Manager Console"}
-            </h1>
-            <p className="max-w-2xl text-lg font-medium leading-8 text-on-surface-variant">
-              {portalVariant === "owner"
-                ? "Manage your hospitality ecosystem, monitor active menus, and orchestrate brand growth from a single pane of glass."
-                : "Open the assigned restaurant, update menus and dishes, and share the public menu link or QR without touching owner-only controls."}
-            </p>
+        <div className="mx-auto max-w-7xl space-y-8 px-6 py-8 md:px-8" key={sidebarActiveKey}>
+          {sidebarActiveKey === "restaurants" ? (
+            /* ── Restaurants View ─────────────────────────────────────── */
+            <section className="dash-fade-up space-y-6">
+              <div className="flex flex-wrap items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <h1 className="dash-title text-[2.6rem] font-extrabold leading-none tracking-[-0.04em] text-on-surface">
+                    Restaurants
+                  </h1>
+                  <p className="text-sm font-medium leading-6 text-on-surface-variant">
+                    Manage all your kitchens — open workspace, deactivate, or remove.
+                  </p>
+                </div>
+
+                {portalVariant === "owner" ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(true)}
+                    className="dash-cta inline-flex items-center gap-2 px-5 py-2.5 text-sm font-bold"
+                  >
+                    <span className="material-symbols-outlined text-base">
+                      add
+                    </span>
+                    Add Restaurant
+                  </button>
+                ) : null}
+              </div>
+
+              {restaurants.length === 0 ? (
+                <div className="dash-panel">
+                  <p className="text-sm text-on-surface-variant">
+                    No restaurants yet. Create one from the sidebar.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {restaurants.map((restaurant) => {
+                    const publishedMenus =
+                      restaurant.details?.menus.filter((menu) => menu.isPublished)
+                        .length ?? 0;
+                    const allDishes =
+                      restaurant.details?.menus.flatMap((menu) =>
+                        menu.categories.flatMap((category) => category.dishes),
+                      ) ?? [];
+                    const ready3dAssets = allDishes.flatMap((dish) =>
+                      dish.assets.filter(
+                        (asset) =>
+                          asset.kind === "MODEL_3D" && asset.status === "READY",
+                      ),
+                    ).length;
+
+                    return (
+                      <div
+                        key={restaurant.summary.id}
+                        className="dash-panel space-y-4"
+                      >
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <h3 className="truncate text-lg font-bold text-on-surface">
+                              {restaurant.summary.name}
+                            </h3>
+                            <p className="text-xs text-on-surface-variant">
+                              {restaurant.summary.publicId} ·{" "}
+                              {restaurant.summary.isActive
+                                ? restaurant.summary.isPublished
+                                  ? "Published"
+                                  : "Active (Draft)"
+                                : "Deactivated"}
+                            </p>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Link
+                              href={getWorkspacePath(
+                                portalVariant,
+                                restaurant.summary.id,
+                              )}
+                              className="dash-cta inline-flex items-center gap-2 px-4 py-2 text-xs font-bold"
+                            >
+                              <span className="material-symbols-outlined text-[0.9rem]">
+                                open_in_new
+                              </span>
+                              Open workspace
+                            </Link>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleToggleRestaurantActive(
+                                  restaurant,
+                                  !restaurant.summary.isActive,
+                                )
+                              }
+                              disabled={
+                                lifecyclePendingRestaurantId ===
+                                restaurant.summary.id
+                              }
+                              className="dash-cta-outline inline-flex items-center gap-2 px-4 py-2 text-xs font-bold"
+                            >
+                              <span className="material-symbols-outlined text-[0.9rem]">
+                                {restaurant.summary.isActive
+                                  ? "pause_circle"
+                                  : "play_circle"}
+                              </span>
+                              {restaurant.summary.isActive
+                                ? "Deactivate kitchen"
+                                : "Reactivate kitchen"}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => openLifecycleDialog(restaurant)}
+                              className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
+                            >
+                              <span className="material-symbols-outlined text-[0.9rem]">
+                                delete
+                              </span>
+                              Delete kitchen
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Stats row — Menus, Dishes, 3D Ready */}
+                        <div className="grid grid-cols-3 gap-3 text-center">
+                          <div className="dash-stat-tile">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
+                              Menus
+                            </p>
+                            <p className="mt-1 text-lg font-extrabold text-on-surface">
+                              {publishedMenus}
+                            </p>
+                          </div>
+                          <div className="dash-stat-tile">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
+                              Dishes
+                            </p>
+                            <p className="mt-1 text-lg font-extrabold text-on-surface">
+                              {allDishes.length}
+                            </p>
+                          </div>
+                          <div className="dash-stat-tile">
+                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
+                              3D Ready
+                            </p>
+                            <p className="mt-1 text-lg font-extrabold text-on-surface">
+                              {ready3dAssets}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {dashboardError ? (
+                <div className="rounded-[1rem] bg-error-container px-4 py-3 text-sm font-semibold text-error">
+                  {dashboardError}
+                </div>
+              ) : null}
+            </section>
+          ) : (
+          /* ── Dashboard Overview (default) ───────────────────────────── */
+          <>
+          <section className="dash-fade-up flex flex-wrap items-end justify-between gap-6">
+            <div className="space-y-2">
+              <h1 className="dash-title text-[2.6rem] font-extrabold leading-none tracking-[-0.04em] text-on-surface">
+                Dashboard
+              </h1>
+              <p className="text-sm font-medium leading-6 text-on-surface-variant">
+                {portalVariant === "owner"
+                  ? "Plan, prioritize, and accomplish your tasks with ease."
+                  : "Open assigned restaurants, update menus, and share the public link."}
+              </p>
+            </div>
           </section>
 
-          <section className="grid gap-6 md:grid-cols-3">
-            {statCards(
-              portalVariant,
-              totalRestaurants,
-              activeMenus,
-            ).map((card) => (
-              <div
-                key={card.label}
-                className="rounded-[1.1rem] border-l-4 border-primary bg-surface-container-low p-6 shadow-[0_12px_28px_rgba(18,28,42,0.04)]"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.16em] text-on-surface-variant/80">
-                      {card.label}
+          <section className="grid gap-4 dash-fade-up delay-1 md:grid-cols-2 lg:grid-cols-4">
+            {(() => {
+              const draftRestaurants = restaurants.filter(
+                (r) => !r.summary.isPublished,
+              ).length;
+              const publishedRestaurants = restaurants.filter(
+                (r) => r.summary.isPublished,
+              ).length;
+              const totalDishes = restaurants.reduce(
+                (sum, r) =>
+                  sum +
+                  (r.details?.menus.flatMap((m) =>
+                    m.categories.flatMap((c) => c.dishes),
+                  ).length ?? 0),
+                0,
+              );
+
+              return (
+                <>
+                  <div className="dash-stat-card hero">
+                    <div className="flex items-start justify-between">
+                      <p className="text-base font-semibold">
+                        {portalVariant === "owner"
+                          ? "Total Restaurants"
+                          : "Managed Restaurants"}
+                      </p>
+                      <span className="dash-arrow-chip">
+                        <span className="material-symbols-outlined">
+                          arrow_outward
+                        </span>
+                      </span>
+                    </div>
+                    <p className="mt-6 text-5xl font-extrabold leading-none tracking-[-0.04em]">
+                      {totalRestaurants.toString().padStart(2, "0")}
                     </p>
-                    <p
-                      className={cn(
-                        "mt-2 text-4xl font-extrabold tracking-[-0.05em]",
-                        card.accent ? "text-primary" : "text-on-surface",
-                      )}
-                    >
-                      {card.value}
+                    <p className="mt-3 text-xs font-semibold opacity-90">
+                      <span className="dash-trend-pill">↑ 5</span> Increased
+                      from last month
                     </p>
                   </div>
-                  <span className="material-symbols-outlined text-4xl text-primary/20">
-                    {card.icon}
-                  </span>
-                </div>
-              </div>
-            ))}
+
+                  <div className="dash-stat-card">
+                    <div className="flex items-start justify-between">
+                      <p className="text-base font-semibold">Active Menus</p>
+                      <span className="dash-arrow-chip outline">
+                        <span className="material-symbols-outlined">
+                          arrow_outward
+                        </span>
+                      </span>
+                    </div>
+                    <p className="mt-6 text-5xl font-extrabold leading-none tracking-[-0.04em] text-on-surface">
+                      {activeMenus.toString().padStart(2, "0")}
+                    </p>
+                    <p className="mt-3 text-xs font-semibold text-on-surface-variant">
+                      <span className="dash-trend-pill outline">↑ 2</span>{" "}
+                      Increased from last month
+                    </p>
+                  </div>
+
+                  <div className="dash-stat-card">
+                    <div className="flex items-start justify-between">
+                      <p className="text-base font-semibold">
+                        Published Restaurants
+                      </p>
+                      <span className="dash-arrow-chip outline">
+                        <span className="material-symbols-outlined">
+                          arrow_outward
+                        </span>
+                      </span>
+                    </div>
+                    <p className="mt-6 text-5xl font-extrabold leading-none tracking-[-0.04em] text-on-surface">
+                      {publishedRestaurants.toString().padStart(2, "0")}
+                    </p>
+                    <p className="mt-3 text-xs font-semibold text-on-surface-variant">
+                      <span className="dash-trend-pill outline">↑ 1</span>{" "}
+                      Increased from last month
+                    </p>
+                  </div>
+
+                  <div className="dash-stat-card">
+                    <div className="flex items-start justify-between">
+                      <p className="text-base font-semibold">
+                        Pending / Drafts
+                      </p>
+                      <span className="dash-arrow-chip outline">
+                        <span className="material-symbols-outlined">
+                          arrow_outward
+                        </span>
+                      </span>
+                    </div>
+                    <p className="mt-6 text-5xl font-extrabold leading-none tracking-[-0.04em] text-on-surface">
+                      {draftRestaurants.toString().padStart(2, "0")}
+                    </p>
+                    <p className="mt-3 text-xs font-semibold text-on-surface-variant">
+                      {totalDishes} total dishes across portfolio
+                    </p>
+                  </div>
+                </>
+              );
+            })()}
           </section>
 
           <div className="grid items-start gap-8 lg:grid-cols-12">
             <section
-              className={cn(
-                "space-y-6",
-                portalVariant === "owner"
-                  ? "lg:col-span-8"
-                  : "lg:col-span-12",
-              )}
+              className="space-y-6 lg:col-span-12"
             >
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-bold tracking-[-0.04em] text-on-surface">
@@ -512,7 +743,7 @@ export function DashboardHome({
                 </div>
               ) : null}
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="flex gap-6 overflow-x-auto pb-4 no-scrollbar">
                 {restaurants.length === 0 ? (
                   <div className="rounded-[1.2rem] bg-surface-container-lowest p-8 shadow-[0_18px_40px_rgba(18,28,42,0.06)] md:col-span-2">
                     <h3 className="text-xl font-bold tracking-[-0.03em] text-on-surface">
@@ -547,7 +778,7 @@ export function DashboardHome({
                     return (
                       <article
                         key={restaurant.summary.id}
-                        className="group overflow-hidden rounded-[1.2rem] bg-surface-container-lowest shadow-[0_18px_42px_rgba(18,28,42,0.06)] transition-all hover:-translate-y-1 hover:shadow-[0_24px_54px_rgba(18,28,42,0.08)]"
+                        className="dash-restaurant-card group overflow-hidden rounded-[1.2rem] shadow-[0_18px_42px_rgba(18,28,42,0.06)] min-w-[320px] max-w-[360px] flex-shrink-0"
                       >
                         <div
                           className={cn(
@@ -558,14 +789,14 @@ export function DashboardHome({
                           <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
                           <div className="absolute bottom-4 left-4 flex items-center gap-2">
                             <span
-                              className={cn(
-                                "rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.18em]",
+                              className="dash-status-pill"
+                              data-state={
                                 !restaurant.summary.isActive
-                                  ? "bg-amber-100 text-amber-700"
+                                  ? "deactivated"
                                   : restaurant.summary.isPublished
-                                  ? "bg-tertiary text-white"
-                                  : "bg-white/18 text-white",
-                              )}
+                                    ? "published"
+                                    : "draft"
+                              }
                             >
                               {!restaurant.summary.isActive
                                 ? "Deactivated"
@@ -577,122 +808,14 @@ export function DashboardHome({
                         </div>
 
                         <div className="space-y-4 p-5">
-                          <div className="relative flex items-start justify-between gap-4">
-                            <div>
-                              <h3 className="text-xl font-bold tracking-[-0.03em] text-on-surface">
-                                {restaurant.summary.name}
-                              </h3>
-                              <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
-                                {restaurant.summary.publicId} -{" "}
-                                {getRoleLabel(restaurant.summary.role)} access
-                              </p>
-                            </div>
-
-                            {portalVariant === "owner" ? (
-                              <div className="relative">
-                                <button
-                                  type="button"
-                                  onClick={(event) => {
-                                    event.stopPropagation();
-                                    setActiveCardMenuId((current) =>
-                                      current === restaurant.summary.id
-                                        ? null
-                                        : restaurant.summary.id,
-                                    );
-                                  }}
-                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-surface-container-high text-on-surface-variant"
-                                >
-                                  <span className="material-symbols-outlined text-base">
-                                    more_vert
-                                  </span>
-                                </button>
-
-                                {activeCardMenuId === restaurant.summary.id ? (
-                                  <div
-                                    className="absolute right-0 top-11 z-20 w-52 rounded-[1rem] border border-outline-variant/18 bg-white p-2 shadow-[0_18px_40px_rgba(18,28,42,0.14)]"
-                                    onClick={(event) => event.stopPropagation()}
-                                  >
-                                    <Link
-                                      href={getWorkspacePath(
-                                        portalVariant,
-                                        restaurant.summary.id,
-                                      )}
-                                      className="flex w-full items-center gap-2 rounded-[0.85rem] px-3 py-2.5 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
-                                    >
-                                      <span className="material-symbols-outlined text-base">
-                                        open_in_new
-                                      </span>
-                                      Open workspace
-                                    </Link>
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        void handleToggleRestaurantActive(
-                                          restaurant,
-                                          !restaurant.summary.isActive,
-                                        )
-                                      }
-                                      disabled={
-                                        lifecyclePendingRestaurantId ===
-                                        restaurant.summary.id
-                                      }
-                                      className="flex w-full items-center gap-2 rounded-[0.85rem] px-3 py-2.5 text-left text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-low"
-                                    >
-                                      <span className="material-symbols-outlined text-base">
-                                        {restaurant.summary.isActive
-                                          ? "pause_circle"
-                                          : "play_circle"}
-                                      </span>
-                                      {lifecyclePendingRestaurantId ===
-                                      restaurant.summary.id
-                                        ? restaurant.summary.isActive
-                                          ? "Deactivating..."
-                                          : "Reactivating..."
-                                        : restaurant.summary.isActive
-                                          ? "Deactivate kitchen"
-                                          : "Reactivate kitchen"}
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => openLifecycleDialog(restaurant)}
-                                      className="flex w-full items-center gap-2 rounded-[0.85rem] px-3 py-2.5 text-left text-sm font-semibold text-error transition-colors hover:bg-error-container"
-                                    >
-                                      <span className="material-symbols-outlined text-base">
-                                        delete
-                                      </span>
-                                      Delete kitchen
-                                    </button>
-                                  </div>
-                                ) : null}
-                              </div>
-                            ) : null}
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-3 text-center">
-                            <div className="rounded-[0.9rem] bg-surface-container-low px-3 py-3">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
-                                Menus
-                              </p>
-                              <p className="mt-1 text-lg font-extrabold text-on-surface">
-                                {publishedMenus}
-                              </p>
-                            </div>
-                            <div className="rounded-[0.9rem] bg-surface-container-low px-3 py-3">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
-                                Dishes
-                              </p>
-                              <p className="mt-1 text-lg font-extrabold text-on-surface">
-                                {allDishes.length}
-                              </p>
-                            </div>
-                            <div className="rounded-[0.9rem] bg-surface-container-low px-3 py-3">
-                              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
-                                3D Ready
-                              </p>
-                              <p className="mt-1 text-lg font-extrabold text-on-surface">
-                                {ready3dAssets}
-                              </p>
-                            </div>
+                          <div>
+                            <h3 className="text-xl font-bold tracking-[-0.03em] text-on-surface">
+                              {restaurant.summary.name}
+                            </h3>
+                            <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-on-surface-variant">
+                              {restaurant.summary.publicId} -{" "}
+                              {getRoleLabel(restaurant.summary.role)} access
+                            </p>
                           </div>
 
                           <Link
@@ -700,21 +823,9 @@ export function DashboardHome({
                               portalVariant,
                               restaurant.summary.id,
                             )}
-                            className={cn(
-                              "flex w-full items-center justify-center gap-2 rounded-[0.95rem] px-4 py-3 text-sm font-bold transition-all",
-                              restaurant.summary.isActive &&
-                              restaurant.summary.isPublished
-                                ? "bg-gradient-to-br from-primary to-primary-container text-white shadow-[0_12px_26px_rgba(182,23,34,0.18)]"
-                                : "bg-surface-container-high text-on-surface hover:bg-surface-container-highest",
-                            )}
+                            className="dash-cta flex w-full items-center justify-center gap-2 rounded-[0.95rem] px-4 py-3 text-sm font-bold text-white"
                           >
-                            {portalVariant === "owner"
-                              ? !restaurant.summary.isActive
-                                ? "Review Kitchen"
-                                : restaurant.summary.isPublished
-                                ? "View Dashboard"
-                                : "Continue Setup"
-                              : "Open Workspace"}
+                            Open Workspace
                             <span className="material-symbols-outlined text-base">
                               arrow_forward
                             </span>
@@ -726,91 +837,6 @@ export function DashboardHome({
                 )}
               </div>
             </section>
-
-            {portalVariant === "owner" ? (
-              <aside
-                ref={createPanelRef}
-                className="lg:sticky lg:top-24 lg:col-span-4"
-              >
-                <div className="relative overflow-hidden rounded-[1.5rem] bg-surface-container-low p-8 shadow-[0_18px_40px_rgba(18,28,42,0.06)]">
-                  <div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-primary/8 blur-3xl" />
-                  <div className="relative z-10 space-y-6">
-                    <div>
-                      <h2 className="text-3xl font-bold tracking-[-0.04em] text-on-surface">
-                        Expand Brand
-                      </h2>
-                      <p className="mt-2 text-sm font-medium text-on-surface-variant">
-                        Register a new physical location or digital storefront.
-                      </p>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div>
-                        <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-                          Restaurant Name
-                        </label>
-                        <input
-                          type="text"
-                          value={createName}
-                          onChange={(event) => setCreateName(event.target.value)}
-                          placeholder="e.g. The Golden Truffle"
-                          className="w-full rounded-[0.95rem] bg-white px-4 py-3 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 transition-all placeholder:text-on-surface-variant/55 focus:ring-2 focus:ring-primary/20"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-                          Unique URL Slug
-                        </label>
-                        <div className="flex overflow-hidden rounded-[0.95rem] ring-1 ring-outline-variant/12">
-                          <span className="flex items-center bg-surface-container-low px-3 text-xs font-semibold text-on-surface-variant">
-                            aroma.app/
-                          </span>
-                          <input
-                            type="text"
-                            value={createName
-                              .trim()
-                              .toLowerCase()
-                              .replace(/[^a-z0-9]+/g, "-")
-                              .replace(/^-+|-+$/g, "")}
-                            readOnly
-                            className="w-full bg-white px-4 py-3 text-sm font-medium text-on-surface outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      {createError ? (
-                        <div className="rounded-[0.95rem] bg-error-container px-4 py-3 text-sm font-semibold text-error">
-                          {createError}
-                        </div>
-                      ) : null}
-
-                      <button
-                        type="button"
-                        onClick={handleCreateRestaurant}
-                        disabled={isCreating}
-                        className="flex w-full items-center justify-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-4 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-75"
-                      >
-                        {isCreating ? <span className="spinner-sm" /> : null}
-                        <span className="material-symbols-outlined text-base">
-                          add_business
-                        </span>
-                        Add New Restaurant
-                      </button>
-                    </div>
-
-                    <div className="rounded-[1rem] bg-white/56 p-4 ring-1 ring-white/55">
-                      <p className="text-[11px] italic leading-5 text-on-surface-variant/75">
-                        Each new restaurant is linked to your account
-                        immediately. Public IDs are generated by the backend
-                        after creation, so your routes stay unique and
-                        production-safe.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </aside>
-            ) : null}
           </div>
 
           <section className="grid gap-8 lg:grid-cols-2">
@@ -885,8 +911,102 @@ export function DashboardHome({
               </div>
             </div>
           </section>
+          </>
+          )}
         </div>
       </main>
+
+      {/* ── Create Restaurant Modal (Expand Brand) ─────────────────── */}
+      {showCreateModal ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-md"
+          onClick={() => setShowCreateModal(false)}
+        >
+          <div
+            className="dash-create-panel relative w-full max-w-md overflow-hidden rounded-[1.5rem] p-8 animate-modal-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low"
+            >
+              <span className="material-symbols-outlined text-base">close</span>
+            </button>
+
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold tracking-[-0.04em] text-on-surface">
+                  Expand Brand
+                </h2>
+                <p className="mt-2 text-sm font-medium text-on-surface-variant">
+                  Register a new physical location or digital storefront.
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                    Restaurant Name
+                  </label>
+                  <input
+                    type="text"
+                    value={createName}
+                    onChange={(event) => setCreateName(event.target.value)}
+                    placeholder="e.g. The Golden Truffle"
+                    className="dash-create-input w-full rounded-[0.95rem] px-4 py-3 text-sm font-medium"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                    Unique URL Slug
+                  </label>
+                  <div className="flex overflow-hidden rounded-[0.95rem] ring-1 ring-outline-variant/12">
+                    <span className="flex items-center bg-surface-container-low px-3 text-xs font-semibold text-on-surface-variant">
+                      aroma.app/
+                    </span>
+                    <input
+                      type="text"
+                      value={createName
+                        .trim()
+                        .toLowerCase()
+                        .replace(/[^a-z0-9]+/g, "-")
+                        .replace(/^-+|-+$/g, "")}
+                      readOnly
+                      className="w-full bg-white px-4 py-3 text-sm font-medium text-on-surface outline-none"
+                    />
+                  </div>
+                </div>
+
+                {createError ? (
+                  <div className="rounded-[0.95rem] bg-error-container px-4 py-3 text-sm font-semibold text-error">
+                    {createError}
+                  </div>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCreateRestaurant();
+                    if (!createError && createName.trim()) {
+                      setShowCreateModal(false);
+                    }
+                  }}
+                  disabled={isCreating}
+                  className="dash-cta flex w-full items-center justify-center gap-2 rounded-[1rem] px-5 py-4 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-75"
+                >
+                  {isCreating ? <span className="spinner-sm" /> : null}
+                  <span className="material-symbols-outlined text-base">
+                    add_business
+                  </span>
+                  Add New Restaurant
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {lifecycleDialog && lifecycleDialogMeta ? (
         <div

@@ -138,74 +138,67 @@ export function LoginForm({
   };
 
   return (
-    <div className="rounded-[1.5rem] bg-surface-container-lowest px-8 py-8 shadow-[0_16px_48px_rgba(18,28,42,0.08)] ring-1 ring-outline-variant/12 md:px-9 md:py-9">
+    <div>
       <header>
-        <h2 className="text-[2rem] font-bold tracking-[-0.03em] text-on-surface">
-          {portalHeading}
+        <h2 className="text-[2.2rem] font-bold tracking-[-0.03em] text-gray-900">
+          Welcome Back!
         </h2>
-        <p className="mt-2 text-sm font-medium text-on-surface-variant">
-          {portalDescription}
+        <p className="mt-2 text-sm font-medium text-gray-500">
+          Sign in to your admin portal
         </p>
       </header>
 
-      <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
-        <div className="space-y-2">
+      <form className="mt-8 space-y-5" onSubmit={handleSubmit}>
+        <div className="space-y-1.5">
           <label
-            className="flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.17em] text-on-surface-variant"
+            className="text-sm font-semibold text-gray-700"
             htmlFor="email"
           >
-            <span className="material-symbols-outlined text-[1rem]">mail</span>
-            Email Address
+            Email
           </label>
-          <input
-            id="email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder={
-              portalVariant === "owner"
-                ? "admin@aroma.com"
-                : "manager@restaurant.com"
-            }
-            className="w-full rounded-[0.95rem] bg-surface-container-low px-4 py-3.5 text-[0.98rem] text-on-surface outline-none transition-all placeholder:text-outline focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
-            required
-          />
+          <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+              <span className="material-symbols-outlined text-[1.1rem]">mail</span>
+            </span>
+            <input
+              id="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Type your email address"
+              className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-11 pr-4 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+              required
+            />
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between gap-3">
-            <label
-              className="flex items-center gap-2 text-[0.72rem] font-semibold uppercase tracking-[0.17em] text-on-surface-variant"
-              htmlFor="password"
-            >
-              <span className="material-symbols-outlined text-[1rem]">lock</span>
-              Password
-            </label>
-            <Link
-              href="mailto:support@aromaar.com"
-              className="text-xs font-bold text-primary transition-colors hover:text-primary-container"
-            >
-              Forgot Password?
-            </Link>
-          </div>
-
+        <div className="space-y-1.5">
+          <label
+            className="text-sm font-semibold text-gray-700"
+            htmlFor="password"
+          >
+            Password
+          </label>
           <div className="relative">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+              <span className="material-symbols-outlined text-[1.1rem]">lock</span>
+            </span>
             <input
               id="password"
               type={showPassword ? "text" : "password"}
               autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              placeholder="••••••••"
-              className="w-full rounded-[0.95rem] bg-surface-container-low px-4 py-3.5 pr-12 text-[0.98rem] text-on-surface outline-none transition-all placeholder:text-outline focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/20"
+              placeholder="Type your password"
+              className="w-full rounded-xl border border-gray-200 bg-white py-3 pl-11 pr-12 text-sm text-gray-900 outline-none transition-all placeholder:text-gray-400 focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
               required
             />
             <button
               type="button"
               onClick={() => setShowPassword((value) => !value)}
-              className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full text-outline transition-colors hover:bg-white/70 hover:text-on-surface"
+              className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 transition-colors hover:text-gray-600"
               aria-label={showPassword ? "Hide password" : "Show password"}
             >
               <span className="material-symbols-outlined text-[1.1rem]">
@@ -215,18 +208,8 @@ export function LoginForm({
           </div>
         </div>
 
-        <label className="flex items-center gap-3 text-sm font-medium text-on-surface-variant">
-          <input
-            type="checkbox"
-            checked={rememberMe}
-            onChange={(event) => setRememberMe(event.target.checked)}
-            className="h-4 w-4 rounded border border-outline-variant/70 text-primary accent-primary"
-          />
-          Keep me signed in for 30 days
-        </label>
-
         {errorMessage ? (
-          <div className="rounded-[0.95rem] bg-error-container px-4 py-3 text-sm font-semibold text-error">
+          <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
             {errorMessage}
           </div>
         ) : null}
@@ -234,37 +217,38 @@ export function LoginForm({
         <button
           type="submit"
           disabled={isSubmitting}
-          className={cn(
-            "flex w-full items-center justify-center gap-3 rounded-[0.95rem] bg-gradient-to-br from-primary to-primary-container px-5 py-3.5 text-[1rem] font-bold text-on-primary shadow-[0_12px_24px_rgba(182,23,34,0.22)] transition-all",
-            "hover:-translate-y-0.5 hover:shadow-[0_18px_28px_rgba(182,23,34,0.24)] active:translate-y-0 active:scale-[0.99]",
-            "disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-80 disabled:shadow-[0_8px_16px_rgba(182,23,34,0.16)]",
-          )}
+          className="flex w-full items-center justify-center gap-3 rounded-xl bg-gray-200 px-5 py-3.5 text-sm font-semibold text-gray-500 transition-all hover:bg-gray-300 disabled:cursor-not-allowed disabled:opacity-70"
         >
           {isSubmitting ? <span className="spinner-sm" /> : null}
           {isSubmitting ? "Signing In..." : "Sign In"}
         </button>
       </form>
 
-      <div className="mt-8 border-t border-outline-variant/16 pt-7 text-center">
-        <p className="text-sm font-medium text-on-surface-variant">
-          Need a different portal?
-          <Link
-            href={alternatePortalHref}
-            className="ml-1.5 font-bold text-primary transition-colors hover:text-primary-container"
-          >
-            {alternatePortalLabel}
-          </Link>
-        </p>
-        <p className="mt-3 text-sm font-medium text-on-surface-variant">
-          New restaurant?
-          <Link
-            href="mailto:sales@aromaar.com"
-            className="ml-1.5 font-bold text-primary transition-colors hover:text-primary-container"
-          >
-            Contact Sales
-          </Link>
-        </p>
-      </div>
+      {portalVariant === "manager" ? (
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-500">
+            Need admin access?{" "}
+            <Link
+              href={alternatePortalHref}
+              className="font-semibold text-orange-500 hover:text-orange-600"
+            >
+              Admin Sign In
+            </Link>
+          </p>
+        </div>
+      ) : (
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-500">
+            Restaurant manager?{" "}
+            <Link
+              href={alternatePortalHref}
+              className="font-semibold text-orange-500 hover:text-orange-600"
+            >
+              Manager Sign In
+            </Link>
+          </p>
+        </div>
+      )}
     </div>
   );
 }

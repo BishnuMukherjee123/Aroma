@@ -37,6 +37,7 @@ import {
   type PortalVariant,
 } from "@/lib/portal";
 import { cn } from "@/lib/utils";
+import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { ReadinessCard } from "./ReadinessCard";
 import { WorkspaceHeader } from "./WorkspaceHeader";
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
@@ -633,51 +634,42 @@ export function RestaurantWorkspace({
       (portalVariant === "manager" && isOwnerUser))
   ) {
     return (
-      <div className="auth-grid flex min-h-screen items-center justify-center">
-        <div className="rounded-[1.35rem] bg-white/90 px-8 py-7 shadow-[0_18px_40px_rgba(18,28,42,0.08)]">
-          <div className="mx-auto spinner-sm border-primary/30 border-t-primary" />
-          <p className="mt-4 text-sm font-semibold text-on-surface-variant">
-            Redirecting to the correct portal...
-          </p>
-        </div>
-      </div>
+      <LoadingScreen
+        message="Redirecting to the correct portal..."
+        className="dashboard-shell"
+      />
     );
   }
 
   if (session.status === "loading" || isLoadingRestaurant) {
     return (
-      <div className="auth-grid flex min-h-screen items-center justify-center">
-        <div className="rounded-[1.35rem] bg-white/90 px-8 py-7 shadow-[0_18px_40px_rgba(18,28,42,0.08)]">
-          <div className="mx-auto spinner-sm border-primary/30 border-t-primary" />
-          <p className="mt-4 text-sm font-semibold text-on-surface-variant">
-            Loading workspace...
-          </p>
-        </div>
-      </div>
+      <LoadingScreen
+        message="Loading workspace..."
+        className="dashboard-shell"
+      />
     );
   }
 
   if (session.status === "unauthenticated") {
     return (
-      <div className="auth-grid flex min-h-screen items-center justify-center">
-        <div className="rounded-[1.35rem] bg-white/90 px-8 py-7 shadow-[0_18px_40px_rgba(18,28,42,0.08)]">
-          <p className="text-sm font-semibold text-error">{session.message}</p>
-          <p className="mt-2 text-sm text-on-surface-variant">
-            Redirecting you back to the login page.
-          </p>
-        </div>
-      </div>
+      <LoadingScreen
+        message={session.message ?? "Redirecting you back to the login page."}
+        className="dashboard-shell"
+        spinnerColor="#dc2626"
+        spinnerTrackColor="#fecaca"
+        textColor="#dc2626"
+      />
     );
   }
 
   if (!restaurant || loadError) {
     return (
-      <div className="auth-grid flex min-h-screen items-center justify-center">
-        <div className="max-w-lg rounded-[1.35rem] bg-white/92 px-8 py-7 shadow-[0_18px_40px_rgba(18,28,42,0.08)]">
-          <p className="text-sm font-semibold text-error">
+      <div className="dashboard-shell flex min-h-screen items-center justify-center">
+        <div className="max-w-lg text-center">
+          <p className="text-sm font-semibold text-red-600">
             {loadError ?? "Workspace data is unavailable."}
           </p>
-          <p className="mt-2 text-sm text-on-surface-variant">
+          <p className="mt-2 text-sm text-[var(--dash-text-muted,#5a6660)]">
             Make sure this restaurant belongs to the logged-in account and try
             again from the dashboard.
           </p>
@@ -3081,7 +3073,7 @@ export function RestaurantWorkspace({
     : null;
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="dashboard-shell min-h-screen">
       {toasts.length > 0 ? (
         <div className="pointer-events-none fixed right-4 top-4 z-[70] flex w-[min(92vw,24rem)] flex-col gap-3">
           {toasts.map((toast) => (
@@ -3126,7 +3118,7 @@ export function RestaurantWorkspace({
         }
       />
 
-      <main className="min-h-screen md:ml-64">
+      <main className="min-h-screen">
         <WorkspaceHeader
           restaurantName={restaurant.name}
           publicId={restaurant.publicId}

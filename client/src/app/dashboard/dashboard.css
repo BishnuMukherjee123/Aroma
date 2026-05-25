@@ -1,0 +1,965 @@
+/*
+ * Dashboard custom styles — "Donezo"-style green / cream palette
+ * ─────────────────────────────────────────────────────────────────────────
+ *
+ * Reference visual: a soft cream background, white cards with subtle
+ * shadows, green primary accent, and one bold green hero stat card with
+ * a deep-green time-tracker accent block. Light theme only — overrides
+ * the global dark-theme tokens via .dashboard-shell scope so the rest
+ * of the app stays in dark mode.
+ *
+ * All rules are scoped under .dashboard-shell so they only apply to the
+ * dashboard route.
+ */
+
+/* ─── Palette tokens ──────────────────────────────────────────────────── */
+
+.dashboard-shell {
+  /* Greens */
+  --dash-green-900: #0f3a23;   /* deepest, time-tracker / dark accents */
+  --dash-green-700: #176939;   /* primary green — buttons, active state */
+  --dash-green-600: #1d7a3a;   /* hero stat-card fill */
+  --dash-green-100: #e6f1ea;   /* light tint for icon chips, hover bg */
+  --dash-green-50:  #f0f6f2;   /* very subtle wash */
+
+  /* Neutral / surface */
+  --dash-bg:        #ffffff;   /* page background — pure white */
+  --dash-card:      #ffffff;   /* card surface */
+  --dash-sidebar:   #f7f7f7;   /* sidebar surface — slight off-white */
+  --dash-border:    rgba(15, 28, 19, 0.06);
+  --dash-border-2:  rgba(15, 28, 19, 0.10);
+  --dash-shadow:    0 12px 30px rgba(15, 28, 19, 0.06);
+  --dash-shadow-lg: 0 24px 50px rgba(15, 28, 19, 0.10);
+
+  /* Text */
+  --dash-text:        #14201a;
+  --dash-text-muted:  #5a6660;
+  --dash-text-faint:  #8c958f;
+
+  /* ── Override the global @theme tokens so Tailwind utilities resolve
+     to light-mode values inside .dashboard-shell. This is the root fix
+     for the "red/dark colors leaking through" problem — every utility
+     class that references these tokens (bg-surface, text-on-surface,
+     text-primary, from-primary, etc.) now resolves to green/light
+     values instead of the dark-mode ones in globals.css. ──────────── */
+  --color-background:                #ffffff;
+  --color-on-background:             #14201a;
+  --color-surface:                   #ffffff;
+  --color-surface-dim:               #f7f7f7;
+  --color-surface-container-lowest:  #ffffff;
+  --color-surface-container-low:     #f7f7f7;
+  --color-surface-container:         #f0f0f0;
+  --color-surface-container-high:    #e8e8e8;
+  --color-surface-container-highest: #e0e0e0;
+  --color-surface-bright:            #ffffff;
+  --color-surface-variant:           #e8e8e8;
+  --color-on-surface:                #14201a;
+  --color-on-surface-variant:        #5a6660;
+  --color-primary:                   #176939;
+  --color-primary-container:         #1d7a3a;
+  --color-on-primary:                #ffffff;
+  --color-on-primary-container:      #ffffff;
+  --color-primary-fixed:             #e6f1ea;
+  --color-primary-fixed-dim:         #176939;
+  --color-inverse-primary:           #176939;
+  --color-secondary:                 #5a6660;
+  --color-secondary-container:       #e8e8e8;
+  --color-on-secondary:              #ffffff;
+  --color-on-secondary-container:    #14201a;
+  --color-tertiary:                  #176939;
+  --color-tertiary-container:        #e6f1ea;
+  --color-on-tertiary:               #ffffff;
+  --color-on-tertiary-container:     #0f3a23;
+  --color-error:                     #dc2626;
+  --color-error-container:           #fef2f2;
+  --color-on-error:                  #ffffff;
+  --color-on-error-container:        #dc2626;
+  --color-outline:                   rgba(15, 28, 19, 0.12);
+  --color-outline-variant:           rgba(15, 28, 19, 0.08);
+  --color-inverse-surface:           #14201a;
+  --color-inverse-on-surface:        #ffffff;
+  --color-surface-tint:              #176939;
+}
+
+/* ─── Force light theme inside the dashboard ──────────────────────────
+ * The global stylesheet sets `:root { color-scheme: dark }` and a dark
+ * body background. We flip both back to light just for this page so the
+ * form controls render correctly and the cream page background shows
+ * through.
+ *
+ * NOTE: the wrapper element has both `dashboard-shell` AND `bg-surface`
+ * Tailwind classes. We DON'T zero out the bg here (we used to, which
+ * left the wrapper transparent and made the dark body show through).
+ * Instead we just let `.dashboard-shell { background: cream }` win.
+ */
+.dashboard-shell {
+  color-scheme: light;
+  background: var(--dash-bg);
+  color: var(--dash-text);
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Full-viewport cream backdrop drawn by the dashboard wrapper itself.
+   This guarantees the cream covers everything between the html element
+   and the visible content, regardless of how the body's bg-background
+   utility resolves. The pseudo-element is fixed-position and behind
+   everything else (z-index: -1) so it doesn't intercept clicks. */
+.dashboard-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: var(--dash-bg);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Paint <html> AND <body> cream when the dashboard is mounted, so no
+   dark global background leaks through above/below/around the page.
+   We use double selectors (e.g. body.bg-background:has(...)) to win
+   over Tailwind's bg-background utility on <body> in app/layout.tsx,
+   which has the same specificity but later source order than us.
+   color-scheme: light propagates to the browser's chrome (scrollbars,
+   form controls, the area around <html> on Chrome/Windows) so the
+   dark window frame doesn't show through any more either. */
+:root:has(.dashboard-shell) {
+  color-scheme: light !important;
+  background-color: var(--dash-bg) !important;
+}
+html:has(.dashboard-shell),
+body.bg-background:has(.dashboard-shell),
+body:has(.dashboard-shell) {
+  background-color: var(--dash-bg) !important;
+  background-image: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  color-scheme: light !important;
+}
+
+/* Ensure the dashboard wrapper itself fills the viewport with no gaps. */
+.dashboard-shell {
+  margin: 0 !important;
+  padding: 0;
+}
+
+/* Map the existing on-surface / on-surface-variant utilities to our new
+   text colours so DashboardHome's class soup keeps working. */
+.dashboard-shell .text-on-surface          { color: var(--dash-text) !important; }
+.dashboard-shell .text-on-surface-variant  { color: var(--dash-text-muted) !important; }
+.dashboard-shell .text-on-surface-variant\/70,
+.dashboard-shell .text-on-surface-variant\/80,
+.dashboard-shell .text-on-surface-variant\/60 {
+  color: var(--dash-text-muted) !important;
+}
+.dashboard-shell .text-on-surface\/70 { color: var(--dash-text-muted) !important; }
+
+/* ─── Headline polish ──────────────────────────────────────────────── */
+
+.dashboard-shell .dash-eyebrow {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--dash-border-2);
+  background: var(--dash-card);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--dash-text-muted);
+}
+
+/* No gradient on the title in this design — just a strong dark heading. */
+.dashboard-shell .dash-title {
+  background: none !important;
+  -webkit-background-clip: initial;
+          background-clip: initial;
+  -webkit-text-fill-color: var(--dash-text);
+  color: var(--dash-text);
+}
+
+/* ─── Stat cards ──────────────────────────────────────────────────────
+ * Four cards in the reference: one filled-green "hero" card and three
+ * white cards. We render the first as `.accent` and the rest plain.
+ */
+.dashboard-shell .dash-stat-card {
+  background: var(--dash-card);
+  border: 1px solid var(--dash-border);
+  border-left: none;
+  border-radius: 1.25rem;
+  color: var(--dash-text);
+  box-shadow: var(--dash-shadow);
+  transition:
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.25s ease;
+}
+.dashboard-shell .dash-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--dash-shadow-lg);
+}
+
+/* Filled-green hero card. The DashboardHome component already adds the
+   `.accent` modifier on the stat marked accent:true (the third card).
+   We re-purpose that class for the green fill so the hero stat stands
+   out the way the reference does. */
+.dashboard-shell .dash-stat-card.accent {
+  background: linear-gradient(
+    180deg,
+    var(--dash-green-600) 0%,
+    var(--dash-green-700) 100%
+  );
+  border: 1px solid var(--dash-green-700);
+  color: #ffffff;
+}
+.dashboard-shell .dash-stat-card.accent .text-on-surface,
+.dashboard-shell .dash-stat-card.accent .text-on-surface-variant,
+.dashboard-shell .dash-stat-card.accent .text-on-surface-variant\/80,
+.dashboard-shell .dash-stat-card.accent .text-primary {
+  color: #ffffff !important;
+}
+.dashboard-shell .dash-stat-card.accent .text-primary\/20 {
+  color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* Icon chip in plain stat cards (the green up-arrow in the reference). */
+.dashboard-shell .dash-stat-card:not(.accent) .text-primary\/20 {
+  color: var(--dash-green-700) !important;
+}
+.dashboard-shell .dash-stat-card:not(.accent) .material-symbols-outlined {
+  background: var(--dash-green-100);
+  color: var(--dash-green-700);
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px !important;
+}
+
+/* ─── Restaurant cards ────────────────────────────────────────────── */
+
+.dashboard-shell .dash-restaurant-card {
+  background: var(--dash-card);
+  border: 1px solid var(--dash-border);
+  border-radius: 1.25rem;
+  color: var(--dash-text);
+  box-shadow: var(--dash-shadow);
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.3s ease;
+}
+.dashboard-shell .dash-restaurant-card:hover {
+  border-color: var(--dash-border-2);
+}
+
+/* Status pills, harmonised. */
+.dashboard-shell .dash-status-pill {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  backdrop-filter: blur(6px);
+}
+.dashboard-shell .dash-status-pill[data-state="deactivated"] {
+  background: rgba(217, 119, 87, 0.15);
+  color: #b15a30;
+  border: 1px solid rgba(217, 119, 87, 0.35);
+}
+.dashboard-shell .dash-status-pill[data-state="published"] {
+  background: var(--dash-green-100);
+  color: var(--dash-green-700);
+  border: 1px solid var(--dash-green-700);
+}
+.dashboard-shell .dash-status-pill[data-state="draft"] {
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--dash-text-muted);
+  border: 1px solid var(--dash-border-2);
+}
+
+/* Stats triplet inside each restaurant card. */
+.dashboard-shell .dash-stat-tile {
+  background: var(--dash-green-50);
+  border: 1px solid var(--dash-border);
+  border-radius: 0.9rem;
+  padding: 12px;
+  text-align: center;
+  color: var(--dash-text);
+  transition: background-color 0.2s ease;
+}
+.dashboard-shell .dash-stat-tile:hover {
+  background: var(--dash-green-100);
+}
+
+/* CTA button — pill-shaped solid green, like the reference's "Add
+   Project" / "Start Meeting" buttons. */
+.dashboard-shell .dash-cta {
+  background: var(--dash-green-700);
+  color: #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 10px 22px rgba(23, 105, 57, 0.22);
+  transition:
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+.dashboard-shell .dash-cta:hover {
+  transform: translateY(-1px);
+  background: var(--dash-green-600);
+  box-shadow: 0 14px 30px rgba(23, 105, 57, 0.30);
+}
+
+/* Secondary buttons (Continue Setup, Review Kitchen, etc.) — outlined
+   pills in the reference style. */
+.dashboard-shell .dash-restaurant-card .bg-surface-container-high {
+  background: var(--dash-card) !important;
+  border: 1px solid var(--dash-border-2);
+  border-radius: 999px !important;
+  color: var(--dash-text) !important;
+}
+.dashboard-shell .dash-restaurant-card .bg-surface-container-high:hover {
+  background: var(--dash-green-50) !important;
+  border-color: var(--dash-green-700);
+  color: var(--dash-green-700) !important;
+}
+
+/* ─── Create-restaurant panel ────────────────────────────────────── */
+
+.dashboard-shell .dash-create-panel {
+  background: var(--dash-card);
+  border: 1px solid var(--dash-border);
+  border-radius: 1.5rem;
+  color: var(--dash-text);
+  box-shadow: var(--dash-shadow);
+}
+
+.dashboard-shell .dash-create-input {
+  background: var(--dash-bg);
+  border: 1px solid var(--dash-border-2);
+  border-radius: 999px;
+  color: var(--dash-text);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+.dashboard-shell .dash-create-input::placeholder {
+  color: var(--dash-text-faint);
+}
+.dashboard-shell .dash-create-input:focus {
+  background: #ffffff;
+  border-color: var(--dash-green-700);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(23, 105, 57, 0.15);
+}
+
+/* ─── Card menu (kebab dropdown) ─────────────────────────────────── */
+
+.dashboard-shell .dash-card-menu {
+  background: var(--dash-card);
+  border: 1px solid var(--dash-border-2);
+  box-shadow: 0 24px 48px rgba(15, 28, 19, 0.18);
+  border-radius: 1rem;
+}
+.dashboard-shell .dash-card-menu button,
+.dashboard-shell .dash-card-menu a {
+  color: var(--dash-text);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.dashboard-shell .dash-card-menu button:hover,
+.dashboard-shell .dash-card-menu a:hover {
+  background: var(--dash-green-50);
+  color: var(--dash-green-700);
+}
+.dashboard-shell .dash-card-menu .danger {
+  color: #b13030;
+}
+.dashboard-shell .dash-card-menu .danger:hover {
+  background: rgba(177, 48, 48, 0.08);
+  color: #b13030;
+}
+
+/* ─── Subtle entrance animation ────────────────────────────────────── */
+
+@keyframes dashFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+.dashboard-shell .dash-fade-up {
+  animation: dashFadeUp 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.dashboard-shell .dash-fade-up.delay-1 { animation-delay: 0.05s; }
+.dashboard-shell .dash-fade-up.delay-2 { animation-delay: 0.10s; }
+.dashboard-shell .dash-fade-up.delay-3 { animation-delay: 0.15s; }
+
+/* ─── Reduced-motion users ─────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-shell .dash-stat-card,
+  .dashboard-shell .dash-restaurant-card,
+  .dashboard-shell .dash-cta,
+  .dashboard-shell .dash-fade-up {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * SIDEBAR
+ * The DashboardSidebar component hardcodes a translucent white look
+ * (bg-white/86, border-white/70, primary-red gradient logo). We
+ * neutralise those and re-paint everything in the new green palette.
+ * ───────────────────────────────────────────────────────────────────── */
+
+.dashboard-shell aside.bg-white\/86 {
+  background: var(--dash-sidebar) !important;
+  border: none !important;
+  border-radius: 1.25rem;
+  box-shadow: none;
+  margin: 16px 0 16px 16px;
+  height: calc(100vh - 32px) !important;
+  backdrop-filter: none;
+}
+
+/* Push <main> to the right so the gap between the sidebar's right edge
+   and the main content's left edge matches the gap on the other sides
+   (~20 px). The component sets `md:ml-64` (256 px) which is exactly
+   the sidebar width — leaving 0 px of breathing room. We add 20 px more
+   on top of that.
+   We also turn <main> itself into the large off-white rounded container
+   that holds both the topbar and the dashboard content (matching the
+   sidebar's #f7f7f7 surface). The cards inside stay pure white so they
+   pop against this off-white panel. */
+.dashboard-shell main {
+  margin: 16px;
+  border-radius: 0;
+  background: transparent;
+  min-height: calc(100vh - 32px);
+  padding: 16px 0 0 0;
+}
+@media (min-width: 768px) {
+  .dashboard-shell main {
+    /* Sidebar: 16px left margin + 256px width = ends at 272px.
+       Main starts at 272 + 16px gap = 288px from left edge.
+       That's 16rem + 32px (sidebar margin + gap). */
+    margin-top:    16px;
+    margin-right:  16px;
+    margin-bottom: 16px;
+    margin-left:   calc(16rem + 32px);
+  }
+}
+
+/* The content div inside main (the one with all the dashboard sections)
+   gets its own white rounded panel so it's visually separate from the
+   topbar above it. Includes a fade-in animation triggered by the key
+   prop changing when the user switches sidebar tabs. */
+.dashboard-shell main > div {
+  background: var(--dash-sidebar);
+  border-radius: 1.25rem;
+  padding: 24px;
+  animation: dashContentIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes dashContentIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Brand title + subtitle. */
+.dashboard-shell aside h1.text-primary {
+  color: var(--dash-green-700) !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--dash-green-700);
+}
+.dashboard-shell aside .text-on-surface-variant\/60 {
+  color: var(--dash-text-faint) !important;
+}
+
+/* Square logo tile — was red gradient, now green. */
+.dashboard-shell aside .from-primary.to-primary-container {
+  background: linear-gradient(
+    135deg,
+    var(--dash-green-700) 0%,
+    var(--dash-green-600) 100%
+  ) !important;
+}
+.dashboard-shell aside .from-primary.to-primary-container .material-symbols-outlined {
+  color: #ffffff !important;
+}
+
+/* Nav items — inactive state */
+.dashboard-shell aside nav button {
+  color: var(--dash-text-muted) !important;
+  border-radius: 12px !important;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.dashboard-shell aside nav button:hover {
+  background: var(--dash-green-50) !important;
+  color: var(--dash-green-700) !important;
+}
+
+/* Nav items — active state. The green pill indicator is now a real DOM
+   element that slides between items (see DashboardSidebar.tsx). We keep
+   the active button styling but remove the ::before pseudo-element. */
+.dashboard-shell aside nav button.bg-primary\/8,
+.dashboard-shell aside nav button.text-primary {
+  background: transparent !important;
+  color: var(--dash-text) !important;
+  position: relative;
+  border: none !important;
+  border-radius: 12px !important;
+  padding-left: 16px;
+}
+.dashboard-shell aside nav button.bg-primary\/8 .material-symbols-outlined,
+.dashboard-shell aside nav button.text-primary  .material-symbols-outlined {
+  color: var(--dash-green-700) !important;
+}
+
+/* The sliding pill element itself. */
+.dashboard-shell .dash-nav-pill {
+  pointer-events: none;
+}
+
+/* Footer separator above the New Location / Logout buttons. */
+.dashboard-shell aside .border-outline-variant\/20 {
+  border-top-color: var(--dash-border-2) !important;
+}
+
+/* Sidebar sub-items (restaurant actions under the expanded "Restaurants"
+   nav item). Match the reference's clean icon + text rows. */
+.dashboard-shell .dash-sidebar-sub-item {
+  color: var(--dash-text-muted) !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.dashboard-shell .dash-sidebar-sub-item:hover {
+  background: var(--dash-green-50) !important;
+  color: var(--dash-text) !important;
+}
+.dashboard-shell .dash-sidebar-sub-item .material-symbols-outlined {
+  background: none !important;
+  width: auto !important;
+  height: auto !important;
+  border-radius: 0 !important;
+  color: inherit !important;
+}
+/* Delete action stays red. */
+.dashboard-shell .dash-sidebar-sub-item.text-error {
+  color: #b13030 !important;
+}
+.dashboard-shell .dash-sidebar-sub-item.text-error:hover {
+  background: rgba(177, 48, 48, 0.08) !important;
+  color: #b13030 !important;
+}
+
+/* "New Location" CTA — pill-shaped green like reference's "Add Project". */
+.dashboard-shell aside .from-primary.to-primary-container.text-white {
+  background: var(--dash-green-700) !important;
+  color: #ffffff !important;
+  border-radius: 999px !important;
+  box-shadow: 0 12px 24px rgba(23, 105, 57, 0.22) !important;
+}
+
+/* "Logout" button — outlined pill. */
+.dashboard-shell aside .border-outline-variant\/25 {
+  background: transparent !important;
+  border: 1px solid var(--dash-border-2) !important;
+  border-radius: 999px !important;
+  color: var(--dash-text) !important;
+}
+.dashboard-shell aside .border-outline-variant\/25:hover {
+  background: var(--dash-green-50) !important;
+  border-color: var(--dash-green-700) !important;
+  color: var(--dash-green-700) !important;
+}
+
+/* "Assigned Workspace" link (manager variant) — same pill style. */
+.dashboard-shell aside a.bg-surface-container-low {
+  background: var(--dash-bg) !important;
+  color: var(--dash-text) !important;
+  border-radius: 999px !important;
+}
+.dashboard-shell aside a.bg-surface-container-low:hover {
+  background: var(--dash-green-50) !important;
+  color: var(--dash-green-700) !important;
+}
+
+/* ─── Topbar (DashboardTopbar) overrides ─────────────────────────────
+ * The component renders <header> with bg-surface/88 (dark) plus
+ * border-white/80 and various dark-theme utility classes. We re-paint
+ * everything to the cream / white palette.
+ */
+
+.dashboard-shell header.bg-surface\/88 {
+  background-color: var(--dash-sidebar) !important;
+  border: none !important;
+  border-radius: 1.25rem;
+  box-shadow: none;
+  margin: 0 0 16px 0;
+  padding: 12px 20px;
+  position: static;
+  backdrop-filter: none;
+}
+
+/* Search input. Was bg-surface-container-low (dark) — re-tint to white. */
+.dashboard-shell header input.bg-surface-container-low {
+  background: #ffffff !important;
+  color: var(--dash-text) !important;
+  border: none;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+.dashboard-shell header input.bg-surface-container-low::placeholder {
+  color: var(--dash-text-faint) !important;
+}
+.dashboard-shell header input.bg-surface-container-low:focus {
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(23, 105, 57, 0.15);
+}
+
+/* Search icon. */
+.dashboard-shell header .text-on-surface-variant\/70 {
+  color: var(--dash-text-faint) !important;
+}
+
+/* Notification + Help buttons. Hover state was hover:bg-surface-container-low
+   which was dark — re-tint. */
+.dashboard-shell header button.hover\:bg-surface-container-low:hover {
+  background: var(--dash-green-50) !important;
+  color: var(--dash-green-700) !important;
+}
+.dashboard-shell header button .material-symbols-outlined {
+  color: var(--dash-text-muted);
+}
+
+/* Vertical divider. */
+.dashboard-shell header .bg-outline-variant\/30 {
+  background-color: var(--dash-border-2) !important;
+}
+
+/* Account name + email block. */
+.dashboard-shell header p.text-on-surface { color: var(--dash-text) !important; }
+.dashboard-shell header p.text-on-surface-variant { color: var(--dash-text-muted) !important; }
+
+/* Avatar circle. The component uses a from-surface-container-high to
+   from-surface-container-low gradient with text-primary (red). Re-paint
+   to a soft green initial-circle. */
+.dashboard-shell header .from-surface-container-high.to-surface-container-low {
+  background: var(--dash-green-100) !important;
+  color: var(--dash-green-700) !important;
+}
+
+/* Logout link. */
+.dashboard-shell header a.text-on-surface-variant {
+  color: var(--dash-text-muted) !important;
+}
+.dashboard-shell header a.text-on-surface-variant:hover {
+  color: var(--dash-green-700) !important;
+}
+
+/* ─────────────────────────────────────────────────────────────────────
+ * SAFETY-NET — anywhere else on the dashboard route hardcoding white
+ * surfaces or the primary-red, retint to fit the new palette.
+ * ───────────────────────────────────────────────────────────────────── */
+
+.dashboard-shell .bg-white\/90,
+.dashboard-shell .bg-white\/95 {
+  background-color: var(--dash-card) !important;
+}
+.dashboard-shell .border-white\/70,
+.dashboard-shell .border-white\/40,
+.dashboard-shell .border-outline-variant\/12 {
+  border-color: var(--dash-border-2) !important;
+}
+
+/* Anything still rendering with the old border-l-4 border-primary stripe
+   (we removed it on stat cards but other places might use it). */
+.dashboard-shell .border-primary {
+  border-color: var(--dash-green-700) !important;
+}
+.dashboard-shell .text-primary {
+  color: var(--dash-green-700) !important;
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────
+ * Donezo-style widgets
+ * Adds the layout primitives the reference uses: 4-stat row with one
+ * filled-green hero card, an analytics bar chart, a reminders block,
+ * a recent-activity list, a publication-progress gauge, and a couple
+ * of header buttons. All scoped under .dashboard-shell.
+ * ───────────────────────────────────────────────────────────────────── */
+
+/* ─── Header CTA buttons ──────────────────────────────────────────── */
+
+.dashboard-shell .dash-cta-outline {
+  background: var(--dash-card);
+  color: var(--dash-text);
+  border: 1px solid var(--dash-border-2);
+  border-radius: 999px;
+  transition: background-color 0.2s ease, color 0.2s ease,
+              transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.dashboard-shell .dash-cta-outline:hover {
+  background: var(--dash-green-50);
+  border-color: var(--dash-green-700);
+  color: var(--dash-green-700);
+  transform: translateY(-1px);
+}
+
+/* ─── Stat card upgrades ──────────────────────────────────────────────
+ * The reference has 4 stat cards: one big filled-green hero (left) and
+ * three white cards. We use `.hero` for the green one and re-style the
+ * existing .dash-stat-card to match.
+ */
+.dashboard-shell .dash-stat-card {
+  padding: 24px;
+  border-radius: 1.5rem;
+}
+
+/* The hero variant (filled green). Replaces the old .accent pattern. */
+.dashboard-shell .dash-stat-card.hero {
+  background: linear-gradient(
+    180deg,
+    var(--dash-green-700) 0%,
+    var(--dash-green-900) 100%
+  );
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 18px 40px rgba(15, 28, 19, 0.18);
+}
+.dashboard-shell .dash-stat-card.hero p { color: #ffffff !important; }
+.dashboard-shell .dash-stat-card.hero:hover {
+  box-shadow: 0 24px 50px rgba(15, 28, 19, 0.25);
+}
+
+/* The little arrow chip in each stat card top-right corner. */
+.dashboard-shell .dash-arrow-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.20);
+  color: #ffffff;
+  flex-shrink: 0;
+}
+.dashboard-shell .dash-arrow-chip .material-symbols-outlined {
+  font-size: 18px !important;
+  background: none !important;
+  color: inherit !important;
+  width: auto !important;
+  height: auto !important;
+}
+.dashboard-shell .dash-arrow-chip.outline {
+  background: var(--dash-green-50);
+  color: var(--dash-green-700);
+  border: 1px solid var(--dash-border-2);
+}
+
+/* The "Increased from last month" pill. */
+.dashboard-shell .dash-trend-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  margin-right: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.dashboard-shell .dash-trend-pill.outline {
+  background: var(--dash-green-50);
+  color: var(--dash-green-700);
+  border: 1px solid var(--dash-border-2);
+}
+
+/* ─── Generic content panel ───────────────────────────────────────── */
+
+.dashboard-shell .dash-panel {
+  background: var(--dash-card);
+  border: 1px solid var(--dash-border);
+  border-radius: 1.5rem;
+  box-shadow: var(--dash-shadow);
+  padding: 24px;
+}
+
+/* Pill at the top-right of a panel header (e.g. "This week"). */
+.dashboard-shell .dash-stat-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--dash-green-50);
+  color: var(--dash-green-700);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ─── Analytics bar chart ─────────────────────────────────────────── */
+
+.dashboard-shell .dash-bars {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 12px;
+  align-items: end;
+  margin-top: 24px;
+  height: 220px;
+}
+
+.dashboard-shell .dash-bar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  gap: 12px;
+}
+
+.dashboard-shell .dash-bar {
+  position: relative;
+  width: 100%;
+  max-width: 56px;
+  background: var(--dash-green-50);
+  border-radius: 999px;
+  flex: 0 0 auto;
+  /* Diagonal stripe pattern for inactive bars, like the reference. */
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--dash-green-50) 0,
+    var(--dash-green-50) 6px,
+    rgba(23, 105, 57, 0.08) 6px,
+    rgba(23, 105, 57, 0.08) 8px
+  );
+  border: 1px solid var(--dash-border);
+}
+
+.dashboard-shell .dash-bar.active {
+  background: linear-gradient(
+    180deg,
+    var(--dash-green-600) 0%,
+    var(--dash-green-700) 100%
+  );
+  background-image: none;
+  border: none;
+  box-shadow: 0 8px 18px rgba(23, 105, 57, 0.25);
+}
+
+.dashboard-shell .dash-bar-tag {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.dashboard-shell .dash-bar-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--dash-text-muted);
+}
+
+/* ─── Reminder panel ──────────────────────────────────────────────── */
+
+.dashboard-shell .dash-panel.reminder {
+  background: var(--dash-card);
+}
+
+/* ─── Recent-activity list ────────────────────────────────────────── */
+
+.dashboard-shell .dash-activity {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.dashboard-shell .dash-activity-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-shell .dash-activity-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: var(--dash-green-100);
+  color: var(--dash-green-700);
+  flex-shrink: 0;
+}
+.dashboard-shell .dash-activity-avatar .material-symbols-outlined {
+  font-size: 22px !important;
+}
+
+.dashboard-shell .dash-activity-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--dash-green-50);
+  color: var(--dash-green-700);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ─── Publication-progress gauge ──────────────────────────────────── */
+
+.dashboard-shell .dash-panel.project-progress {
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-shell .dash-gauge {
+  position: relative;
+  margin: 12px auto 4px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.dashboard-shell .dash-gauge svg {
+  width: 100%;
+  display: block;
+}
+
+.dashboard-shell .dash-gauge-center {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translate(-50%, -10%);
+  text-align: center;
+}
+
+.dashboard-shell .dash-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dash-text-muted);
+}
+.dashboard-shell .dash-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.dashboard-shell .dash-legend i.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--dash-green-700);
+}
+.dashboard-shell .dash-legend i.dot.prog    { background: rgba(23, 105, 57, 0.45); }
+.dashboard-shell .dash-legend i.dot.pending { background: var(--dash-text-faint); }

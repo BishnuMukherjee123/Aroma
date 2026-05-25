@@ -1,0 +1,298 @@
+/*
+ * Workspace light-theme overrides
+ * ─────────────────────────────────────────────────────────────────────────
+ * The RestaurantWorkspace component uses dark-theme Tailwind utilities
+ * (bg-surface, text-on-surface, bg-gradient-to-br from-primary, etc.)
+ * that resolve to dark colors via globals.css @theme tokens. We override
+ * those here so the workspace matches the dashboard's green/white palette.
+ *
+ * Scoped under .dashboard-shell (which the workspace wrapper now has).
+ */
+
+/* ─── Global surface overrides ─────────────────────────────────────── */
+
+/* Any element using bg-surface or bg-surface-container-* inside the
+   workspace should render light, not dark. */
+.dashboard-shell .bg-surface-container-low,
+.dashboard-shell .bg-surface-container,
+.dashboard-shell .bg-surface-container-high,
+.dashboard-shell .bg-surface-container-highest {
+  background-color: #f7f7f7 !important;
+}
+
+/* Text colors — force dark text on light backgrounds. */
+.dashboard-shell .text-on-surface {
+  color: #14201a !important;
+}
+.dashboard-shell .text-on-surface-variant {
+  color: #5a6660 !important;
+}
+
+/* ─── Workspace sidebar ────────────────────────────────────────────── */
+
+/* The workspace sidebar uses a fixed dark aside. We re-paint it to
+   match the dashboard sidebar (#f7f7f7, no border). */
+.dashboard-shell aside {
+  background: #f7f7f7 !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Sidebar text */
+.dashboard-shell aside .text-on-surface,
+.dashboard-shell aside .text-on-surface\/70,
+.dashboard-shell aside h1,
+.dashboard-shell aside h2,
+.dashboard-shell aside p {
+  color: #14201a !important;
+}
+.dashboard-shell aside .text-on-surface-variant,
+.dashboard-shell aside .text-on-surface-variant\/60,
+.dashboard-shell aside .text-on-surface-variant\/70 {
+  color: #5a6660 !important;
+}
+
+/* Sidebar nav items */
+.dashboard-shell aside nav button,
+.dashboard-shell aside nav a {
+  color: #5a6660 !important;
+}
+.dashboard-shell aside nav button:hover,
+.dashboard-shell aside nav a:hover {
+  background: #e6f1ea !important;
+  color: #176939 !important;
+}
+
+/* Active nav item in workspace sidebar */
+.dashboard-shell aside nav .bg-primary\/8,
+.dashboard-shell aside nav .text-primary,
+.dashboard-shell aside nav button[data-active="true"],
+.dashboard-shell aside nav a[data-active="true"] {
+  background: transparent !important;
+  color: #14201a !important;
+}
+
+/* ─── Universal gap ────────────────────────────────────────────────────
+ * Every gap in the workspace (sidebar↔content, navbar↔content,
+ * viewport edges, between panels) uses this single value. Change it
+ * once here and the entire layout adjusts. */
+:root {
+  --workspace-gap: 16px;
+}
+
+/* ─── Main area positioning ────────────────────────────────────────── */
+
+.dashboard-shell main.min-h-screen {
+  padding-top: 0 !important;
+  margin: var(--workspace-gap) !important;
+}
+@media (min-width: 768px) {
+  .dashboard-shell main.min-h-screen {
+    /* sidebar left offset + sidebar width + gap */
+    margin-left: calc(16rem + var(--workspace-gap) * 2) !important;
+  }
+}
+
+/* ─── Workspace header / topbar ────────────────────────────────────── */
+
+.dashboard-shell header,
+.dashboard-shell .bg-surface\/88 {
+  background: #f7f7f7 !important;
+  border-color: transparent !important;
+}
+
+.dashboard-shell main > header {
+  background: #f7f7f7 !important;
+  border: none !important;
+  border-radius: 1.25rem;
+  position: static !important;
+  margin: 0 0 var(--workspace-gap) 0 !important;
+  padding: var(--workspace-gap) 20px;
+}
+
+/* ─── Content area below the header ───────────────────────────────── */
+
+.dashboard-shell main > div.bg-slate-50\/55,
+.dashboard-shell main > .flex.flex-col {
+  background: #f7f7f7 !important;
+  border-radius: 1.25rem;
+  margin: 0;
+  padding: var(--workspace-gap);
+}
+
+/* Gap between the two-column layout inside the content area
+   (main content + aside) */
+.dashboard-shell main .flex.flex-col.gap-8 {
+  gap: var(--workspace-gap) !important;
+}
+.dashboard-shell main .xl\:flex-row {
+  gap: var(--workspace-gap) !important;
+}
+
+/* Gap between sections inside the main content column */
+.dashboard-shell main .space-y-6 > * + * {
+  margin-top: var(--workspace-gap) !important;
+}
+.dashboard-shell main .space-y-4 > * + * {
+  margin-top: var(--workspace-gap) !important;
+}
+
+/* Two-column grid layouts (e.g. "Main Menu Layer" + "Create Category",
+   "Restaurant Access" + "Manager Login", "Workspace Settings" + "QR Access").
+   These use Tailwind's gap-6 (24px) — override to use the universal gap. */
+.dashboard-shell main .grid.gap-6 {
+  gap: var(--workspace-gap) !important;
+}
+.dashboard-shell main section.grid {
+  gap: var(--workspace-gap) !important;
+}
+
+/* ─── Universal internal spacing ───────────────────────────────────────
+ * Any child div inside a workspace panel that uses Tailwind's mt-*,
+ * p-*, gap-*, or space-y-* to create separation between sections
+ * should use --workspace-gap instead. This catches things like the
+ * "Guest entry tools" card's internal padding and the gap between
+ * its QR preview and the buttons below it.
+ */
+
+/* Panel internal padding — all rounded panels use p-5 or p-6 (20/24px).
+   Normalize to --workspace-gap. */
+.dashboard-shell main .rounded-\[1\.7rem\],
+.dashboard-shell main .rounded-\[1\.4rem\],
+.dashboard-shell main .rounded-\[1\.5rem\] {
+  padding: var(--workspace-gap) !important;
+}
+
+/* Internal section gaps — mt-6, mt-5, mt-4, mt-8 used between
+   sub-sections inside panels. Override all to --workspace-gap. */
+.dashboard-shell main .mt-6,
+.dashboard-shell main .mt-5,
+.dashboard-shell main .mt-8 {
+  margin-top: var(--workspace-gap) !important;
+}
+
+/* Grid gaps inside panels (e.g. gap-3, gap-4, gap-5 between buttons,
+   form fields, stat tiles). Keep these tighter — use half the gap. */
+.dashboard-shell main .grid.gap-3,
+.dashboard-shell main .grid.gap-4,
+.dashboard-shell main .grid.gap-5 {
+  gap: calc(var(--workspace-gap) * 0.75) !important;
+}
+
+/* Space-y inside panels */
+.dashboard-shell main .space-y-3 > * + *,
+.dashboard-shell main .space-y-5 > * + * {
+  margin-top: var(--workspace-gap) !important;
+}
+
+/* ─── Primary / accent color overrides ─────────────────────────────── */
+
+/* Red gradient buttons → green */
+.dashboard-shell .from-primary.to-primary-container,
+.dashboard-shell .bg-gradient-to-br.from-primary {
+  background: linear-gradient(135deg, #176939 0%, #1d7a3a 100%) !important;
+  /* Kill the red-tinted box-shadow that the component hardcodes via
+     shadow-[0_14px_28px_rgba(182,23,34,0.2)]. Replace with a green one. */
+  box-shadow: 0 14px 28px rgba(23, 105, 57, 0.22) !important;
+  color: #ffffff !important;
+}
+/* Ensure icons inside green gradient buttons are white, not green. */
+.dashboard-shell .from-primary.to-primary-container .material-symbols-outlined,
+.dashboard-shell .bg-gradient-to-br.from-primary .material-symbols-outlined {
+  color: #ffffff !important;
+}
+
+/* Primary text (was red) → green */
+.dashboard-shell .text-primary {
+  color: #176939 !important;
+}
+
+/* Primary border → green */
+.dashboard-shell .border-primary,
+.dashboard-shell .border-primary\/30 {
+  border-color: #176939 !important;
+}
+
+/* Error/red stays red for delete actions — no override needed. */
+
+/* ─── Cards and panels ─────────────────────────────────────────────── */
+
+/* The workspace uses bg-white cards which are fine. But some use
+   bg-surface-container-low for inner sections — make those light. */
+.dashboard-shell .rounded-\[1\.7rem\],
+.dashboard-shell .rounded-\[1\.4rem\] {
+  border-color: rgba(15, 28, 19, 0.06) !important;
+}
+
+/* ─── Tab pills ────────────────────────────────────────────────────── */
+
+/* Active tab — was using primary (red) ring/border. Make it green. */
+.dashboard-shell .ring-primary,
+.dashboard-shell .ring-primary\/20,
+.dashboard-shell .border-primary {
+  --tw-ring-color: #176939 !important;
+  border-color: #176939 !important;
+}
+
+/* ─── Toggle switches ──────────────────────────────────────────────── */
+
+.dashboard-shell .bg-primary {
+  background-color: #176939 !important;
+}
+
+/* ─── Badges / pills ──────────────────────────────────────────────── */
+
+/* "PUBLISHED" badge — green */
+.dashboard-shell .bg-tertiary {
+  background-color: #176939 !important;
+}
+
+/* "MAIN MENU" pill — was red, make green */
+.dashboard-shell .bg-primary-container {
+  background-color: #e6f1ea !important;
+  color: #176939 !important;
+}
+
+/* ─── Misc ─────────────────────────────────────────────────────────── */
+
+/* Dividers */
+.dashboard-shell .border-outline-variant\/20,
+.dashboard-shell .border-outline-variant\/30,
+.dashboard-shell .bg-outline-variant\/30 {
+  border-color: rgba(15, 28, 19, 0.08) !important;
+  background-color: rgba(15, 28, 19, 0.08) !important;
+}
+
+/* The "Back to Portfolio" link */
+.dashboard-shell .text-primary\/80 {
+  color: #176939 !important;
+}
+
+/* Spinner overrides for inline spinners */
+.dashboard-shell .spinner-sm {
+  border-color: #e6f1ea !important;
+  border-top-color: #176939 !important;
+}
+
+/* User avatar circle */
+.dashboard-shell .from-surface-container-high.to-surface-container-low {
+  background: #e6f1ea !important;
+  color: #176939 !important;
+}
+
+/* ─── Kill ALL red-tinted shadows ──────────────────────────────────────
+ * The workspace hardcodes shadow-[0_14px_28px_rgba(182,23,34,0.2)] and
+ * shadow-[0_14px_30px_rgba(182,23,34,0.18)] on multiple buttons. These
+ * produce the pink/red glow behind green buttons. We override any
+ * element inside .dashboard-shell that has an inline box-shadow
+ * containing the red rgba. Since we can't target arbitrary values by
+ * class name, we use a broader selector on the gradient buttons. */
+.dashboard-shell [class*="shadow-[0_14px"] {
+  box-shadow: 0 14px 28px rgba(23, 105, 57, 0.18) !important;
+}
+.dashboard-shell [class*="shadow-[0_10px"] {
+  box-shadow: 0 10px 22px rgba(23, 105, 57, 0.16) !important;
+}
+.dashboard-shell [class*="shadow-[0_12px"] {
+  box-shadow: 0 12px 26px rgba(23, 105, 57, 0.18) !important;
+}
