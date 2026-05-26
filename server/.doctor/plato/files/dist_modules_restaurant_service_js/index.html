@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - dist/modules/restaurant/service.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="https://github.com/the-simian/es6-plato">ES6 Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+      <li class="active">
+        <a href="display.html">Summary Display</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>dist/modules/restaurant/service.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">60.89</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">229</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">70.21</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">2.51</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">var __awaiter = (this &amp;&amp; this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator[&quot;throw&quot;](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+import { prisma } from &quot;../../db/prisma.js&quot;;
+import { conflict, ensureFoundValue } from &quot;../../lib/errors.js&quot;;
+import { createPublicId } from &quot;../../lib/ids.js&quot;;
+import { rebuildPublicRestaurantSnapshot, invalidatePublicRestaurantSnapshot, } from &quot;../../lib/public-menu.js&quot;;
+import { ensureRestaurantRole } from &quot;./access.js&quot;;
+const RESTAURANT_NOT_FOUND = &quot;Restaurant not found&quot;;
+export const createRestaurant = (actorUserId, input) =&gt; __awaiter(void 0, void 0, void 0, function* () {
+    const restaurant = yield prisma.$transaction((tx) =&gt; __awaiter(void 0, void 0, void 0, function* () {
+        const createdRestaurant = yield tx.restaurant.create({
+            data: {
+                name: input.name,
+                publicId: createPublicId(&quot;rest&quot;),
+                ownerId: actorUserId,
+            },
+            select: {
+                id: true,
+                name: true,
+                publicId: true,
+                ownerId: true,
+                isActive: true,
+                isPublished: true,
+                createdAt: true,
+                updatedAt: true,
+            },
+        });
+        yield tx.restaurantMember.create({
+            data: {
+                userId: actorUserId,
+                restaurantId: createdRestaurant.id,
+                role: &quot;OWNER&quot;,
+            },
+        });
+        return createdRestaurant;
+    }));
+    yield rebuildPublicRestaurantSnapshot(restaurant.id);
+    return restaurant;
+});
+export const getRestaurant = (actorUserId, restaurantId) =&gt; __awaiter(void 0, void 0, void 0, function* () {
+    yield ensureRestaurantRole(actorUserId, restaurantId, &quot;EDITOR&quot;);
+    const restaurant = yield prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: {
+            id: true,
+            name: true,
+            publicId: true,
+            ownerId: true,
+            isActive: true,
+            isPublished: true,
+            publicMenuSnapshotUpdatedAt: true,
+            createdAt: true,
+            updatedAt: true,
+            members: {
+                select: {
+                    id: true,
+                    role: true,
+                    user: {
+                        select: {
+                            id: true,
+                            email: true,
+                        },
+                    },
+                },
+            },
+            menus: {
+                orderBy: [{ sortOrder: &quot;asc&quot; }, { createdAt: &quot;asc&quot; }],
+                select: {
+                    id: true,
+                    name: true,
+                    isPublished: true,
+                    sortOrder: true,
+                    categories: {
+                        orderBy: [{ sortOrder: &quot;asc&quot; }, { createdAt: &quot;asc&quot; }],
+                        select: {
+                            id: true,
+                            name: true,
+                            mainMenuId: true,
+                            isPublished: true,
+                            sortOrder: true,
+                            dishes: {
+                                orderBy: [{ sortOrder: &quot;asc&quot; }, { createdAt: &quot;asc&quot; }],
+                                select: {
+                                    id: true,
+                                    name: true,
+                                    price: true,
+                                    currency: true,
+                                    description: true,
+                                    badgeLabel: true,
+                                    servingSize: true,
+                                    detailsPanelEnabled: true,
+                                    crossSellItems: true,
+                                    isPublished: true,
+                                    sortOrder: true,
+                                    dietaryType: true,
+                                    assets: {
+                                        orderBy: [{ createdAt: &quot;asc&quot; }],
+                                        select: {
+                                            id: true,
+                                            kind: true,
+                                            status: true,
+                                            storageKey: true,
+                                            url: true,
+                                            mimeType: true,
+                                            sizeBytes: true,
+                                            createdAt: true,
+                                            updatedAt: true,
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    });
+    return ensureFoundValue(restaurant, RESTAURANT_NOT_FOUND);
+});
+export const updateRestaurant = (actorUserId, restaurantId, input) =&gt; __awaiter(void 0, void 0, void 0, function* () {
+    yield ensureRestaurantRole(actorUserId, restaurantId, &quot;OWNER&quot;);
+    const restaurant = yield prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: {
+            id: true,
+            publicId: true,
+        },
+    });
+    const existingRestaurant = ensureFoundValue(restaurant, RESTAURANT_NOT_FOUND);
+    if (input.publicId !== undefined &amp;&amp;
+        input.publicId !== existingRestaurant.publicId) {
+        const publicIdOwner = yield prisma.restaurant.findUnique({
+            where: { publicId: input.publicId },
+            select: { id: true },
+        });
+        if (publicIdOwner &amp;&amp; publicIdOwner.id !== restaurantId) {
+            conflict(&quot;That public slug is already in use.&quot;);
+        }
+    }
+    const updatedRestaurant = yield prisma.restaurant.update({
+        where: { id: restaurantId },
+        data: Object.assign(Object.assign(Object.assign(Object.assign({}, (input.name !== undefined ? { name: input.name } : {})), (input.publicId !== undefined ? { publicId: input.publicId } : {})), (input.isActive !== undefined ? { isActive: input.isActive } : {})), (input.isPublished !== undefined
+            ? { isPublished: input.isPublished }
+            : {})),
+        select: {
+            id: true,
+            name: true,
+            publicId: true,
+            ownerId: true,
+            isActive: true,
+            isPublished: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+    });
+    if (updatedRestaurant.publicId !== existingRestaurant.publicId) {
+        invalidatePublicRestaurantSnapshot(existingRestaurant.publicId);
+    }
+    yield rebuildPublicRestaurantSnapshot(restaurantId);
+    return updatedRestaurant;
+});
+export const deleteRestaurant = (actorUserId, restaurantId) =&gt; __awaiter(void 0, void 0, void 0, function* () {
+    yield ensureRestaurantRole(actorUserId, restaurantId, &quot;OWNER&quot;);
+    const restaurant = yield prisma.restaurant.findUnique({
+        where: { id: restaurantId },
+        select: {
+            id: true,
+            name: true,
+            publicId: true,
+            members: {
+                where: {
+                    role: &quot;ADMIN&quot;,
+                },
+                select: {
+                    userId: true,
+                },
+            },
+        },
+    });
+    const existingRestaurant = ensureFoundValue(restaurant, RESTAURANT_NOT_FOUND);
+    const managerUserIds = [...new Set(existingRestaurant.members.map((member) =&gt; member.userId))];
+    yield prisma.$transaction((tx) =&gt; __awaiter(void 0, void 0, void 0, function* () {
+        yield tx.asset.deleteMany({
+            where: { restaurantId },
+        });
+        yield tx.dish.deleteMany({
+            where: { restaurantId },
+        });
+        yield tx.menu.deleteMany({
+            where: { restaurantId },
+        });
+        yield tx.mainMenu.deleteMany({
+            where: { restaurantId },
+        });
+        yield tx.restaurantMember.deleteMany({
+            where: { restaurantId },
+        });
+        yield tx.restaurant.delete({
+            where: { id: restaurantId },
+        });
+        for (const managerUserId of managerUserIds) {
+            const remainingMemberships = yield tx.restaurantMember.count({
+                where: { userId: managerUserId },
+            });
+            const remainingOwnedRestaurants = yield tx.restaurant.count({
+                where: { ownerId: managerUserId },
+            });
+            if (remainingMemberships === 0 &amp;&amp; remainingOwnedRestaurants === 0) {
+                yield tx.user.delete({
+                    where: { id: managerUserId },
+                });
+            }
+        }
+    }));
+    invalidatePublicRestaurantSnapshot(existingRestaurant.publicId);
+    return {
+        id: existingRestaurant.id,
+        name: existingRestaurant.name,
+        deleted: true,
+    };
+});
+//# sourceMappingURL=service.js.map</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

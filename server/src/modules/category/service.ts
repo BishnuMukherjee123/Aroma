@@ -1,8 +1,27 @@
 import { prisma } from "../../db/prisma.js";
+import { buildPartialUpdate, dishFieldsSelect, type CreateDishInput } from "../../lib/dish-select.js";
 import { badRequest, ensureFoundValue } from "../../lib/errors.js";
 import { rebuildPublicRestaurantSnapshot } from "../../lib/public-menu.js";
-import type { CrossSellItemInput } from "../../lib/validation.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
+
+const CATEGORY_NOT_FOUND = "Category not found";
+
+/** Resolves a category by id and verifies the actor has EDITOR access. */
+const requireCategoryEditorAccess = async (
+  actorUserId: string,
+  categoryId: string,
+) => {
+  const category = await prisma.menu.findUnique({
+    where: { id: categoryId },
+    select: {
+      id: true,
+      restaurantId: true,
+    },
+  });
+  const existing = ensureFoundValue(category, CATEGORY_NOT_FOUND);
+  await ensureRestaurantRole(actorUserId, existing.restaurantId, "EDITOR");
+  return existing;
+};
 
 export const createCategory = async (
   actorUserId: string,
@@ -51,30 +70,9 @@ export const createCategory = async (
 export const createDishForCategory = async (
   actorUserId: string,
   categoryId: string,
-  input: {
-    name: string;
-    price: number;
-    currency: "USD" | "INR" | "EUR" | "GBP" | "AED";
-    description?: string;
-    badgeLabel?: string | null;
-    servingSize?: number;
-    detailsPanelEnabled?: boolean;
-    crossSellItems?: CrossSellItemInput[];
-    isPublished?: boolean;
-    sortOrder?: number;
-    dietaryType?: "VEG" | "NON_VEG" | "BOTH";
-  },
+  input: CreateDishInput,
 ) => {
-  const category = await prisma.menu.findUnique({
-    where: { id: categoryId },
-    select: {
-      id: true,
-      restaurantId: true,
-    },
-  });
-
-  const existingCategory = ensureFoundValue(category, "Category not found");
-  await ensureRestaurantRole(actorUserId, existingCategory.restaurantId, "EDITOR");
+  const existingCategory = await requireCategoryEditorAccess(actorUserId, categoryId);
 
   const dish = await prisma.dish.create({
     data: {
@@ -92,24 +90,7 @@ export const createDishForCategory = async (
       sortOrder: input.sortOrder ?? 0,
       dietaryType: input.dietaryType,
     },
-    select: {
-      id: true,
-      name: true,
-      price: true,
-      currency: true,
-      description: true,
-      badgeLabel: true,
-      servingSize: true,
-      detailsPanelEnabled: true,
-      crossSellItems: true,
-      restaurantId: true,
-      menuId: true,
-      isPublished: true,
-      sortOrder: true,
-      dietaryType: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    select: dishFieldsSelect,
   });
 
   await rebuildPublicRestaurantSnapshot(existingCategory.restaurantId);
@@ -125,26 +106,11 @@ export const updateCategory = async (
     sortOrder?: number;
   },
 ) => {
-  const category = await prisma.menu.findUnique({
-    where: { id: categoryId },
-    select: {
-      id: true,
-      restaurantId: true,
-    },
-  });
-
-  const existingCategory = ensureFoundValue(category, "Category not found");
-  await ensureRestaurantRole(actorUserId, existingCategory.restaurantId, "EDITOR");
+  const existingCategory = await requireCategoryEditorAccess(actorUserId, categoryId);
 
   const updatedCategory = await prisma.menu.update({
     where: { id: categoryId },
-    data: {
-      ...(input.name !== undefined ? { name: input.name } : {}),
-      ...(input.isPublished !== undefined
-        ? { isPublished: input.isPublished }
-        : {}),
-      ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
-    },
+    data: buildPartialUpdate(input),
     select: {
       id: true,
       name: true,
@@ -178,7 +144,7 @@ export const deleteCategory = async (
     },
   });
 
-  const existingCategory = ensureFoundValue(category, "Category not found");
+  const existingCategory = ensureFoundValue(category, CATEGORY_NOT_FOUND);
   await ensureRestaurantRole(actorUserId, existingCategory.restaurantId, "EDITOR");
 
   if (existingCategory._count.dishes > 0) {

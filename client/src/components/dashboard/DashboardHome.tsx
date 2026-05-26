@@ -447,7 +447,7 @@ export function DashboardHome({
                     Restaurants
                   </h1>
                   <p className="text-sm font-medium leading-6 text-on-surface-variant">
-                    Manage all your kitchens — open workspace, deactivate, or remove.
+                    Manage all your kitchens: open workspace, deactivate, or remove.
                   </p>
                 </div>
 
@@ -852,7 +852,7 @@ export function DashboardHome({
 
               <div className="space-y-4">
                 {limitedActivityItems.length === 0 ? (
-                  <div className="rounded-[1rem] bg-white px-4 py-4 text-sm font-medium text-on-surface-variant">
+                  <div className="rounded-[1rem] bg-white p-4 text-sm font-medium text-on-surface-variant">
                     Activity will appear here once you create restaurants and
                     publish menus.
                   </div>
@@ -929,7 +929,7 @@ export function DashboardHome({
             <button
               type="button"
               onClick={() => setShowCreateModal(false)}
-              className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low"
+              className="absolute right-4 top-4 flex size-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-container-low"
             >
               <span className="material-symbols-outlined text-base">close</span>
             </button>
@@ -946,11 +946,13 @@ export function DashboardHome({
 
               <div className="space-y-4">
                 <div>
-                  <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  <label htmlFor="create-restaurant-name" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                     Restaurant Name
                   </label>
                   <input
+                    id="create-restaurant-name"
                     type="text"
+                    aria-label="Restaurant name"
                     value={createName}
                     onChange={(event) => setCreateName(event.target.value)}
                     placeholder="e.g. The Golden Truffle"
@@ -959,7 +961,7 @@ export function DashboardHome({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  <label htmlFor="create-restaurant-slug" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                     Unique URL Slug
                   </label>
                   <div className="flex overflow-hidden rounded-[0.95rem] ring-1 ring-outline-variant/12">
@@ -967,7 +969,9 @@ export function DashboardHome({
                       aroma.app/
                     </span>
                     <input
+                      id="create-restaurant-slug"
                       type="text"
+                      aria-label="Restaurant URL slug"
                       value={createName
                         .trim()
                         .toLowerCase()

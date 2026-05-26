@@ -43,18 +43,50 @@ type ArDishView = PublicDishPayload & {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+});
+const inrFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "INR",
+  minimumFractionDigits: 2,
+});
+const eurFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+});
+const gbpFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "GBP",
+  minimumFractionDigits: 2,
+});
+const aedFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "AED",
+  minimumFractionDigits: 2,
+});
+
 const formatPrice = (
   value: number,
   currency: PublicDishPayload["currency"] | string | undefined,
-) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency:
-      currency && ["USD", "INR", "EUR", "GBP", "AED"].includes(currency)
-        ? currency
-        : "USD",
-    minimumFractionDigits: 2,
-  }).format(value);
+) => {
+  switch (currency) {
+    case "INR":
+      return inrFormatter.format(value);
+    case "EUR":
+      return eurFormatter.format(value);
+    case "GBP":
+      return gbpFormatter.format(value);
+    case "AED":
+      return aedFormatter.format(value);
+    default:
+      return usdFormatter.format(value);
+  }
+};
+
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
@@ -221,24 +253,26 @@ export function PublicRestaurantMenu({
   const normalizedSearch = deferredSearch.trim().toLowerCase();
 
   const topArDishes = useMemo<ArDishView[]>(() => {
-    return categories.flatMap((category) =>
-      category.dishes
-        .filter((dish) => Boolean(dish.modelUrl))
-        .filter((dish) => {
-          if (!normalizedSearch) return true;
-          return [dish.name, dish.description ?? "", category.name]
+    return categories.flatMap((category) => {
+      const result: ArDishView[] = [];
+      for (const dish of category.dishes) {
+        if (!dish.modelUrl) continue;
+        if (normalizedSearch) {
+          const haystack = [dish.name, dish.description ?? "", category.name]
             .join(" ")
-            .toLowerCase()
-            .includes(normalizedSearch);
-        })
-        .map((dish) => ({
+            .toLowerCase();
+          if (!haystack.includes(normalizedSearch)) continue;
+        }
+        result.push({
           ...dish,
           categoryId: category.id,
           categoryName: category.name,
           menuId: category.menuId,
           menuName: category.menuName,
-        })),
-    );
+        });
+      }
+      return result;
+    });
   }, [categories, normalizedSearch]);
 
   const filteredMenuCategories = useMemo(() => {
@@ -355,7 +389,7 @@ export function PublicRestaurantMenu({
       <div className="min-h-screen bg-background px-4 py-10 flex flex-col items-center justify-center">
         <div className="mx-auto spinner-sm border-primary/30 border-t-primary" />
         <p className="mt-4 text-sm font-semibold text-on-surface-variant">
-          Preparing the digital menu...
+          Preparing the digital menu…
         </p>
       </div>
     );
@@ -383,7 +417,6 @@ export function PublicRestaurantMenu({
             backgroundColor: "rgb(15, 15, 15)",
             transform: 'translateY(0)',
             transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)",
-            willChange: "transform",
           }}
         >
           <div className="max-w-4xl mx-auto px-6 py-4 flex flex-col gap-4">
@@ -410,6 +443,7 @@ export function PublicRestaurantMenu({
                   <input
                     type="text"
                     placeholder="Find dish..."
+                    aria-label="Search dishes"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-9 pr-4 text-xs text-white focus:outline-none focus:border-white/20 transition-all"
@@ -419,6 +453,7 @@ export function PublicRestaurantMenu({
 
               <div className="flex items-center justify-center gap-8 overflow-x-auto scrollbar-hide">
                 <button
+                  type="button"
                   onClick={() => setCurrentMainTab("special")}
                   className={cn(
                     "text-[10px] tracking-[0.2em] font-medium uppercase pb-1 transition-all",
@@ -430,6 +465,7 @@ export function PublicRestaurantMenu({
                   Chef&apos;s Special
                 </button>
                 <button
+                  type="button"
                   onClick={() => setCurrentMainTab("menu")}
                   className={cn(
                     "text-[10px] tracking-[0.2em] font-medium uppercase pb-1 transition-all",
@@ -511,27 +547,27 @@ export function PublicRestaurantMenu({
 const DietaryIcon = ({ dietaryType }: { dietaryType: string | null | undefined }) => {
   if (dietaryType === "VEG") return (
     <span className="inline-flex items-center gap-1 ml-2 bg-emerald-500 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full">
-      <span className="flex items-center justify-center w-[9px] h-[9px] border border-white rounded-[1px]">
-        <span className="w-[4px] h-[4px] bg-white rounded-full" />
+      <span className="flex items-center justify-center size-[9px] border border-white rounded-[1px]">
+        <span className="size-[4px] bg-white rounded-full" />
       </span>
       VEG
     </span>
   );
   if (dietaryType === "NON_VEG") return (
     <span className="inline-flex items-center gap-1 ml-2 bg-red-500 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full">
-      <span className="flex items-center justify-center w-[9px] h-[9px] border border-white rounded-[1px]">
-        <span className="w-[4px] h-[4px] bg-white rounded-full" />
+      <span className="flex items-center justify-center size-[9px] border border-white rounded-[1px]">
+        <span className="size-[4px] bg-white rounded-full" />
       </span>
       NON-VEG
     </span>
   );
   if (dietaryType === "BOTH") return (
     <span className="inline-flex items-center gap-1 ml-2 bg-white/10 text-white text-[9px] font-bold tracking-wide uppercase px-1.5 py-[2px] rounded-full border border-white/20">
-      <span className="flex items-center justify-center w-[9px] h-[9px] border border-emerald-400 rounded-[1px]">
-        <span className="w-[4px] h-[4px] bg-emerald-400 rounded-full" />
+      <span className="flex items-center justify-center size-[9px] border border-emerald-400 rounded-[1px]">
+        <span className="size-[4px] bg-emerald-400 rounded-full" />
       </span>
-      <span className="flex items-center justify-center w-[9px] h-[9px] border border-red-400 rounded-[1px]">
-        <span className="w-[4px] h-[4px] bg-red-400 rounded-full" />
+      <span className="flex items-center justify-center size-[9px] border border-red-400 rounded-[1px]">
+        <span className="size-[4px] bg-red-400 rounded-full" />
       </span>
       VEG &amp; NON-VEG
     </span>

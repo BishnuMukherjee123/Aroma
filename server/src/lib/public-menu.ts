@@ -3,6 +3,8 @@ import { ensureFoundValue, notFound } from "./errors.js";
 import { ExpiringCache } from "./public-menu-cache.js";
 import { config } from "../utils/conf.js";
 
+const RESTAURANT_NOT_FOUND = "Restaurant not found";
+
 type PublicAssetMap = {
   modelUrl: string | null;
   lodUrl: string | null;
@@ -10,7 +12,7 @@ type PublicAssetMap = {
   posterUrl: string | null;
 };
 
-export type PublicDishPayload = {
+type PublicDishPayload = {
   id: string;
   name: string;
   price: number;
@@ -35,14 +37,14 @@ export type PublicDishPayload = {
   posterUrl: string | null;
 };
 
-export type PublicCategoryPayload = {
+type PublicCategoryPayload = {
   id: string;
   name: string;
   sortOrder: number;
   dishes: PublicDishPayload[];
 };
 
-export type PublicMenuPayload = {
+type PublicMenuPayload = {
   id: string;
   name: string;
   sortOrder: number;
@@ -158,7 +160,7 @@ const buildSnapshot = async (
     },
   });
 
-  const existingRestaurant = ensureFoundValue(restaurant, "Restaurant not found");
+  const existingRestaurant = ensureFoundValue(restaurant, RESTAURANT_NOT_FOUND);
 
   return {
     id: existingRestaurant.id,
@@ -264,10 +266,10 @@ export const getPublicRestaurantSnapshot = async (
     },
   });
 
-  const existingRestaurant = ensureFoundValue(restaurant, "Restaurant not found");
+  const existingRestaurant = ensureFoundValue(restaurant, RESTAURANT_NOT_FOUND);
   if (!existingRestaurant.isActive || !existingRestaurant.isPublished) {
     invalidatePublicRestaurantSnapshot(publicId);
-    notFound("Restaurant not found");
+    notFound(RESTAURANT_NOT_FOUND);
   }
 
   const cached = publicMenuCache.get(publicId);

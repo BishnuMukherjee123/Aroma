@@ -11,36 +11,40 @@ import {
 } from "@/lib/portal";
 import { cn } from "@/lib/utils";
 
-const ownerWorkspaceNav = [
-  { label: "Menu & Dishes", icon: "restaurant_menu", active: true },
-  { label: "Team Members", icon: "group", active: false },
-  { label: "Performance", icon: "analytics", active: false },
-  { label: "Store Settings", icon: "settings", active: false },
-] as const;
+type WorkspaceTab = "dishes" | "menus" | "team" | "settings";
 
-const managerWorkspaceNav = [
-  { label: "Menu & Dishes", icon: "restaurant_menu", active: true },
-  { label: "Share & QR", icon: "qr_code_2", active: false },
-  { label: "Workspace Access", icon: "badge", active: false },
-] as const;
+const ownerWorkspaceNav: Array<{ id: WorkspaceTab; label: string; icon: string }> = [
+  { id: "dishes", label: "Manage Dishes", icon: "restaurant_menu" },
+  { id: "team", label: "Manager Access", icon: "group" },
+  { id: "settings", label: "Settings", icon: "settings" },
+];
+
+const managerWorkspaceNav: Array<{ id: WorkspaceTab; label: string; icon: string }> = [
+  { id: "dishes", label: "Manage Dishes", icon: "restaurant_menu" },
+  { id: "settings", label: "Share & QR", icon: "qr_code_2" },
+];
 
 export function WorkspaceSidebar({
   profileLabel,
   profileCaption,
   homePath,
   portalVariant = "owner",
+  activeTab = "dishes",
+  onTabChange,
 }: {
   profileLabel: string;
   profileCaption: string;
   homePath: string;
   portalVariant?: PortalVariant;
+  activeTab?: WorkspaceTab;
+  onTabChange?: (tab: WorkspaceTab) => void;
 }) {
   const workspaceNav =
     portalVariant === "owner" ? ownerWorkspaceNav : managerWorkspaceNav;
 
   return (
-    <aside className="hidden w-64 flex-col border-none bg-[#f7f7f7] px-4 py-4 rounded-[1.25rem] md:fixed md:left-[16px] md:top-[16px] md:flex" style={{ height: 'calc(100vh - 32px)' }}>
-      <div className="px-2 py-2">
+    <aside className="hidden w-64 flex-col border-none bg-[#f7f7f7] p-4 rounded-[1.25rem] md:fixed md:left-[16px] md:top-[16px] md:flex" style={{ height: 'calc(100vh - 32px)' }}>
+      <div className="p-2">
         <h1 className="text-xl font-bold tracking-[-0.04em] text-on-surface">
           {getPortalTitle(portalVariant)}
         </h1>
@@ -70,11 +74,12 @@ export function WorkspaceSidebar({
 
         {workspaceNav.map((item) => (
           <button
-            key={item.label}
+            key={item.id}
             type="button"
+            onClick={() => onTabChange?.(item.id)}
             className={cn(
               "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-left text-sm font-semibold transition-all",
-              item.active
+              activeTab === item.id
                 ? "border-r-4 border-primary bg-white text-primary shadow-[0_10px_22px_rgba(18,28,42,0.04)]"
                 : "text-on-surface/70 hover:bg-white hover:text-on-surface",
             )}
@@ -89,7 +94,7 @@ export function WorkspaceSidebar({
 
       <div className="mt-auto space-y-3 p-2">
         <div className="flex items-center gap-3 rounded-[1.2rem] bg-white p-3 shadow-[0_10px_24px_rgba(18,28,42,0.05)]">
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-primary/12 to-surface-container-high text-sm font-bold text-primary">
+          <div className="flex size-11 items-center justify-center rounded-full bg-gradient-to-br from-primary/12 to-surface-container-high text-sm font-bold text-primary">
             {profileLabel.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">

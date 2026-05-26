@@ -1,0 +1,20 @@
+{
+  "env": { "node": true, "es2021": true },
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["node", "security", "sonarjs", "@typescript-eslint"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:node/recommended",
+    "plugin:security/recommended",
+    "plugin:sonarjs/recommended",
+    "plugin:@typescript-eslint/recommended"
+  ],
+  "rules": {
+    "sonarjs/no-duplicate-string": "warn",
+    "sonarjs/cognitive-complexity": ["warn", 10],
+    "sonarjs/no-identical-functions": "error",
+    "node/no-unsupported-features/es-syntax": "off",
+    "node/no-missing-import": "off",
+    "node/no-unpublished-import": "off"
+  }
+}

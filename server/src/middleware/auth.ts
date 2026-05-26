@@ -10,11 +10,12 @@ export const requireAuth = async (
   next: NextFunction,
 ): Promise<void> => {
   const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     unauthorized("Missing bearer token");
+    return;
   }
 
-  const token = authHeader!.slice("Bearer ".length).trim();
+  const token = authHeader.slice("Bearer ".length).trim();
   const payload = verifyAuthToken(token);
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },

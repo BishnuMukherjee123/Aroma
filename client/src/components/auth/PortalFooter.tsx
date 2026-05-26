@@ -16,7 +16,7 @@ export function PortalFooter() {
               {link.label}
             </Link>
             {index < footerLinks.length - 1 ? (
-              <span className="h-1 w-1 rounded-full bg-outline-variant" />
+              <span className="size-1 rounded-full bg-outline-variant" />
             ) : null}
           </div>
         ))}

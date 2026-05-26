@@ -1,0 +1,8 @@
+{
+  "ignore": [
+    "src/generated/**",
+    "**/generated/**",
+    "src/generated/**/*",
+    "**/generated/**/*"
+  ]
+}

@@ -118,17 +118,19 @@ export async function launchDirectAr(options: {
   document.body.appendChild(launcher);
 
   try {
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => resolve());
-      });
-    });
-
+    // Guard first (synchronous) so the skip path stays fast — avoids waiting
+    // two rAF ticks before discovering AR isn't supported on this device.
     if (!launcher.activateAR) {
       throw new Error(
         "AR could not open here. Try Chrome on Android or Safari on iPhone.",
       );
     }
+
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => resolve());
+      });
+    });
 
     await launcher.activateAR();
   } finally {

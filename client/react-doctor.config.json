@@ -1,0 +1,40 @@
+{
+  "ignore": {
+    "files": [
+      "**/public/8thwall/vendor/**"
+    ],
+    "rules": [
+      "deslop/unused-file",
+      "react-doctor/no-event-handler",
+      "react-doctor/no-derived-state",
+      "react-doctor/no-giant-component",
+      "react-doctor/prefer-useReducer",
+      "react-doctor/no-cascading-set-state",
+      "react-doctor/no-pass-data-to-parent",
+      "react-doctor/design-no-redundant-size-axes",
+      "react-doctor/design-no-redundant-padding-axes",
+      "react-doctor/no-noninteractive-element-interactions",
+      "react-doctor/no-static-element-interactions",
+      "react-doctor/click-events-have-key-events",
+      "react-doctor/no-render-in-render",
+      "react-doctor/react-compiler-destructure-method",
+      "react-doctor/nextjs-no-client-side-redirect",
+      "react-doctor/nextjs-no-img-element",
+      "react-doctor/no-chain-state-updates",
+      "react-doctor/exhaustive-deps",
+      "react-doctor/async-parallel",
+      "react-doctor/no-danger",
+      "react-doctor/no-initialize-state",
+      "react-doctor/js-combine-iterations",
+      "react-doctor/nextjs-no-font-link",
+      "react-doctor/no-many-boolean-props",
+      "react-doctor/rendering-hydration-mismatch-time",
+      "react-doctor/no-adjust-state-on-prop-change",
+      "react-doctor/async-await-in-loop",
+      "react-doctor/no-autofocus",
+      "react-doctor/no-wide-letter-spacing",
+      "react-doctor/rerender-state-only-in-handlers",
+      "react-doctor/control-has-associated-label"
+    ]
+  }
+}

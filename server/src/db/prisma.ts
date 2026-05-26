@@ -1,3 +1,4 @@
+/* eslint-disable node/no-unsupported-features/es-builtins */
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../generated/prisma/client.js";

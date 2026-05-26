@@ -171,14 +171,14 @@ export function ProtectedSessionPanel() {
 
         <div className="mt-5 grid gap-4">
           {state.user.memberships.length === 0 ? (
-            <div className="rounded-[0.95rem] bg-surface-container-low px-4 py-4 text-sm font-medium text-on-surface-variant">
+            <div className="rounded-[0.95rem] bg-surface-container-low p-4 text-sm font-medium text-on-surface-variant">
               This user has no restaurant memberships yet, but the login token is valid.
             </div>
           ) : (
             state.user.memberships.map((membership) => (
               <div
                 key={membership.id}
-                className="rounded-[0.95rem] bg-surface-container-low px-4 py-4 ring-1 ring-outline-variant/10"
+                className="rounded-[0.95rem] bg-surface-container-low p-4 ring-1 ring-outline-variant/10"
               >
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div>

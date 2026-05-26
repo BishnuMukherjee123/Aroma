@@ -15,6 +15,8 @@ export const createAuthRouter = (): Router => {
 
   router.post("/register", authLimiter, asyncHandler(controller.register));
   router.post("/login", authLimiter, asyncHandler(controller.login));
+  router.post("/otp/send", authLimiter, asyncHandler(controller.sendOtp));
+  router.post("/otp/verify", authLimiter, asyncHandler(controller.verifyOtp));
   router.get("/me", asyncHandler(requireAuth), asyncHandler(controller.me));
 
   return router;

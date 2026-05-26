@@ -28,7 +28,7 @@ export default function App() {
       >
         {/* Assets — loaded from /public/assets/ */}
         <a-assets>
-          <img id="groundTex" src="/assets/sand.jpg" />
+          <img id="groundTex" src="/assets/sand.jpg" alt="" />
           <a-asset-item id="cactusModel" src="/assets/10.glb"></a-asset-item>
         </a-assets>
 

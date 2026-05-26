@@ -795,3 +795,22 @@ export const uploadFileToSignedUrl = async ({
     throw new Error("Upload to storage failed.");
   }
 };
+
+export const sendOtpRequest = async (input: {
+  email: string;
+}): Promise<{ success: boolean; message: string }> => {
+  return apiRequest<{ success: boolean; message: string }>("/api/v1/auth/otp/send", {
+    method: "POST",
+    body: input,
+  });
+};
+
+export const verifyOtpRequest = async (input: {
+  email: string;
+  code: string;
+}): Promise<{ user: AuthUser; token: string }> => {
+  return apiRequest<{ user: AuthUser; token: string }>("/api/v1/auth/otp/verify", {
+    method: "POST",
+    body: input,
+  });
+};

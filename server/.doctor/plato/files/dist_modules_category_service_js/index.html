@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - dist/modules/category/service.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="https://github.com/the-simian/es6-plato">ES6 Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+      <li class="active">
+        <a href="display.html">Summary Display</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>dist/modules/category/service.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">61.25</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">155</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">69.84</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.94</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">var __awaiter = (this &amp;&amp; this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator[&quot;throw&quot;](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+import { prisma } from &quot;../../db/prisma.js&quot;;
+import { badRequest, ensureFoundValue } from &quot;../../lib/errors.js&quot;;
+import { rebuildPublicRestaurantSnapshot } from &quot;../../lib/public-menu.js&quot;;
+import { ensureRestaurantRole } from &quot;../restaurant/access.js&quot;;
+const CATEGORY_NOT_FOUND = &quot;Category not found&quot;;
+export const createCategory = (actorUserId, mainMenuId, input) =&gt; __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const mainMenu = yield prisma.mainMenu.findUnique({
+        where: { id: mainMenuId },
+        select: {
+            id: true,
+            restaurantId: true,
+        },
+    });
+    const existingMainMenu = ensureFoundValue(mainMenu, &quot;Main menu not found&quot;);
+    yield ensureRestaurantRole(actorUserId, existingMainMenu.restaurantId, &quot;EDITOR&quot;);
+    const category = yield prisma.menu.create({
+        data: {
+            restaurantId: existingMainMenu.restaurantId,
+            mainMenuId: existingMainMenu.id,
+            name: input.name,
+            isPublished: (_a = input.isPublished) !== null &amp;&amp; _a !== void 0 ? _a : true,
+            sortOrder: (_b = input.sortOrder) !== null &amp;&amp; _b !== void 0 ? _b : 0,
+        },
+        select: {
+            id: true,
+            name: true,
+            restaurantId: true,
+            mainMenuId: true,
+            isPublished: true,
+            sortOrder: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+    });
+    yield rebuildPublicRestaurantSnapshot(existingMainMenu.restaurantId);
+    return category;
+});
+export const createDishForCategory = (actorUserId, categoryId, input) =&gt; __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d, _e;
+    const category = yield prisma.menu.findUnique({
+        where: { id: categoryId },
+        select: {
+            id: true,
+            restaurantId: true,
+        },
+    });
+    const existingCategory = ensureFoundValue(category, CATEGORY_NOT_FOUND);
+    yield ensureRestaurantRole(actorUserId, existingCategory.restaurantId, &quot;EDITOR&quot;);
+    const dish = yield prisma.dish.create({
+        data: {
+            menuId: existingCategory.id,
+            restaurantId: existingCategory.restaurantId,
+            name: input.name,
+            price: input.price,
+            currency: input.currency,
+            description: input.description,
+            badgeLabel: input.badgeLabel,
+            servingSize: (_a = input.servingSize) !== null &amp;&amp; _a !== void 0 ? _a : 2,
+            detailsPanelEnabled: (_b = input.detailsPanelEnabled) !== null &amp;&amp; _b !== void 0 ? _b : true,
+            crossSellItems: (_c = input.crossSellItems) !== null &amp;&amp; _c !== void 0 ? _c : [],
+            isPublished: (_d = input.isPublished) !== null &amp;&amp; _d !== void 0 ? _d : false,
+            sortOrder: (_e = input.sortOrder) !== null &amp;&amp; _e !== void 0 ? _e : 0,
+            dietaryType: input.dietaryType,
+        },
+        select: {
+            id: true,
+            name: true,
+            price: true,
+            currency: true,
+            description: true,
+            badgeLabel: true,
+            servingSize: true,
+            detailsPanelEnabled: true,
+            crossSellItems: true,
+            restaurantId: true,
+            menuId: true,
+            isPublished: true,
+            sortOrder: true,
+            dietaryType: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+    });
+    yield rebuildPublicRestaurantSnapshot(existingCategory.restaurantId);
+    return dish;
+});
+export const updateCategory = (actorUserId, categoryId, input) =&gt; __awaiter(void 0, void 0, void 0, function* () {
+    const category = yield prisma.menu.findUnique({
+        where: { id: categoryId },
+        select: {
+            id: true,
+            restaurantId: true,
+        },
+    });
+    const existingCategory = ensureFoundValue(category, CATEGORY_NOT_FOUND);
+    yield ensureRestaurantRole(actorUserId, existingCategory.restaurantId, &quot;EDITOR&quot;);
+    const updatedCategory = yield prisma.menu.update({
+        where: { id: categoryId },
+        data: Object.assign(Object.assign(Object.assign({}, (input.name !== undefined ? { name: input.name } : {})), (input.isPublished !== undefined
+            ? { isPublished: input.isPublished }
+            : {})), (input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {})),
+        select: {
+            id: true,
+            name: true,
+            restaurantId: true,
+            mainMenuId: true,
+            isPublished: true,
+            sortOrder: true,
+            createdAt: true,
+            updatedAt: true,
+        },
+    });
+    yield rebuildPublicRestaurantSnapshot(existingCategory.restaurantId);
+    return updatedCategory;
+});
+export const deleteCategory = (actorUserId, categoryId) =&gt; __awaiter(void 0, void 0, void 0, function* () {
+    const category = yield prisma.menu.findUnique({
+        where: { id: categoryId },
+        select: {
+            id: true,
+            restaurantId: true,
+            _count: {
+                select: {
+                    dishes: true,
+                },
+            },
+        },
+    });
+    const existingCategory = ensureFoundValue(category, CATEGORY_NOT_FOUND);
+    yield ensureRestaurantRole(actorUserId, existingCategory.restaurantId, &quot;EDITOR&quot;);
+    if (existingCategory._count.dishes &gt; 0) {
+        badRequest(&quot;Delete or move dishes out of this category before removing it.&quot;);
+    }
+    yield prisma.menu.delete({
+        where: {
+            id: existingCategory.id,
+        },
+    });
+    yield rebuildPublicRestaurantSnapshot(existingCategory.restaurantId);
+    return {
+        id: existingCategory.id,
+        deleted: true,
+    };
+});
+//# sourceMappingURL=service.js.map</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

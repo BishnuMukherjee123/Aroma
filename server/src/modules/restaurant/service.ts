@@ -1,11 +1,14 @@
 import { prisma } from "../../db/prisma.js";
 import { conflict, ensureFoundValue } from "../../lib/errors.js";
+import { dishFieldsWithAssetsSelect } from "../../lib/dish-select.js";
 import { createPublicId } from "../../lib/ids.js";
 import {
   rebuildPublicRestaurantSnapshot,
   invalidatePublicRestaurantSnapshot,
 } from "../../lib/public-menu.js";
 import { ensureRestaurantRole } from "./access.js";
+
+const RESTAURANT_NOT_FOUND = "Restaurant not found";
 
 export const createRestaurant = async (
   actorUserId: string,
@@ -89,34 +92,7 @@ export const getRestaurant = async (actorUserId: string, restaurantId: string) =
               sortOrder: true,
               dishes: {
                 orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-                select: {
-                  id: true,
-                  name: true,
-                  price: true,
-                  currency: true,
-                  description: true,
-                  badgeLabel: true,
-                  servingSize: true,
-                  detailsPanelEnabled: true,
-                  crossSellItems: true,
-                  isPublished: true,
-                  sortOrder: true,
-                  dietaryType: true,
-                  assets: {
-                    orderBy: [{ createdAt: "asc" }],
-                    select: {
-                      id: true,
-                      kind: true,
-                      status: true,
-                      storageKey: true,
-                      url: true,
-                      mimeType: true,
-                      sizeBytes: true,
-                      createdAt: true,
-                      updatedAt: true,
-                    },
-                  },
-                },
+                select: dishFieldsWithAssetsSelect,
               },
             },
           },
@@ -125,7 +101,7 @@ export const getRestaurant = async (actorUserId: string, restaurantId: string) =
     },
   });
 
-  return ensureFoundValue(restaurant, "Restaurant not found");
+  return ensureFoundValue(restaurant, RESTAURANT_NOT_FOUND);
 };
 
 export const updateRestaurant = async (
@@ -148,7 +124,7 @@ export const updateRestaurant = async (
     },
   });
 
-  const existingRestaurant = ensureFoundValue(restaurant, "Restaurant not found");
+  const existingRestaurant = ensureFoundValue(restaurant, RESTAURANT_NOT_FOUND);
 
   if (
     input.publicId !== undefined &&
@@ -217,7 +193,7 @@ export const deleteRestaurant = async (
     },
   });
 
-  const existingRestaurant = ensureFoundValue(restaurant, "Restaurant not found");
+  const existingRestaurant = ensureFoundValue(restaurant, RESTAURANT_NOT_FOUND);
   const managerUserIds = [...new Set(existingRestaurant.members.map((member) => member.userId))];
 
   await prisma.$transaction(async (tx) => {

@@ -72,9 +72,9 @@ export function DashboardSidebar({
   }, [activeKey, primaryNav]);
 
   return (
-    <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/70 bg-white/86 px-4 py-4 shadow-[0_8px_34px_rgba(18,28,42,0.05)] backdrop-blur md:fixed md:left-0 md:top-0 md:flex">
+    <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-white/70 bg-white/86 p-4 shadow-[0_8px_34px_rgba(18,28,42,0.05)] backdrop-blur md:fixed md:left-0 md:top-0 md:flex">
       <div className="mb-8 flex items-center gap-3 px-2">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-white shadow-[0_10px_22px_rgba(182,23,34,0.18)]">
+        <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-container text-white shadow-[0_10px_22px_rgba(182,23,34,0.18)]">
           <span
             className="material-symbols-outlined"
             style={{ fontVariationSettings: '"FILL" 1' }}

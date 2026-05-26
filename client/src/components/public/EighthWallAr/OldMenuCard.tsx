@@ -83,16 +83,46 @@ export type MenuCardDish = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const VALID_CURRENCIES = new Set(["USD", "INR", "EUR", "GBP", "AED"]);
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 2,
+});
+const inrFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "INR",
+  minimumFractionDigits: 2,
+});
+const eurFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+});
+const gbpFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "GBP",
+  minimumFractionDigits: 2,
+});
+const aedFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "AED",
+  minimumFractionDigits: 2,
+});
 
-const formatPrice = (value: number, currency?: string | null) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: currency && VALID_CURRENCIES.has(currency) ? currency : "USD",
-    minimumFractionDigits: 2,
-  })
-    .format(value)
-    .replace(".00", "");
+const formatPrice = (value: number, currency?: string | null) => {
+  switch (currency) {
+    case "INR":
+      return inrFormatter.format(value).replace(".00", "");
+    case "EUR":
+      return eurFormatter.format(value).replace(".00", "");
+    case "GBP":
+      return gbpFormatter.format(value).replace(".00", "");
+    case "AED":
+      return aedFormatter.format(value).replace(".00", "");
+    default:
+      return usdFormatter.format(value).replace(".00", "");
+  }
+};
 
 // ─── MenuCard ─────────────────────────────────────────────────────────────────
 
@@ -540,7 +570,7 @@ export const MenuCard = memo(function MenuCard({
             <span className="price">{formatPrice(dish.price, dish.currency)}</span>
             <span className="dot"></span>
             <span>
-              <span role="img" aria-label={`${servingSize} people`}>👥</span> Good for{" "}
+              <span aria-label={`${servingSize} people`} aria-hidden="false">👥</span> Good for{" "}
               <strong style={{ color: "var(--text-primary)" }}>{servingSize}</strong>
             </span>
             <span className="dot"></span>
@@ -576,7 +606,7 @@ export const MenuCard = memo(function MenuCard({
                     animation: "spin 0.7s linear infinite",
                   }}
                 />
-                Wait...
+                Wait…
               </>
             ) : (
               <>
@@ -640,7 +670,7 @@ export const MenuCard = memo(function MenuCard({
                         ) : (
                           <span className="item-img-placeholder">+</span>
                         )}
-                        <button className="add-item-btn" aria-label={`Add ${item.name}`}></button>
+                        <button type="button" className="add-item-btn" aria-label={`Add ${item.name}`}></button>
                       </div>
                       <div className="item-info">
                         <span className="item-name">{item.name}</span>

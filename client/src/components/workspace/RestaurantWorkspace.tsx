@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -167,16 +167,13 @@ const emptySettingsFormState: SettingsFormState = {
 };
 
 const ownerWorkspaceTabs: Array<{ id: WorkspaceTab; label: string }> = [
-  { id: "dishes", label: "Manage Dishes" },
+  { id: "dishes", label: "All Dishes" },
   { id: "menus", label: "Menus & Categories" },
-  { id: "team", label: "Manager Access" },
-  { id: "settings", label: "Settings" },
 ];
 
 const managerWorkspaceTabs: Array<{ id: WorkspaceTab; label: string }> = [
-  { id: "dishes", label: "Manage Dishes" },
+  { id: "dishes", label: "All Dishes" },
   { id: "menus", label: "Menus & Categories" },
-  { id: "settings", label: "Share & QR" },
 ];
 
 type CategorySection = CategorySummary & {
@@ -221,13 +218,51 @@ const currencyOptions: Array<{ value: CurrencyCode; label: string }> = [
   { value: "AED", label: "AED (د.إ)" },
 ];
 
-const formatPrice = (value: number, currency: CurrencyCode) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+const inrFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "INR",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+const eurFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+const gbpFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "GBP",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+const aedFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "AED",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 0,
+});
+
+const formatPrice = (value: number, currency: CurrencyCode) => {
+  switch (currency) {
+    case "INR":
+      return inrFormatter.format(value);
+    case "EUR":
+      return eurFormatter.format(value);
+    case "GBP":
+      return gbpFormatter.format(value);
+    case "AED":
+      return aedFormatter.format(value);
+    default:
+      return usdFormatter.format(value);
+  }
+};
 
 const buildReadinessPercent = (checks: boolean[]) =>
   Math.round((checks.filter(Boolean).length / checks.length) * 100);
@@ -249,15 +284,19 @@ const createCrossSellItemId = () =>
 const toCrossSellPayload = (
   items: CrossSellComposerItem[],
 ): CrossSellItem[] =>
-  items
-    .map((item) => ({
-      id: item.id || createCrossSellItemId(),
-      name: item.name.trim(),
-      price: Math.max(0, Math.round(Number(item.price))),
-      imageUrl: item.imageUrl || item.imagePreviewUrl || null,
-      imageStorageKey: item.imageStorageKey || null,
-    }))
-    .filter((item) => item.name.length > 0);
+  items.reduce<CrossSellItem[]>((acc, item) => {
+    const name = item.name.trim();
+    if (name.length > 0) {
+      acc.push({
+        id: item.id || createCrossSellItemId(),
+        name,
+        price: Math.max(0, Math.round(Number(item.price))),
+        imageUrl: item.imageUrl || item.imagePreviewUrl || null,
+        imageStorageKey: item.imageStorageKey || null,
+      });
+    }
+    return acc;
+  }, []);
 
 export function RestaurantWorkspace({
   restaurantId,
@@ -314,6 +353,8 @@ export function RestaurantWorkspace({
     null,
   );
   const [toasts, setToasts] = useState<WorkspaceToast[]>([]);
+  const [dishSearchQuery, setDishSearchQuery] = useState("");
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [actionDialog, setActionDialog] = useState<WorkspaceActionDialog | null>(
     null,
   );
@@ -370,7 +411,7 @@ export function RestaurantWorkspace({
   const sortedMainMenus = useMemo(
     () =>
       restaurant
-        ? [...restaurant.menus].sort(
+        ? restaurant.menus.toSorted(
             (left, right) =>
               left.sortOrder - right.sortOrder || left.name.localeCompare(right.name),
           )
@@ -386,7 +427,7 @@ export function RestaurantWorkspace({
   const sortedMenus = useMemo(
     () =>
       selectedMainMenu
-        ? [...getMainMenuCategories(selectedMainMenu)].sort(
+        ? getMainMenuCategories(selectedMainMenu).toSorted(
             (left, right) =>
               left.sortOrder - right.sortOrder || left.name.localeCompare(right.name),
           )
@@ -400,7 +441,7 @@ export function RestaurantWorkspace({
         ...menu,
         mainMenuId: selectedMainMenu?.id ?? "",
         mainMenuName: selectedMainMenu?.name ?? "Main Menu",
-        dishes: [...menu.dishes].sort(
+        dishes: menu.dishes.toSorted(
           (left, right) =>
             left.sortOrder - right.sortOrder || left.name.localeCompare(right.name),
         ),
@@ -411,8 +452,8 @@ export function RestaurantWorkspace({
   const allCategorySections = useMemo(
     () =>
       sortedMainMenus.flatMap((menu) =>
-        [...getMainMenuCategories(menu)]
-          .sort(
+        getMainMenuCategories(menu)
+          .toSorted(
             (left, right) =>
               left.sortOrder - right.sortOrder || left.name.localeCompare(right.name),
           )
@@ -420,7 +461,7 @@ export function RestaurantWorkspace({
             ...category,
             mainMenuId: menu.id,
             mainMenuName: menu.name,
-            dishes: [...category.dishes].sort(
+            dishes: category.dishes.toSorted(
               (left, right) =>
                 left.sortOrder - right.sortOrder ||
                 left.name.localeCompare(right.name),
@@ -1728,10 +1769,10 @@ export function RestaurantWorkspace({
 
         <div className="mt-6 grid gap-4">
           {ownerMember ? (
-            <div className="rounded-[1.3rem] border border-slate-100 bg-surface-container-low px-5 py-5">
+            <div className="rounded-[1.3rem] border border-slate-100 bg-surface-container-low p-5">
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/15 to-surface-container-high text-sm font-bold text-primary">
+                  <div className="flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-primary/15 to-surface-container-high text-sm font-bold text-primary">
                     {ownerMember.user.email.charAt(0).toUpperCase()}
                   </div>
 
@@ -1773,11 +1814,11 @@ export function RestaurantWorkspace({
             </div>
           ) : null}
 
-          <div className="rounded-[1.3rem] border border-slate-100 bg-surface-container-low px-5 py-5">
+          <div className="rounded-[1.3rem] border border-slate-100 bg-surface-container-low p-5">
             {assignedManager ? (
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="flex min-w-0 items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-sky-100 to-sky-50 text-sm font-bold text-sky-700">
+                  <div className="flex size-12 items-center justify-center rounded-full bg-gradient-to-br from-sky-100 to-sky-50 text-sm font-bold text-sky-700">
                     {assignedManager.user.email.charAt(0).toUpperCase()}
                   </div>
 
@@ -1806,7 +1847,7 @@ export function RestaurantWorkspace({
                 </button>
               </div>
             ) : (
-              <div className="rounded-[1rem] border border-dashed border-slate-200 bg-white/65 px-4 py-4">
+              <div className="rounded-[1rem] border border-dashed border-slate-200 bg-white/65 p-4">
                 <p className="text-sm font-bold text-on-surface">
                   No manager account assigned yet
                 </p>
@@ -1846,11 +1887,13 @@ export function RestaurantWorkspace({
 
         <div className="mt-6 grid gap-5">
           <div>
-            <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+            <label htmlFor="manager-email" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
               Manager Email
             </label>
             <input
+              id="manager-email"
               type="email"
+              aria-label="Manager email address"
               value={teamComposerState.email}
               onChange={(event) =>
                 setTeamComposerState((current) => ({
@@ -1864,11 +1907,13 @@ export function RestaurantWorkspace({
           </div>
 
           <div>
-            <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+            <label htmlFor="manager-password" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
               Manager Password
             </label>
             <input
+              id="manager-password"
               type="password"
+              aria-label="Manager password"
               value={teamComposerState.password}
               onChange={(event) =>
                 setTeamComposerState((current) => ({
@@ -1886,7 +1931,7 @@ export function RestaurantWorkspace({
             />
           </div>
 
-          <div className="rounded-[1.2rem] bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
+          <div className="rounded-[1.2rem] bg-surface-container-low p-4 text-sm text-on-surface-variant">
             <p className="font-semibold text-on-surface">Important</p>
             <p className="mt-1">
               Each restaurant gets one manager login. The company owner creates
@@ -1974,7 +2019,7 @@ export function RestaurantWorkspace({
           )}
         </div>
 
-        <div className="mt-4 rounded-[1rem] bg-white px-4 py-4">
+        <div className="mt-4 rounded-[1rem] bg-white p-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
             Public Destination
           </p>
@@ -2026,9 +2071,9 @@ export function RestaurantWorkspace({
       const hasMainMenu = sortedMainMenus.length > 0;
 
       return (
-        <section className="grid gap-6 xl:grid-cols-[1.55fr_1fr]">
+        <section className="grid items-start gap-6 xl:grid-cols-[1.55fr_1fr_auto]">
           <div className="rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
-            <div className="rounded-[1.35rem] bg-surface-container-low px-5 py-5">
+            <div className="rounded-[1.35rem] bg-surface-container-low p-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                 Main Menu Layer
               </p>
@@ -2115,14 +2160,31 @@ export function RestaurantWorkspace({
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleStartCreateMenu}
-                disabled={!selectedMainMenu}
-                className="rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
-              >
-                Add Category
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleStartCreateMenu}
+                  disabled={!selectedMainMenu}
+                  className="rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
+                >
+                  Add Category
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (selectedMenuId || menuSections.length > 0) {
+                      if (!selectedMenuId && menuSections.length > 0) {
+                        setSelectedMenuId(menuSections[0].id);
+                      }
+                      handleStartCreate();
+                    }
+                  }}
+                  disabled={!selectedMainMenu || menuSections.length === 0}
+                  className="rounded-[1rem] border border-slate-200 px-5 py-3 text-sm font-bold text-on-surface-variant transition-all hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:translate-y-0"
+                >
+                  + Add New Dish
+                </button>
+              </div>
             </div>
 
             <div className="mt-6 grid gap-4">
@@ -2144,7 +2206,7 @@ export function RestaurantWorkspace({
                   <div
                     key={menu.id}
                     className={cn(
-                      "rounded-[1.35rem] border px-5 py-5 transition-all",
+                      "rounded-[1.35rem] border p-5 transition-all",
                       selectedMenuId === menu.id
                         ? "border-primary/18 bg-primary/4"
                         : "border-slate-100 bg-white",
@@ -2212,44 +2274,67 @@ export function RestaurantWorkspace({
                         >
                           delete
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setExpandedCategories((prev) => {
+                              const next = new Set(prev);
+                              if (next.has(menu.id)) {
+                                next.delete(menu.id);
+                              } else {
+                                next.add(menu.id);
+                              }
+                              return next;
+                            });
+                          }}
+                          className="material-symbols-outlined rounded-full border border-slate-200 p-2 text-on-surface-variant transition-colors hover:border-primary/30 hover:text-primary"
+                          title={expandedCategories.has(menu.id) ? "Collapse" : "Expand"}
+                        >
+                          {expandedCategories.has(menu.id) ? "expand_less" : "expand_more"}
+                        </button>
                       </div>
                     </div>
 
+                    {expandedCategories.has(menu.id) && (
+                    <>
                     <div className="mt-4 overflow-hidden rounded-[1.15rem] border border-slate-100 bg-surface-container-lowest">
-                      <div className="grid grid-cols-[minmax(0,1.5fr)_auto_auto] gap-3 border-b border-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                      <div className="grid grid-cols-[minmax(0,1.5fr)_auto_auto_auto] gap-3 border-b border-slate-100 px-4 py-3 text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
                         <span>Item</span>
                         <span>Price</span>
                         <span>Status</span>
+                        <span></span>
                       </div>
 
                       {menu.dishes.length === 0 ? (
-                        <div className="px-4 py-4 text-sm text-on-surface-variant">
+                        <div className="p-4 text-sm text-on-surface-variant">
                           No items in this category yet.
                         </div>
                       ) : (
                         menu.dishes.map((dish) => (
-                          <button
+                          <div
                             key={dish.id}
-                            type="button"
-                            onClick={() =>
-                              handleStartEdit({
-                                ...dish,
-                                mainMenuId: menu.mainMenuId,
-                                mainMenuName: menu.mainMenuName,
-                                menuId: menu.id,
-                                menuName: menu.name,
-                              })
-                            }
-                            className="grid w-full grid-cols-[minmax(0,1.5fr)_auto_auto] gap-3 border-t border-slate-100 px-4 py-3 text-left transition-colors first:border-t-0 hover:bg-slate-50"
+                            className="grid w-full grid-cols-[minmax(0,1.5fr)_auto_auto_auto] items-center gap-3 border-t border-slate-100 px-4 py-3 text-left transition-colors first:border-t-0 hover:bg-slate-50"
                           >
-                            <span className="min-w-0">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleStartEdit({
+                                  ...dish,
+                                  mainMenuId: menu.mainMenuId,
+                                  mainMenuName: menu.mainMenuName,
+                                  menuId: menu.id,
+                                  menuName: menu.name,
+                                })
+                              }
+                              className="min-w-0 text-left"
+                            >
                               <span className="block truncate text-sm font-semibold text-on-surface">
                                 {dish.name}
                               </span>
                               <span className="mt-1 block truncate text-xs text-on-surface-variant">
                                 {dish.description || "No description yet"}
                               </span>
-                            </span>
+                            </button>
                             <span className="self-center text-sm font-bold text-on-surface">
                               {formatPrice(dish.price, dish.currency)}
                             </span>
@@ -2263,7 +2348,24 @@ export function RestaurantWorkspace({
                             >
                               {dish.isPublished ? "Live" : "Draft"}
                             </span>
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void handleDeleteDish({
+                                  ...dish,
+                                  mainMenuId: menu.mainMenuId,
+                                  mainMenuName: menu.mainMenuName,
+                                  menuId: menu.id,
+                                  menuName: menu.name,
+                                })
+                              }
+                              disabled={pendingDishActionId === `${dish.id}:delete`}
+                              className="material-symbols-outlined self-center rounded-full p-2 text-on-surface-variant transition-colors hover:bg-red-50 hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
+                              title="Delete dish"
+                            >
+                              delete
+                            </button>
+                          </div>
                         ))
                       )}
                     </div>
@@ -2288,13 +2390,15 @@ export function RestaurantWorkspace({
                         {menu.isPublished ? "Move to Draft" : "Publish Category"}
                       </button>
                     </div>
+                    </>
+                    )}
                   </div>
                 ))
               )}
             </div>
           </div>
 
-          <div className="rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
+          <div className="self-start rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
@@ -2322,11 +2426,13 @@ export function RestaurantWorkspace({
 
             <div className="mt-6 grid gap-5">
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="category-name" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Category Name
                 </label>
                 <input
+                  id="category-name"
                   type="text"
+                  aria-label="Category name"
                   value={menuComposerState.name}
                   onChange={(event) =>
                     setMenuComposerState((current) => ({
@@ -2340,12 +2446,14 @@ export function RestaurantWorkspace({
               </div>
 
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="category-sort-order" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Sort Order
                 </label>
                 <input
+                  id="category-sort-order"
                   type="number"
                   min="0"
+                  aria-label="Category sort order"
                   value={menuComposerState.sortOrder}
                   onChange={(event) =>
                     setMenuComposerState((current) => ({
@@ -2382,7 +2490,7 @@ export function RestaurantWorkspace({
               </label>
             </div>
 
-            <div className="mt-6 rounded-[1.2rem] bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
+            <div className="mt-6 rounded-[1.2rem] bg-surface-container-low p-4 text-sm text-on-surface-variant">
               <p className="font-semibold text-on-surface">Current selection</p>
               <p className="mt-1">
                 {!selectedMainMenu
@@ -2417,6 +2525,50 @@ export function RestaurantWorkspace({
               </button>
             </div>
           </div>
+
+          {/* Main Menu Summary — third column */}
+          <div className="rounded-[1.4rem] border border-slate-100 bg-white p-5 shadow-[0_16px_36px_rgba(18,28,42,0.05)] self-start xl:w-[16rem]">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+              Main Menu Summary
+            </p>
+            <h3 className="mt-2 text-xl font-bold tracking-[-0.03em] text-on-surface">
+              {selectedMainMenu?.name ?? "No main menu selected"}
+            </h3>
+            <p className="mt-1 text-sm font-medium text-on-surface-variant">
+              {selectedMainMenu
+                ? `${menuSections.length} categor${menuSections.length === 1 ? "y" : "ies"} inside this menu`
+                : "Create a main menu to start organizing categories and items."}
+            </p>
+
+            <div className="mt-5 grid gap-3">
+              <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                  Total Main Menus
+                </p>
+                <p className="mt-1 text-sm font-semibold text-on-surface">
+                  {sortedMainMenus.length}
+                </p>
+              </div>
+
+              <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                  Total Categories
+                </p>
+                <p className="mt-1 text-sm font-semibold text-on-surface">
+                  {menuSections.length}
+                </p>
+              </div>
+
+              <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                  Published Categories
+                </p>
+                <p className="mt-1 text-sm font-semibold text-on-surface">
+                  {menuSections.filter((menu) => menu.isPublished).length}
+                </p>
+              </div>
+            </div>
+          </div>
         </section>
       );
     }
@@ -2442,7 +2594,7 @@ export function RestaurantWorkspace({
               </p>
 
               <div className="mt-8 grid gap-5">
-                <div className="rounded-[1.2rem] bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
+                <div className="rounded-[1.2rem] bg-surface-container-low p-4 text-sm text-on-surface-variant">
                   <p className="font-semibold text-on-surface">Assigned role</p>
                   <p className="mt-1">
                     You are signed in as{" "}
@@ -2454,9 +2606,9 @@ export function RestaurantWorkspace({
                 </div>
 
                 <div>
-                  <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  <p className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                     Public Slug
-                  </label>
+                  </p>
                   <div className="flex overflow-hidden rounded-[1.1rem] bg-surface-container-lowest ring-1 ring-outline-variant/12">
                     <span className="border-r border-slate-100 px-4 py-3.5 text-sm font-semibold text-on-surface-variant">
                       /r/
@@ -2467,7 +2619,7 @@ export function RestaurantWorkspace({
                   </div>
                 </div>
 
-                <div className="rounded-[1.2rem] bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
+                <div className="rounded-[1.2rem] bg-surface-container-low p-4 text-sm text-on-surface-variant">
                   <p className="font-semibold text-on-surface">Access scope</p>
                   <p className="mt-1">
                     Owners keep full control over restaurant identity and team
@@ -2511,10 +2663,11 @@ export function RestaurantWorkspace({
 
             <div className="mt-8 grid gap-5">
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="settings-restaurant-name" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Restaurant Name
                 </label>
                 <input
+                  id="settings-restaurant-name"
                   type="text"
                   value={settingsFormState.name}
                   onChange={(event) =>
@@ -2529,7 +2682,7 @@ export function RestaurantWorkspace({
               </div>
 
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="settings-public-slug" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Public Slug
                 </label>
                 <div className="flex overflow-hidden rounded-[1.1rem] bg-surface-container-lowest ring-1 ring-outline-variant/12 focus-within:ring-2 focus-within:ring-primary/20">
@@ -2537,6 +2690,7 @@ export function RestaurantWorkspace({
                     /r/
                   </span>
                   <input
+                    id="settings-public-slug"
                     type="text"
                     value={settingsFormState.publicId}
                     onChange={(event) =>
@@ -2554,7 +2708,7 @@ export function RestaurantWorkspace({
                 </p>
               </div>
 
-              <label className="flex items-center justify-between gap-4 rounded-[1.15rem] bg-surface-container-low px-4 py-4">
+              <label className="flex items-center justify-between gap-4 rounded-[1.15rem] bg-surface-container-low p-4">
                 <div>
                   <p className="text-sm font-semibold text-on-surface">
                     Publish this workspace
@@ -2578,7 +2732,7 @@ export function RestaurantWorkspace({
                 />
               </label>
 
-              <div className="rounded-[1.2rem] bg-surface-container-low px-4 py-4 text-sm text-on-surface-variant">
+              <div className="rounded-[1.2rem] bg-surface-container-low p-4 text-sm text-on-surface-variant">
                 <p className="font-semibold text-on-surface">Permissions</p>
                 <p className="mt-1">
                   Only the top-level owner can update restaurant identity and
@@ -2622,11 +2776,10 @@ export function RestaurantWorkspace({
           <div className="flex flex-wrap items-end justify-between gap-4 px-1">
             <div>
               <h2 className="text-2xl font-bold tracking-[-0.03em] text-on-surface">
-                Menu Items
+                All Dishes
               </h2>
               <p className="mt-1 text-sm font-medium text-on-surface-variant">
-                View one main menu at a time as category sections with dish
-                names, prices, and publish state.
+                Every dish across all categories in one flat list.
               </p>
             </div>
 
@@ -2637,214 +2790,195 @@ export function RestaurantWorkspace({
             </div>
           </div>
 
-          <div className="no-scrollbar flex gap-2 overflow-x-auto px-1 pb-1">
-            {sortedMainMenus.length === 0 ? (
-              <span className="rounded-full bg-white px-4 py-2 text-xs font-semibold text-on-surface-variant shadow-[0_8px_20px_rgba(18,28,42,0.04)]">
-                Create a main menu first
-              </span>
-            ) : (
-              sortedMainMenus.map((menu) => (
-                <button
-                  key={menu.id}
-                  type="button"
-                  onClick={() => setSelectedMainMenuId(menu.id)}
-                  className={cn(
-                    "whitespace-nowrap rounded-full px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] transition-all",
-                    selectedMainMenu?.id === menu.id
-                      ? "bg-primary text-white shadow-[0_10px_20px_rgba(182,23,34,0.18)]"
-                      : "bg-white text-on-surface-variant shadow-[0_8px_20px_rgba(18,28,42,0.04)]",
-                  )}
-                >
-                  {menu.name}
-                </button>
-              ))
-            )}
-          </div>
-
-          <div className="space-y-4">
-            {menuSections.length === 0 ? (
-              <div className="rounded-[1.7rem] border border-slate-100 bg-white px-6 py-10 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
-                <p className="text-sm font-semibold text-on-surface">
-                  No categories or items yet.
-                </p>
-                <p className="mt-2 text-sm text-on-surface-variant">
-                  Start by creating a category like Pizza, then add menu items
-                  with names and prices.
-                </p>
+          <div className="overflow-hidden rounded-[1.7rem] border border-slate-100 bg-white shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
+            {/* Search */}
+            <div className="px-5 pt-5 pb-2">
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-[1.3rem] text-on-surface-variant/40">
+                  search
+                </span>
+                <input
+                  type="text"
+                  value={dishSearchQuery}
+                  onChange={(e) => setDishSearchQuery(e.target.value)}
+                  placeholder="Search menu"
+                  aria-label="Search dishes"
+                  className="w-full rounded-xl bg-[#f0f0f0] py-3.5 pl-12 pr-5 text-sm text-on-surface outline-none placeholder:text-on-surface-variant/50"
+                />
               </div>
-            ) : (
-              menuSections.map((menu) => (
-                <section
-                  key={menu.id}
-                  className="overflow-hidden rounded-[1.7rem] border border-slate-100 bg-white shadow-[0_16px_36px_rgba(18,28,42,0.05)]"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-xl font-bold tracking-[-0.03em] text-on-surface">
-                          {menu.name}
-                        </h3>
-                        <span
-                          className={cn(
-                            "inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]",
-                            menu.isPublished
-                              ? "bg-emerald-50 text-emerald-600"
-                              : "bg-slate-100 text-slate-500",
-                          )}
-                        >
-                          {menu.isPublished ? "Published" : "Draft"}
-                        </span>
-                      </div>
-                      <p className="mt-2 text-sm text-on-surface-variant">
-                        {menu.dishes.length} item{menu.dishes.length === 1 ? "" : "s"} inside this category
-                      </p>
-                    </div>
+            </div>
 
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedMenuId(menu.id);
-                        handleStartCreate();
+            <div className="px-4 pt-4">
+              <table className="w-full border-collapse">
+              <thead>
+                <tr className="hidden md:table-row" style={{ borderBottom: '2px solid #E1E1E2' }}>
+                  <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant bg-[#f9f4f2] rounded-tl-[1rem]">
+                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-[#C2E66E]">restaurant</span> Dish Name</span>
+                  </th>
+                  <th className="px-4 py-4 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant bg-[#f9f4f2]">
+                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-[#C2E66E]">view_in_ar</span> 3D Model</span>
+                  </th>
+                  <th className="px-4 py-4 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant bg-[#f9f4f2]">
+                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-[#C2E66E]">payments</span> Price</span>
+                  </th>
+                  <th className="px-4 py-4 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant bg-[#f9f4f2]">
+                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-[#C2E66E]">toggle_on</span> Status</span>
+                  </th>
+                  <th className="px-4 py-4 text-right text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant bg-[#f9f4f2] rounded-tr-[1rem]">
+                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-[#C2E66E]">more_horiz</span> Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="[&>tr+tr]:border-t-[2px] [&>tr+tr]:border-[#E1E1E2]">
+              {(() => {
+                const query = dishSearchQuery.toLowerCase().trim();
+                const filteredDishes = query
+                  ? dishRows.filter(
+                      (dish) =>
+                        dish.name.toLowerCase().includes(query) ||
+                        (dish.description ?? "").toLowerCase().includes(query) ||
+                        dish.menuName.toLowerCase().includes(query),
+                    )
+                  : dishRows;
+
+                if (filteredDishes.length === 0) {
+                  return (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-10 text-center">
+                        <p className="text-sm font-semibold text-on-surface">
+                          {dishRows.length === 0 ? "No dishes yet." : "No dishes match your search."}
+                        </p>
+                        <p className="mt-2 text-sm text-on-surface-variant">
+                          {dishRows.length === 0
+                            ? "Go to Menus & Categories to create categories and add dishes."
+                            : "Try a different keyword or clear the search."}
+                        </p>
+                      </td>
+                    </tr>
+                  );
+                }
+
+                return filteredDishes.map((dish) => {
+                  const modelAsset = getAssetByKind(dish.assets, "MODEL_3D");
+                  const thumbnailAsset = getAssetByKind(dish.assets, "THUMBNAIL");
+
+                  return (
+                    <tr
+                      key={dish.id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => setSelectedDishId(dish.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          setSelectedDishId(dish.id);
+                        }
                       }}
-                      className="rounded-full bg-surface-container-low px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-on-surface transition-colors hover:bg-surface-container"
+                      className={cn(
+                        "cursor-pointer transition-colors",
+                        selectedDish?.id === dish.id
+                          ? "bg-primary/4"
+                          : "hover:bg-slate-50/60",
+                      )}
                     >
-                      Add Item
-                    </button>
-                  </div>
-
-                  <div className="divide-y divide-slate-100">
-                    {menu.dishes.length === 0 ? (
-                      <div className="px-6 py-5 text-sm text-on-surface-variant">
-                        No items in this category yet.
-                      </div>
-                    ) : (
-                      menu.dishes.map((dish) => {
-                        const modelAsset = getAssetByKind(dish.assets, "MODEL_3D");
-
-                        return (
-                          <div
-                            key={dish.id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => setSelectedDishId(dish.id)}
-                            onKeyDown={(event) => {
-                              if (event.key === "Enter" || event.key === " ") {
-                                event.preventDefault();
-                                setSelectedDishId(dish.id);
-                              }
-                            }}
+                      <td className="px-6 py-4 align-middle">
+                        <p className="truncate text-sm font-bold text-on-surface">
+                          {dish.name}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-sm leading-6 text-on-surface-variant">
+                          {dish.description || "No description added yet."}
+                        </p>
+                        <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
+                          {dish.menuName} · Order {dish.sortOrder} · Good for {dish.servingSize ?? 2}
+                        </p>
+                      </td>
+                      <td className="px-4 py-4 align-middle text-xs font-medium text-on-surface-variant whitespace-nowrap">
+                        {modelAsset?.status === "READY"
+                          ? "3D model ready"
+                          : "No 3D model"}
+                      </td>
+                      <td className="px-4 py-4 align-middle text-base font-bold text-on-surface whitespace-nowrap">
+                        {formatPrice(dish.price, dish.currency)}
+                      </td>
+                      <td className="px-4 py-4 align-middle whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <span
                             className={cn(
-                              "grid gap-4 px-6 py-4 text-left transition-colors md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto_auto_auto]",
-                              selectedDish?.id === dish.id
-                                ? "bg-primary/4"
-                                : "hover:bg-slate-50/60",
+                              "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]",
+                              dish.isPublished
+                                ? "bg-emerald-50 text-emerald-600"
+                                : "bg-slate-100 text-slate-500",
                             )}
                           >
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-bold text-on-surface">
-                                {dish.name}
-                              </p>
-                              <p className="mt-1 line-clamp-2 text-sm leading-6 text-on-surface-variant">
-                                {dish.description || "No description added yet."}
-                              </p>
-                              <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.14em] text-on-surface-variant">
-                                Public order {dish.sortOrder} · Good for {dish.servingSize ?? 2} · Details {dish.detailsPanelEnabled === false ? "off" : "on"}
-                              </p>
-                            </div>
-
-                            <div className="self-center text-xs font-medium text-on-surface-variant">
-                              {modelAsset?.status === "READY"
-                                ? "3D model ready"
-                                : "No 3D model"}
-                            </div>
-
-                            <div className="self-center text-base font-bold text-on-surface">
-                              {formatPrice(dish.price, dish.currency)}
-                            </div>
-
-                            <div className="self-center">
-                              <span
-                                className={cn(
-                                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em]",
-                                  dish.isPublished
-                                    ? "bg-emerald-50 text-emerald-600"
-                                    : "bg-slate-100 text-slate-500",
-                                )}
-                              >
-                                <span
-                                  className={cn(
-                                    "h-1.5 w-1.5 rounded-full",
-                                    dish.isPublished ? "bg-emerald-500" : "bg-slate-300",
-                                  )}
-                                />
-                                {dish.isPublished ? "Live" : "Draft"}
-                              </span>
-                            </div>
-
-                            <div className="flex items-center justify-end gap-2 self-center">
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  handleStartEdit({
-                                    ...dish,
-                                    mainMenuId: menu.mainMenuId,
-                                    mainMenuName: menu.mainMenuName,
-                                    menuId: menu.id,
-                                    menuName: menu.name,
-                                  });
-                                }}
-                                disabled={pendingDishActionId === `${dish.id}:delete`}
-                                className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                                title="Edit dish"
-                              >
-                                edit
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  void handleToggleDishStatus({
-                                    ...dish,
-                                    mainMenuId: menu.mainMenuId,
-                                    mainMenuName: menu.mainMenuName,
-                                    menuId: menu.id,
-                                    menuName: menu.name,
-                                  });
-                                }}
-                                disabled={pendingDishActionId === `${dish.id}:status`}
-                                className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                                title={dish.isPublished ? "Move dish to draft" : "Publish dish"}
-                              >
-                                published_with_changes
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  void handleDeleteDish({
-                                    ...dish,
-                                    mainMenuId: menu.mainMenuId,
-                                    mainMenuName: menu.mainMenuName,
-                                    menuId: menu.id,
-                                    menuName: menu.name,
-                                  });
-                                }}
-                                disabled={pendingDishActionId === `${dish.id}:delete`}
-                                className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-red-50 hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
-                                title="Delete dish"
-                              >
-                                delete
-                              </button>
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </section>
-              ))
-            )}
+                            <span
+                              className={cn(
+                                "h-1.5 w-1.5 rounded-full",
+                                dish.isPublished ? "bg-emerald-500" : "bg-slate-300",
+                              )}
+                            />
+                            {dish.isPublished ? "Live" : "Draft"}
+                          </span>
+                          <span className="group relative cursor-help">
+                            <span className="material-symbols-outlined text-[1rem] text-on-surface-variant/50 transition-colors group-hover:text-primary">
+                              info
+                            </span>
+                            <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 w-48 -translate-x-1/2 rounded-xl bg-[#14201a] px-3 py-2.5 text-[11px] font-medium leading-relaxed text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                              <span className="block font-bold">Category:</span> {dish.menuName}
+                              <br />
+                              <span className="block mt-1 font-bold">3D Model:</span> {modelAsset?.status ?? "Not attached"}
+                              <br />
+                              <span className="block mt-1 font-bold">Thumbnail:</span> {thumbnailAsset?.status ?? "Not attached"}
+                            </span>
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 align-middle">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleStartEdit(dish);
+                            }}
+                            disabled={pendingDishActionId === `${dish.id}:delete`}
+                            className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                            title="Edit dish"
+                          >
+                            edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleToggleDishStatus(dish);
+                            }}
+                            disabled={pendingDishActionId === `${dish.id}:status`}
+                            className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-surface-container-low hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                            title={dish.isPublished ? "Move dish to draft" : "Publish dish"}
+                          >
+                            published_with_changes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleDeleteDish(dish);
+                            }}
+                            disabled={pendingDishActionId === `${dish.id}:delete`}
+                            className="material-symbols-outlined rounded-full p-2 text-on-surface-variant transition-colors hover:bg-red-50 hover:text-error disabled:cursor-not-allowed disabled:opacity-40"
+                            title="Delete dish"
+                          >
+                            delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                });
+              })()}
+              </tbody>
+            </table>
+            </div>
           </div>
         </section>
       </>
@@ -2853,50 +2987,7 @@ export function RestaurantWorkspace({
 
   const renderAsideCard = () => {
     if (activeTab === "menus") {
-      return (
-        <div className="rounded-[1.4rem] border border-slate-100 bg-white p-5 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-            Main Menu Summary
-          </p>
-          <h3 className="mt-2 text-xl font-bold tracking-[-0.03em] text-on-surface">
-            {selectedMainMenu?.name ?? "No main menu selected"}
-          </h3>
-          <p className="mt-1 text-sm font-medium text-on-surface-variant">
-            {selectedMainMenu
-              ? `${menuSections.length} categor${menuSections.length === 1 ? "y" : "ies"} inside this menu`
-              : "Create a main menu to start organizing categories and items."}
-          </p>
-
-          <div className="mt-5 grid gap-3">
-            <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-                Total Main Menus
-              </p>
-              <p className="mt-1 text-sm font-semibold text-on-surface">
-                {sortedMainMenus.length}
-              </p>
-            </div>
-
-            <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-                Total Categories
-              </p>
-              <p className="mt-1 text-sm font-semibold text-on-surface">
-                {menuSections.length}
-              </p>
-            </div>
-
-            <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-                Published Categories
-              </p>
-              <p className="mt-1 text-sm font-semibold text-on-surface">
-                {menuSections.filter((menu) => menu.isPublished).length}
-              </p>
-            </div>
-          </div>
-        </div>
-      );
+      return null;
     }
 
     if (activeTab === "team") {
@@ -2987,42 +3078,7 @@ export function RestaurantWorkspace({
       return null;
     }
 
-    return (
-      <div className="rounded-[1.4rem] border border-slate-100 bg-white p-5 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
-        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-          Current Selection
-        </p>
-        <h3 className="mt-2 text-xl font-bold tracking-[-0.03em] text-on-surface">
-          {selectedDish.name}
-        </h3>
-        <p className="mt-1 text-sm font-medium text-on-surface-variant">
-          {selectedDish.description ||
-            "Select edit to attach or refresh assets for this dish."}
-        </p>
-
-        <div className="mt-5 grid gap-3">
-          <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-              3D Model
-            </p>
-            <p className="mt-1 text-sm font-semibold text-on-surface">
-              {getAssetByKind(selectedDish.assets, "MODEL_3D")?.status ??
-                "Not attached"}
-            </p>
-          </div>
-
-          <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-              Thumbnail
-            </p>
-            <p className="mt-1 text-sm font-semibold text-on-surface">
-              {getAssetByKind(selectedDish.assets, "THUMBNAIL")?.status ??
-                "Not attached"}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
+    return null;
   };
 
   const actionDialogMeta = actionDialog
@@ -3106,6 +3162,8 @@ export function RestaurantWorkspace({
       <WorkspaceSidebar
         portalVariant={effectivePortalVariant}
         homePath={getPortalHomePath(effectivePortalVariant)}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
         profileLabel={
           effectivePortalVariant === "owner"
             ? resolveOwnerLabel(restaurant)
@@ -3129,49 +3187,41 @@ export function RestaurantWorkspace({
           portalVariant={effectivePortalVariant}
         />
 
-        <div className="flex flex-col gap-8 bg-slate-50/55 px-6 py-8 md:px-8 xl:flex-row">
+        <div className="flex flex-col gap-8 bg-slate-50/55 px-6 py-8 md:px-8 xl:flex-row xl:items-start">
           <div className="min-w-0 flex-1 space-y-6">
-            <div className="flex w-full flex-wrap items-center gap-2 rounded-[1.3rem] bg-surface-container-low p-1.5">
-              {availableWorkspaceTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  className={cn(
-                    "rounded-[1rem] px-5 py-2.5 text-xs font-bold transition-colors",
-                    activeTab === tab.id
-                      ? "bg-white text-primary shadow-[0_8px_20px_rgba(18,28,42,0.04)]"
-                      : "text-on-surface-variant hover:bg-surface-container-high",
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+            {(activeTab === "dishes" || activeTab === "menus") && (
+              <div className="flex w-full flex-wrap items-center gap-2 rounded-[1.3rem] bg-surface-container-low p-1.5">
+                {availableWorkspaceTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "rounded-[1rem] px-5 py-2.5 text-xs font-bold transition-colors",
+                      activeTab === tab.id
+                        ? "bg-white text-primary shadow-[0_8px_20px_rgba(18,28,42,0.04)]"
+                        : "text-on-surface-variant hover:bg-surface-container-high",
+                    )}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            )}
             {renderMainContent()}
           </div>
 
-          <aside className="flex w-full shrink-0 flex-col gap-6 xl:w-[24rem]">
-            <ReadinessCard
-              readinessPercent={readinessPercent}
-              hasMenu={allCategorySections.length > 0}
-              publishedDishesCount={publishedDishesCount}
-              readyModelCount={readyModelCount}
-              isActive={restaurant.isActive}
-              isPublished={restaurant.isPublished}
-              isPublishing={isPublishing}
-              canGoLive={isOwnerUser}
-              onGoLive={handlePublishWorkspace}
-            />
+          {activeTab !== "dishes" && activeTab !== "menus" && (
+            <aside className="flex w-full shrink-0 flex-col gap-6 xl:w-[24rem]">
+              {publishMessage ? (
+                <div className="rounded-[1.2rem] bg-surface-container-low p-4 text-sm font-medium text-on-surface-variant">
+                  {publishMessage}
+                </div>
+              ) : null}
 
-            {publishMessage ? (
-              <div className="rounded-[1.2rem] bg-surface-container-low px-4 py-4 text-sm font-medium text-on-surface-variant">
-                {publishMessage}
-              </div>
-            ) : null}
-
-            {renderAsideCard()}
-          </aside>
+              {renderAsideCard()}
+            </aside>
+          )}
         </div>
       </main>
 
@@ -3210,10 +3260,11 @@ export function RestaurantWorkspace({
             {actionDialog.kind === "createMainMenu" ||
             actionDialog.kind === "renameMainMenu" ? (
               <div className="mt-6">
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="action-dialog-input" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Main Menu Name
                 </label>
                 <input
+                  id="action-dialog-input"
                   type="text"
                   value={actionDialog.value}
                   onChange={(event) => updateActionDialogValue(event.target.value)}
@@ -3293,11 +3344,13 @@ export function RestaurantWorkspace({
 
             <div className="mt-8 grid gap-5 md:grid-cols-2">
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="dish-name" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Dish Name
                 </label>
                 <input
+                  id="dish-name"
                   type="text"
+                  aria-label="Dish name"
                   value={composerState.name}
                   onChange={(event) =>
                     setComposerState((current) => ({
@@ -3310,10 +3363,12 @@ export function RestaurantWorkspace({
               </div>
 
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="dish-category" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Item Category
                 </label>
                 <select
+                  id="dish-category"
+                  aria-label="Item category"
                   value={selectedMenuId}
                   onChange={(event) => setSelectedMenuId(event.target.value)}
                   className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
@@ -3334,12 +3389,14 @@ export function RestaurantWorkspace({
               </div>
 
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="dish-price" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Price
                 </label>
                 <input
+                  id="dish-price"
                   type="number"
                   min="1"
+                  aria-label="Dish price"
                   value={composerState.price}
                   onChange={(event) =>
                     setComposerState((current) => ({
@@ -3352,10 +3409,12 @@ export function RestaurantWorkspace({
               </div>
 
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="dish-currency" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Currency
                 </label>
                 <select
+                  id="dish-currency"
+                  aria-label="Currency"
                   value={composerState.currency}
                   onChange={(event) =>
                     setComposerState((current) => ({
@@ -3374,13 +3433,15 @@ export function RestaurantWorkspace({
               </div>
 
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="dish-serving-size" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Good For
                 </label>
                 <input
+                  id="dish-serving-size"
                   type="number"
                   min="1"
                   step="1"
+                  aria-label="Serving size"
                   value={composerState.servingSize}
                   onChange={(event) =>
                     setComposerState((current) => ({
@@ -3393,13 +3454,15 @@ export function RestaurantWorkspace({
               </div>
 
               <div>
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="dish-sort-order" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Public Display Order
                 </label>
                 <input
+                  id="dish-sort-order"
                   type="number"
                   min="0"
                   step="1"
+                  aria-label="Display order"
                   value={composerState.sortOrder}
                   onChange={(event) =>
                     setComposerState((current) => ({
@@ -3449,11 +3512,13 @@ export function RestaurantWorkspace({
               </label>
 
               <div className="md:col-span-2">
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="dish-badge" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Public Card Badge
                 </label>
                 <input
+                  id="dish-badge"
                   type="text"
+                  aria-label="Badge label"
                   value={composerState.badgeLabel}
                   placeholder="Most Ordered This Week"
                   maxLength={80}
@@ -3506,7 +3571,7 @@ export function RestaurantWorkspace({
                 </div>
 
                 {composerState.crossSellItems.length === 0 ? (
-                  <p className="rounded-[1rem] bg-white/70 px-4 py-4 text-sm font-medium text-on-surface-variant">
+                  <p className="rounded-[1rem] bg-white/70 p-4 text-sm font-medium text-on-surface-variant">
                     No serve-with items added yet.
                   </p>
                 ) : (
@@ -3516,8 +3581,12 @@ export function RestaurantWorkspace({
                         key={item.id}
                         className="grid gap-3 rounded-[1rem] bg-white/80 p-4 md:grid-cols-[6rem_minmax(0,1fr)_8rem_auto]"
                       >
-                        <label className="group flex h-24 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[0.9rem] border border-dashed border-slate-200 bg-surface-container-lowest text-center">
+                        <label
+                          htmlFor={`cross-sell-image-${item.id}`}
+                          className="group flex h-24 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-[0.9rem] border border-dashed border-slate-200 bg-surface-container-lowest text-center"
+                        >
                           <input
+                            id={`cross-sell-image-${item.id}`}
                             type="file"
                             accept="image/png,image/jpeg,image/webp"
                             className="hidden"
@@ -3558,10 +3627,14 @@ export function RestaurantWorkspace({
                         </label>
 
                         <div>
-                          <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                          <label
+                            htmlFor={`cross-sell-name-${item.id}`}
+                            className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant"
+                          >
                             Name
                           </label>
                           <input
+                            id={`cross-sell-name-${item.id}`}
                             type="text"
                             value={item.name}
                             placeholder="Butter Naan"
@@ -3580,10 +3653,14 @@ export function RestaurantWorkspace({
                         </div>
 
                         <div>
-                          <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
+                          <label
+                            htmlFor={`cross-sell-price-${item.id}`}
+                            className="mb-2 block text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant"
+                          >
                             Price
                           </label>
                           <input
+                            id={`cross-sell-price-${item.id}`}
                             type="number"
                             min="0"
                             step="1"
@@ -3622,10 +3699,12 @@ export function RestaurantWorkspace({
               </div>
 
               <div className="md:col-span-2">
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <label htmlFor="dish-description" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Description
                 </label>
                 <textarea
+                  id="dish-description"
+                  aria-label="Dish description"
                   rows={5}
                   value={composerState.description}
                   onChange={(event) =>
@@ -3640,9 +3719,9 @@ export function RestaurantWorkspace({
 
               {/* Dietary Type Selector */}
               <div className="md:col-span-2">
-                <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                <p className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Dietary Type
-                </label>
+                </p>
                 <div className="flex gap-3 flex-wrap">
                   {/* None option */}
                   <button

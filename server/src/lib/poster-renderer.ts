@@ -22,8 +22,8 @@ import puppeteer from "puppeteer";
 // Using this ratio keeps object-cover display free of cropping on mobile and
 // ensures the dish appears at the same zoom level as the live model-viewer.
 // ---------------------------------------------------------------------------
-export const POSTER_WIDTH = 768;
-export const POSTER_HEIGHT = 460; // 768 / 1.67 ≈ 460
+const POSTER_WIDTH = 768;
+const POSTER_HEIGHT = 460; // 768 / 1.67 ≈ 460
 
 const MODEL_VIEWER_CDN =
   "https://ajax.googleapis.com/ajax/libs/model-viewer/4.1.0/model-viewer.min.js";
@@ -130,6 +130,7 @@ export const renderPosterPng = async (
   const htmlPath = path.join(renderDir, "render.html");
 
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     await writeFile(htmlPath, buildPosterHtml(modelUrl, alt), "utf8");
 
     const browser = await puppeteer.launch({
@@ -163,7 +164,7 @@ export const renderPosterPng = async (
       const loaded = await page
         .waitForFunction(
           // @ts-expect-error - document is not defined in server TS config
-          () => (document.body as any).dataset.ready === "true",
+          () => (document.body as { dataset: Record<string, string> }).dataset.ready === "true",
           { timeout: 30_000 },
         )
         .then(() => true)
@@ -172,7 +173,7 @@ export const renderPosterPng = async (
       if (!loaded) {
         const hasError = await page.evaluate(
           // @ts-expect-error - document is not defined in server TS config
-          () => (document.body as any).dataset.error === "true",
+          () => (document.body as { dataset: Record<string, string> }).dataset.error === "true",
         );
         if (hasError) {
           throw new Error(

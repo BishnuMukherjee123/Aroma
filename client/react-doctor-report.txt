@@ -1,0 +1,770 @@
+﻿[1mreact-doctor[22m [2mv0.2.8[22m
+
+[90m  [39m
+node.exe : [32mΓêÜ[39m Scanned 54 files in 12.9s
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([32mΓêÜ[39m Scanned 54 files in 12.9s:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+  [31mΓ£ù[39m [31mreact-doctor/no-nested-component-definition        [39m [90m├ù98[39m
+[90m      Component "F" defined inside "F" ΓÇö creates new instance every render, destroying state[39m
+[90m      ΓåÆ Move to a separate file or to module scope above the parent component[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+
+  [31mΓ£ù[39m [31mreact-doctor/rules-of-hooks                        [39m [90m├ù15[39m
+[90m      React Hook `useProgram` is called conditionally. React Hooks must be called in the same order on every render.[39m
+[90m      ΓåÆ Call hooks at the top level of a React function component or a custom Hook.[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+
+  [31mΓ£ù[39m [31mreact-doctor/no-eval                               [39m [90m├ù8[39m
+[90m      eval() is a code injection risk ΓÇö avoid dynamic code execution[39m
+[90m      ΓåÆ Use `JSON.parse` for serialized data, `Function(...)` (still careful) for trusted templates, or refactor to avoid dynamic code execution[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/xrextras/xrextras.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/landing-page/landing-page.js:2[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-this-in-sfc                        [39m [90m├ù197[39m
+[90m      Stateless functional components shouldn't use `this` ΓÇö read props/context from function parameters.[39m
+[90m      ΓåÆ Use the function's `props` parameter instead of `this.props`.[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/landing-page/landing-page.js:2[39m
+[90m      public/8thwall/vendor/landing-page/landing-page.js:2[39m
+[90m      public/8thwall/vendor/landing-page/landing-page.js:2[39m
+
+  [33mΓÜá[39m [33mreact-doctor/js-set-map-lookups                    [39m [90m├ù48[39m
+[90m      array.includes() in a loop is O(n) per call ΓÇö convert to a Set for O(1) lookups[39m
+[90m      ΓåÆ Use a `Set` or `Map` for repeated membership tests / keyed lookups ΓÇö `Array.includes`/`find` is O(n) per call[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/landing-page/landing-page.js:2[39m
+[90m      public/8thwall/vendor/landing-page/landing-page.js:2[39m
+
+  [33mΓÜá[39m [33mdeslop/unused-file                                 [39m [90m├ù30[39m
+[90m      Unused file ΓÇö not reachable from any entry point[39m
+[90m      ΓåÆ Delete the file if it is truly unreachable, or import it from an entry point.[39m
+[90m      public/8thwall/vendor/xrextras/resources/stats.16.min-aab1b1111df515c30351.js[39m
+[90m      src/components/auth/BrandLockup.tsx[39m
+[90m      src/components/auth/DashboardPreview.tsx[39m
+[90m      src/components/auth/LoginForm.tsx[39m
+[90m      src/components/auth/PortalFooter.tsx[39m
+[90m      src/components/dashboard/DashboardHome.tsx[39m
+[90m      src/components/dashboard/DashboardSidebar.tsx[39m
+[90m      src/components/dashboard/DashboardTopbar.tsx[39m
+[90m      src/components/dashboard/ProtectedSessionPanel.tsx[39m
+[90m      src/components/public/8thWallAr/src/App.jsx[39m
+[90m      src/components/public/8thWallAr/src/main.jsx[39m
+[90m      src/components/public/8thWallAr/src/tap-place.js[39m
+[90m      src/components/public/ArPreviewModelViewer.tsx[39m
+[90m      src/components/public/EighthWallAr/EighthWallArViewer.tsx[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx[39m
+[90m      src/components/public/PublicRestaurantMenu.tsx[39m
+[90m      src/components/ui/LoadingScreen.tsx[39m
+[90m      src/components/workspace/AssetUploadPanel.tsx[39m
+[90m      src/components/workspace/ReadinessCard.tsx[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx[39m
+[90m      src/components/workspace/WorkspaceHeader.tsx[39m
+[90m      src/components/workspace/WorkspaceSidebar.tsx[39m
+[90m      src/hooks/use-auth-session.ts[39m
+[90m      src/lib/api.ts[39m
+[90m      src/lib/auth-storage.ts[39m
+[90m      src/lib/model-prefetch.ts[39m
+[90m      src/lib/model-viewer.ts[39m
+[90m      src/lib/portal.ts[39m
+[90m      src/lib/utils.ts[39m
+
+  [33mΓÜá[39m [33mreact-doctor/js-hoist-regexp                       [39m [90m├ù16[39m
+[90m      new RegExp() inside a loop ΓÇö hoist to a module-level constant[39m
+[90m      ΓåÆ Hoist `new RegExp(...)` (or large regex literals) to a module-level constant so it isn't recompiled on every loop iteration[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/media-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-slam.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/resources/semantics-worker.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr-face.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:30[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-event-handler                      [39m [90m├ù14[39m
+[90m      Avoid using state and effects as an event handler. Instead, call the event handling code directly when the event occurs.[39m
+[90m      ΓåÆ Move the side effect into the event handler that triggers it, instead of guarding on its state inside a useEffect. See https://react.dev/learn/you-might-not-need-an-effect#sharing-logic-between-event-handlers[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:382[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:381[39m
+[90m      src/components/dashboard/DashboardSidebar.tsx:48[39m
+[90m      src/components/dashboard/DashboardSidebar.tsx:58[39m
+[90m      src/components/dashboard/DashboardHome.tsx:116[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:375[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:439[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:454[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:468[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:385[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:613[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:598[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:270[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:623[39m
+
+  [33mΓÜá[39m [33mreact-doctor/control-has-associated-label          [39m [90m├ù12[39m
+[90m      A control must be associated with a text label ΓÇö add visible text, `aria-label`, or `aria-labelledby`.[39m
+[90m      ΓåÆ Every interactive control must have an accessible label.[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2440[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2631[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2654[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2683[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3228[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3443[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3460[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3547[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3591[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3613[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3737[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3781[39m
+
+  [33mΓÜá[39m [33mreact-doctor/client-passive-event-listeners        [39m [90m├ù10[39m
+[90m      "touchstart" listener without { passive: true } ΓÇö blocks scrolling performance. Only add { passive: true } if the handler does NOT call event.preventDefault() (passive listeners silently ignore preventDefault())[39m
+[90m      ΓåÆ Add `{ passive: true }` as the third argument: `addEventListener('scroll', handler, { passive: true })`. Only do this if the handler does NOT call `event.preventDefault()` ΓÇö passive listeners silently ignore `preventDefault()`, which breaks features like pull-to-refresh suppression, custom gestures, and nested-scroll containment.[39m
+[90m      public/8thwall/vendor/xrextras/xrextras.js:1[39m
+[90m      public/8thwall/vendor/xrextras/xrextras.js:1[39m
+[90m      public/8thwall/vendor/xrextras/xrextras.js:1[39m
+[90m      public/8thwall/vendor/xrextras/xrextras.js:1[39m
+[90m      public/8thwall/vendor/xrextras/xrextras.js:1[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+
+  [33mΓÜá[39m [33mreact-doctor/js-combine-iterations                 [39m [90m├ù8[39m
+[90m      .flatMap().flatMap() iterates the array twice ΓÇö combine into a single loop with .reduce() or for...of[39m
+[90m      ΓåÆ Combine `.map().filter()` (or similar chains) into a single pass with `.reduce()` or a `for...of` loop to avoid iterating the array twice[39m
+[90m      src/app/r/[restaurant_id]/ar/[dish_id]/page.tsx:44[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/landing-page/landing-page.js:2[39m
+[90m      public/sw.js:31[39m
+[90m      src/components/public/PublicRestaurantMenu.tsx:248[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-chain-state-updates                [39m [90m├ù8[39m
+[90m      Avoid chaining state changes. When possible, update all relevant state simultaneously.[39m
+[90m      ΓåÆ Update all related state simultaneously inside the event handler that originally fires, instead of reacting to one state update in a useEffect that writes another state. See https://react.dev/learn/you-might-not-need-an-effect#chains-of-computations[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:383[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:382[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:449[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:463[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:565[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:566[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:567[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:614[39m
+
+  [33mΓÜá[39m [33mreact-doctor/click-events-have-key-events          [39m [90m├ù8[39m
+[90m      Visible non-interactive elements with click handlers must have a corresponding keyboard listener (`onKeyUp`, `onKeyDown`, or `onKeyPress`).[39m
+[90m      ΓåÆ Pair `onClick` with `onKeyUp` / `onKeyDown` / `onKeyPress` for keyboard users.[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:392[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:594[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:391[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:615[39m
+[90m      src/components/dashboard/DashboardHome.tsx:921[39m
+[90m      src/components/dashboard/DashboardHome.tsx:1016[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3191[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3269[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-static-element-interactions        [39m [90m├ù8[39m
+[90m      Static HTML elements with event handlers require a role ΓÇö add `role="ΓÇª"` or use a semantic HTML element instead.[39m
+[90m      ΓåÆ Static HTML elements with event handlers require a role, or use a semantic HTML element instead.[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:392[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:594[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:391[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:615[39m
+[90m      src/components/dashboard/DashboardHome.tsx:921[39m
+[90m      src/components/dashboard/DashboardHome.tsx:1016[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3191[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3269[39m
+
+  [33mΓÜá[39m [33mreact-doctor/nextjs-no-img-element                 [39m [90m├ù8[39m
+[90m      Use next/image instead of <img> ΓÇö provides automatic optimization, lazy loading, and responsive srcset[39m
+[90m      ΓåÆ `import Image from 'next/image'` ΓÇö provides automatic WebP/AVIF, lazy loading, and responsive srcset[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:457[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:639[39m
+[90m      src/components/public/EighthWallAr/EighthWallArViewer.tsx:316[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:456[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:660[39m
+[90m      src/components/public/8thWallAr/src/App.jsx:31[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:1969[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3570[39m
+
+  [33mΓÜá[39m [33mreact-doctor/design-no-redundant-size-axes         [39m [90m├ù8[39m
+[90m      w-8 h-8 ΓåÆ use the shorthand size-8 (Tailwind v3.4+)[39m
+[90m      ΓåÆ Collapse `w-N h-N` to `size-N` (Tailwind v3.4+) when both axes match[39m
+[90m      src/components/auth/LoginForm.tsx:203[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:1972[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2450[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2693[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3216[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3301[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3452[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3469[39m
+
+  [33mΓÜá[39m [33mreact-doctor/design-no-redundant-padding-axes      [39m [90m├ù8[39m
+[90m      px-4 py-4 ΓåÆ use the shorthand p-4[39m
+[90m      ΓåÆ Collapse `px-N py-N` to `p-N` when both axes match. Keep them split only when one axis varies at a breakpoint (`py-2 md:py-3`)[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2780[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2783[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2786[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2789[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2857[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2862[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2865[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2897[39m
+
+  [33mΓÜá[39m [33mreact-doctor/exhaustive-deps                       [39m [90m├ù7[39m
+[90m      The ref value `prewarmMvRef.current` will likely have changed by the time this effect cleanup function runs. Copy it to a variable inside the hook callback and use that variable in cleanup.[39m
+[90m      ΓåÆ List every value the hook callback captures in its dependency array.[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:170[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:220[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:250[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:170[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:220[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:250[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:594[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-derived-state                      [39m [90m├ù7[39m
+[90m      Avoid storing derived state. Compute "pillTop" directly during render, optionally with `useMemo` if it's expensive.[39m
+[90m      ΓåÆ Compute derived state inline during render (or with useMemo if expensive) instead of mirroring it into useState via a useEffect. See https://react.dev/learn/you-might-not-need-an-effect#updating-state-based-on-props-or-state[39m
+[90m      src/components/dashboard/DashboardSidebar.tsx:68[39m
+[90m      src/components/dashboard/DashboardSidebar.tsx:69[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:443[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:457[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:471[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:480[39m
+[90m      src/components/public/PublicRestaurantMenu.tsx:215[39m
+
+  [33mΓÜá[39m [33mreact-doctor/nextjs-no-client-side-redirect        [39m [90m├ù7[39m
+[90m      router.replace() in useEffect ΓÇö use redirect() from next/navigation or handle navigation in an event handler[39m
+[90m      ΓåÆ Avoid redirects inside useEffect. Use an event handler, middleware, or server-side redirect (App Router: redirect() from next/navigation; Pages Router: getServerSideProps redirect)[39m
+[90m      src/components/auth/LoginForm.tsx:99[39m
+[90m      src/components/auth/LoginForm.tsx:104[39m
+[90m      src/components/dashboard/DashboardHome.tsx:117[39m
+[90m      src/components/dashboard/DashboardHome.tsx:125[39m
+[90m      src/hooks/use-auth-session.ts:74[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:624[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:629[39m
+
+  [33mΓÜá[39m [33mreact-doctor/react-compiler-destructure-method     [39m [90m├ù7[39m
+[90m      Destructure for clarity: `const { replace } = useRouter()` then call `replace(...)` directly ΓÇö easier for React Compiler to memoize and clearer about which methods this component depends on[39m
+[90m      ΓåÆ Destructure the method up front: `const { push } = useRouter()` then call `push(...)` directly ΓÇö clearer dependency graph and easier for React Compiler to memoize[39m
+[90m      src/components/auth/LoginForm.tsx:99[39m
+[90m      src/components/auth/LoginForm.tsx:104[39m
+[90m      src/components/auth/LoginForm.tsx:130[39m
+[90m      src/components/dashboard/DashboardHome.tsx:117[39m
+[90m      src/components/dashboard/DashboardHome.tsx:125[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:624[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:629[39m
+
+  [33mΓÜá[39m [33mreact-doctor/async-parallel                        [39m [90m├ù5[39m
+[90m      3 sequential await statements that appear independent ΓÇö use Promise.all() for parallel execution[39m
+[90m      ΓåÆ Use `const [a, b] = await Promise.all([fetchA(), fetchB()])` to run independent operations concurrently[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:736[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:963[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:981[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:1156[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:1599[39m
+
+  [33mΓÜá[39m [33mreact-doctor/js-hoist-intl                         [39m [90m├ù4[39m
+[90m      new Intl.NumberFormat() inside a function ΓÇö hoist to module scope or wrap in useMemo so it isn't recreated each call[39m
+[90m      ΓåÆ Hoist `new Intl.NumberFormat(...)` to module scope or wrap in `useMemo` ΓÇö Intl constructors allocate dozens of objects per locale lookup[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:89[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:89[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:222[39m
+[90m      src/components/public/PublicRestaurantMenu.tsx:50[39m
+
+  [33mΓÜá[39m [33mreact-doctor/prefer-useReducer                     [39m [90m├ù4[39m
+[90m      Component "LoginForm" has 6 useState calls ΓÇö consider useReducer for related state[39m
+[90m      ΓåÆ Group related state: `const [state, dispatch] = useReducer(reducer, { field1, field2, ... })`[39m
+[90m      src/components/auth/LoginForm.tsx:24[39m
+[90m      src/components/dashboard/DashboardHome.tsx:86[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:266[39m
+[90m      src/components/public/PublicRestaurantMenu.tsx:64[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-render-in-render                   [39m [90m├ù4[39m
+[90m      Inline render function "renderQrAccessCard()" ΓÇö extract to a separate component for proper reconciliation[39m
+[90m      ΓåÆ Extract to a named component: `const ListItem = ({ item }) => <div>{item.name}</div>`[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2607[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:2730[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3173[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3184[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-cascading-set-state                [39m [90m├ù3[39m
+[90m      3 setState calls in a single useEffect ΓÇö consider using useReducer or deriving state[39m
+[90m      ΓåÆ Combine into useReducer: `const [state, dispatch] = useReducer(reducer, initialState)`[39m
+[90m      src/components/public/EighthWallAr/OldMenuCard.tsx:139[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:139[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:560[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-initialize-state                   [39m [90m├ù3[39m
+[90m      Avoid initializing state in an effect. Instead, initialize "runtimeState"'s `useState()` with "undefined". For SSR hydration, prefer `useSyncExternalStore()`.[39m
+[90m      ΓåÆ Pass the initial value directly to useState() instead of setting it from a mount-only useEffect. For SSR hydration, prefer useSyncExternalStore().[39m
+[90m      src/components/public/EighthWallAr/EighthWallArViewer.tsx:204[39m
+[90m      src/components/dashboard/ProtectedSessionPanel.tsx:68[39m
+[90m      src/hooks/use-auth-session.ts:31[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-giant-component                    [39m [90m├ù3[39m
+[90m      Component "DashboardHome" is 988 lines ΓÇö consider breaking it into smaller focused components[39m
+[90m      ΓåÆ Extract logical sections into focused components: `<UserHeader />`, `<UserActions />`, etc.[39m
+[90m      src/components/dashboard/DashboardHome.tsx:82[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:263[39m
+[90m      src/components/public/PublicRestaurantMenu.tsx:61[39m
+
+  [33mΓÜá[39m [33mreact-doctor/rerender-state-only-in-handlers       [39m [90m├ù3[39m
+[90m      useState "activeCardMenuId" is updated but never read in the component's return ΓÇö use useRef so updates don't trigger re-renders[39m
+[90m      ΓåÆ Replace useState with useRef when the value is only mutated and never read in render ΓÇö `ref.current = ...` updates without re-rendering the component[39m
+[90m      src/components/dashboard/DashboardHome.tsx:98[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:288[39m
+[90m      src/components/public/PublicRestaurantMenu.tsx:71[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-noninteractive-element-interactions[39m [90m├ù3[39m
+[90m      Non-interactive element `<section>` should not have interactive event handlers ΓÇö convert to a semantic interactive element or add an interactive role.[39m
+[90m      ΓåÆ Move interactions to a semantic interactive element / add an interactive role.[39m
+[90m      src/components/dashboard/DashboardHome.tsx:1020[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3195[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3278[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-danger                             [39m [90m├ù2[39m
+[90m      Do not use `dangerouslySetInnerHTML` ΓÇö it injects raw HTML and is a common XSS vector.[39m
+[90m      ΓåÆ Render trusted content as React children rather than injecting raw HTML.[39m
+[90m      src/app/r/[restaurant_id]/ar/[dish_id]/layout.tsx:100[39m
+[90m      src/app/layout.tsx:46[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-pass-data-to-parent                [39m [90m├ù2[39m
+[90m      Avoid passing data to parents in an effect. Instead, fetch the data in the parent and pass it down to the child as a prop.[39m
+[90m      ΓåÆ Fetch the data in the parent and pass it to the child as a prop (or return it from the hook), instead of pushing it back up via a prop callback inside a useEffect. See https://react.dev/learn/you-might-not-need-an-effect#passing-data-to-the-parent[39m
+[90m      src/components/dashboard/DashboardSidebar.tsx:61[39m
+[90m      src/components/dashboard/DashboardSidebar.tsx:62[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-dynamic-import-path                [39m [90m├ù2[39m
+[90m      Dynamic import path is not statically analyzable ΓÇö use a string literal so the bundler can split this chunk[39m
+[90m      ΓåÆ Use a string-literal path: `import('./feature/heavy.js')` so the bundler can split this chunk[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+
+  [33mΓÜá[39m [33mreact-doctor/label-has-associated-control          [39m [90m├ù2[39m
+[90m      A form label must be associated with a control ΓÇö use `htmlFor` or nest the input.[39m
+[90m      ΓåÆ Associate every label with a control via `htmlFor` or by nesting the input.[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3588[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3610[39m
+
+  [33mΓÜá[39m [33mreact-doctor/rendering-hydration-mismatch-time[39m
+[90m      Date.now() reachable from JSX renders differently on server vs client ΓÇö wrap in useEffect+useState (client-only) or add suppressHydrationWarning to the parent if intentional[39m
+[90m      ΓåÆ Wrap dynamic time/random values in useEffect+useState (client-only) or add suppressHydrationWarning to the parent if intentional[39m
+[90m      src/components/public/MenuCard/MenuCard.tsx:583[39m
+
+  [33mΓÜá[39m [33mreact-doctor/nextjs-no-font-link[39m
+[90m      Loading Google Fonts via <link> ΓÇö use next/font instead for self-hosting, zero layout shift, and no render-blocking requests[39m
+[90m      ΓåÆ `import { Inter } from "next/font/google"` ΓÇö self-hosted, zero layout shift, no render-blocking requests[39m
+[90m      src/app/layout.tsx:35[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-many-boolean-props[39m
+[90m      Component "ReadinessCard" takes 5 boolean-like props (hasMenu, isActive, isPublishedΓÇª) ΓÇö consider compound components or explicit variants instead of stacking flags[39m
+[90m      ΓåÆ Split into compound components or named variants: `<Button.Primary />`, `<DialogConfirm />` instead of stacking `isPrimary`, `isConfirm` flags[39m
+[90m      src/components/workspace/ReadinessCard.tsx:26[39m
+
+  [33mΓÜá[39m [33mreact-doctor/js-flatmap-filter[39m
+[90m      .map().filter(Boolean) iterates twice ΓÇö use .flatMap() to transform and filter in a single pass[39m
+[90m      ΓåÆ Use `.flatMap(item => condition ? [value] : [])` ΓÇö transforms and filters in a single pass instead of creating an intermediate array[39m
+[90m      public/8thwall/vendor/engine-binary/xr.js:47[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-adjust-state-on-prop-change[39m
+[90m      Avoid adjusting state when a prop changes. Instead, adjust the state directly during render, or refactor your state to avoid this need entirely.[39m
+[90m      ΓåÆ Adjust the state inline during render instead of via a useEffect, or refactor the state to avoid the need entirely. See https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:614[39m
+
+  [33mΓÜá[39m [33mreact-doctor/async-await-in-loop[39m
+[90m      await inside a forΓÇªof loop runs the calls sequentially ΓÇö for independent operations, collect them and use `await Promise.all(items.map(...))` to run them concurrently[39m
+[90m      ΓåÆ Collect the items and use `await Promise.all(items.map(...))` to run independent operations concurrently[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:1017[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-autofocus[39m
+[90m      `autoFocus` should not be used ΓÇö it disrupts users who expect the page focus to remain at the top of the document on load.[39m
+[90m      ΓåÆ Don't use `autoFocus` ΓÇö it disorients users.[39m
+[90m      src/components/workspace/RestaurantWorkspace.tsx:3234[39m
+
+  [33mΓÜá[39m [33mreact-doctor/no-wide-letter-spacing[39m
+[90m      Letter spacing 0.06em on body text disrupts natural character groupings. Reserve wide tracking for short uppercase labels only[39m
+[90m      ΓåÆ Reserve wide tracking (letter-spacing > 0.05em) for short uppercase labels, navigation items, and buttons ΓÇö not body text[39m
+[90m      src/components/public/PublicRestaurantMenu.tsx:460[39m
+
+  [33mΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ[39m  [33m68[39m [2m/ 100[22m [33mNeeds work[39m [2m┬╖[22m [2maroma[22m
+  [33mΓöé ΓÇó ΓÇó Γöé[39m  [33mΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûê[39m[2mΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæ[22m
+  [33mΓöé  ΓöÇ  Γöé[39m  React Doctor [2m(https://react.doctor)[22m
+  [33mΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ[39m
+
+  [31m580 issues[39m
+[90m  Full diagnostics written to C:\Users\BISHNU~1\AppData\Local\Temp\react-doctor-4b5a670e-91dc-4618-8288-34ad6fdde726[39m
+
+  [1mΓåÆ Share:[22m [36mhttps://www.react.doctor/share?p=aroma&s=68&e=121&w=459&f=41[39m
+
+

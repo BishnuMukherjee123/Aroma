@@ -1,0 +1,10 @@
+{
+  "ignore": {
+    "files": [
+      "**/public/8thwall/vendor/**"
+    ],
+    "rules": [
+      "deslop/unused-file"
+    ]
+  }
+}

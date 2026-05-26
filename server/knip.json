@@ -1,0 +1,12 @@
+{
+  "ignore": [
+    "src/generated/**",
+    ".doctor/**",
+    "doctor.cjs"
+  ],
+  "ignoreDependencies": [
+    "@prisma/client",
+    "es6-plato",
+    "jscpd"
+  ]
+}

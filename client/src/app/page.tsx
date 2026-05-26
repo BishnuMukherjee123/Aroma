@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { BrandLockup } from "@/components/auth/BrandLockup";
 import { LoginForm } from "@/components/auth/LoginForm";
 
@@ -18,23 +19,26 @@ export default function LoginPage() {
 
           <p className="mt-8 text-center text-xs text-gray-400">
             By clicking Sign in, you agree to Aroma&apos;s{" "}
-            <a href="#" className="font-semibold text-gray-600 underline">
+            <button type="button" className="font-semibold text-gray-600 underline cursor-pointer bg-transparent border-0 p-0">
               Terms of Service
-            </a>
+            </button>
           </p>
         </div>
       </div>
 
       {/* ── Right: Food photo grid ────────────────────────────────────── */}
-      <div className="hidden lg:block lg:w-1/2 h-screen sticky top-0 overflow-hidden">
+      <div className="hidden lg:block lg:w-1/2 h-screen sticky top-0 overflow-hidden group">
         <div className="grid h-full grid-cols-3 grid-rows-4 gap-1 rounded-l-[2rem] overflow-hidden">
           {Array.from({ length: 12 }, (_, i) => (
-            <div key={i} className="overflow-hidden">
-              <img
+            <div key={i} className="relative overflow-hidden">
+              <Image
                 src={`/login/${i + 1}.jpg`}
                 alt=""
-                className="h-full w-full object-cover"
+                fill
+                sizes="(min-width: 1024px) 16vw, 0px"
+                className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                 loading="lazy"
+                style={{ transitionDelay: `${i * 30}ms` }}
               />
             </div>
           ))}

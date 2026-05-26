@@ -1,10 +1,20 @@
+import { createClient } from "@supabase/supabase-js";
 import { prisma } from "../../db/prisma.js";
 import { conflict, ensureFoundValue, unauthorized } from "../../lib/errors.js";
 import {
   createAuthToken,
   hashPassword,
-  verifyPassword,
 } from "../../lib/auth.js";
+import { config } from "../../utils/conf.js";
+
+const getSupabaseClient = () => {
+  return createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+};
 
 const authUserSelect = {
   id: true,
@@ -18,6 +28,32 @@ const roleRank = {
   ADMIN: 2,
   OWNER: 3,
 } as const;
+
+/** Shared helper: find or create the local user, then return a session token. */
+const findOrCreateAuthSession = async (normalizedEmail: string) => {
+  let user = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: authUserSelect,
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        email: normalizedEmail,
+        passwordHash: "",
+      },
+      select: authUserSelect,
+    });
+  }
+
+  return {
+    user,
+    token: createAuthToken({
+      userId: user.id,
+      email: user.email,
+    }),
+  };
+};
 
 export const registerUser = async (input: {
   email: string;
@@ -54,36 +90,63 @@ export const loginUser = async (input: {
   email: string;
   password: string;
 }) => {
+  const normalizedEmail = input.email.toLowerCase().trim();
+  const supabase = getSupabaseClient();
+  
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: normalizedEmail,
+    password: input.password,
+  });
+
+  if (error || !data.user) {
+    unauthorized("Invalid email or password");
+    return;
+  }
+
+  return findOrCreateAuthSession(normalizedEmail);
+};
+
+export const sendOtpService = async (email: string) => {
+  const normalizedEmail = email.toLowerCase().trim();
   const user = await prisma.user.findUnique({
-    where: { email: input.email },
-    select: {
-      ...authUserSelect,
-      passwordHash: true,
+    where: { email: normalizedEmail },
+    select: { id: true },
+  });
+
+  if (!user) {
+    unauthorized("Unauthorized email address");
+  }
+
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.auth.signInWithOtp({
+    email: normalizedEmail,
+    options: {
+      shouldCreateUser: false,
     },
   });
 
-  const existingUser = ensureFoundValue(user, "Invalid email or password");
-  const isValidPassword = await verifyPassword(
-    input.password,
-    existingUser.passwordHash,
-  );
-
-  if (!isValidPassword) {
-    unauthorized("Invalid email or password");
+  if (error) {
+    throw new Error(`Failed to send OTP: ${error.message}`);
   }
 
-  return {
-    user: {
-      id: existingUser.id,
-      email: existingUser.email,
-      createdAt: existingUser.createdAt,
-      updatedAt: existingUser.updatedAt,
-    },
-    token: createAuthToken({
-      userId: existingUser.id,
-      email: existingUser.email,
-    }),
-  };
+  return { success: true, message: "OTP sent successfully" };
+};
+
+export const verifyOtpService = async (email: string, code: string) => {
+  const normalizedEmail = email.toLowerCase().trim();
+  const supabase = getSupabaseClient();
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: normalizedEmail,
+    token: code,
+    type: "email",
+  });
+
+  if (error || !data.user) {
+    unauthorized("Invalid or expired OTP code");
+    return;
+  }
+
+  return findOrCreateAuthSession(normalizedEmail);
 };
 
 export const getCurrentUser = async (userId: string) => {

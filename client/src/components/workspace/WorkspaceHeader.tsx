@@ -67,15 +67,6 @@ export function WorkspaceHeader({
             <p className="mt-1 text-[11px] font-medium text-primary">{qrState}</p>
           ) : null}
         </div>
-
-        <button
-          type="button"
-          onClick={onCreateDish}
-          className="flex items-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-5 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5"
-        >
-          <span className="material-symbols-outlined text-[1rem]">add</span>
-          Add New Dish
-        </button>
       </div>
     </header>
   );

@@ -93,12 +93,15 @@ export function ArPreviewModelViewer({
     let visibleMv: HTMLElement;
     let hiddenMv: HTMLElement | null = null;
     let cleanedUp = false;
+    let handleLodLoad: (() => void) | undefined;
+    let handleFullLoad: (() => void) | undefined;
+    let handleLoad: (() => void) | undefined;
 
     if (lodUrl) {
       // ── PHASE 1: mount LOD viewer ──────────────────────────────────────────
       visibleMv = createMv(lodUrl, true);
 
-      const handleLodLoad = () => {
+      handleLodLoad = () => {
         if (cleanedUp) return;
         // Tell the card the model is "ready" — spinner hides, poster fades out
         onLoadedRef.current();
@@ -107,7 +110,7 @@ export function ArPreviewModelViewer({
         hiddenMv = createMv(modelUrl, false);
         container.appendChild(hiddenMv);
 
-        const handleFullLoad = () => {
+        handleFullLoad = () => {
           if (cleanedUp) return;
           // Swap the visible viewer to full-quality src.
           // The GLB is already in browser cache so this is near-instant.
@@ -128,7 +131,7 @@ export function ArPreviewModelViewer({
     } else {
       // ── NO LOD: single viewer, original behaviour ──────────────────────────
       visibleMv = createMv(modelUrl, true);
-      const handleLoad = () => onLoadedRef.current();
+      handleLoad = () => onLoadedRef.current();
       visibleMv.addEventListener("load", handleLoad, { once: true });
     }
 
@@ -136,6 +139,9 @@ export function ArPreviewModelViewer({
 
     return () => {
       cleanedUp = true;
+      if (handleLodLoad) visibleMv.removeEventListener("load", handleLodLoad);
+      if (handleLoad) visibleMv.removeEventListener("load", handleLoad);
+      if (hiddenMv && handleFullLoad) hiddenMv.removeEventListener("load", handleFullLoad);
       if (container.contains(visibleMv)) container.removeChild(visibleMv);
       if (hiddenMv && container.contains(hiddenMv)) container.removeChild(hiddenMv);
     };

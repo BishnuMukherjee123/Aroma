@@ -73,7 +73,7 @@ const uploadPosterBuffer = async (
  * Idempotent guard: if a READY POSTER asset already exists for the dish,
  * this function returns early without re-rendering.
  */
-export const generateAndSavePoster = async (opts: {
+const generateAndSavePoster = async (opts: {
   dishId: string;
   restaurantId: string;
   modelUrl: string;

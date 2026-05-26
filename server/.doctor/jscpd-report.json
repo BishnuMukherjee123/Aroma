@@ -1,0 +1,925 @@
+{
+  "statistics": {
+    "detectionDate": "2026-05-26T22:15:28.420Z",
+    "formats": {
+      "typescript": {
+        "sources": {
+          "src/modules/restaurant/service.ts": {
+            "lines": 246,
+            "tokens": 1971,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/restaurant/route.ts": {
+            "lines": 63,
+            "tokens": 447,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/restaurant/controller.ts": {
+            "lines": 59,
+            "tokens": 579,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 18,
+            "duplicatedTokens": 170,
+            "percentage": 30.51,
+            "percentageTokens": 29.36,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/restaurant/access.ts": {
+            "lines": 66,
+            "tokens": 446,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/qr/service.ts": {
+            "lines": 41,
+            "tokens": 358,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/qr/controller.ts": {
+            "lines": 14,
+            "tokens": 160,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/public/service.ts": {
+            "lines": 16,
+            "tokens": 137,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/public/route.ts": {
+            "lines": 11,
+            "tokens": 97,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/public/controller.ts": {
+            "lines": 16,
+            "tokens": 159,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/menu/service.ts": {
+            "lines": 123,
+            "tokens": 934,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/menu/route.ts": {
+            "lines": 36,
+            "tokens": 262,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 32,
+            "duplicatedTokens": 163,
+            "percentage": 88.89,
+            "percentageTokens": 62.21,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/menu/controller.ts": {
+            "lines": 52,
+            "tokens": 532,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 46,
+            "duplicatedTokens": 464,
+            "percentage": 88.46,
+            "percentageTokens": 87.22,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/member/service.ts": {
+            "lines": 297,
+            "tokens": 2053,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/member/controller.ts": {
+            "lines": 44,
+            "tokens": 369,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/dish/service.ts": {
+            "lines": 126,
+            "tokens": 1006,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/dish/route.ts": {
+            "lines": 29,
+            "tokens": 215,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 16,
+            "duplicatedTokens": 80,
+            "percentage": 55.17,
+            "percentageTokens": 37.21,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/dish/controller.ts": {
+            "lines": 51,
+            "tokens": 552,
+            "sources": 1,
+            "clones": 2,
+            "duplicatedLines": 17,
+            "duplicatedTokens": 234,
+            "percentage": 33.33,
+            "percentageTokens": 42.39,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/category/service.ts": {
+            "lines": 165,
+            "tokens": 1294,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/category/route.ts": {
+            "lines": 35,
+            "tokens": 249,
+            "sources": 1,
+            "clones": 1,
+            "duplicatedLines": 16,
+            "duplicatedTokens": 83,
+            "percentage": 45.71,
+            "percentageTokens": 33.33,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/category/controller.ts": {
+            "lines": 88,
+            "tokens": 887,
+            "sources": 1,
+            "clones": 4,
+            "duplicatedLines": 45,
+            "duplicatedTokens": 528,
+            "percentage": 51.14,
+            "percentageTokens": 59.53,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/auth/service.ts": {
+            "lines": 213,
+            "tokens": 1633,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/auth/route.ts": {
+            "lines": 22,
+            "tokens": 250,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/auth/controller.ts": {
+            "lines": 44,
+            "tokens": 557,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/asset/service.ts": {
+            "lines": 185,
+            "tokens": 1571,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/asset/route.ts": {
+            "lines": 29,
+            "tokens": 215,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/asset/controller.ts": {
+            "lines": 42,
+            "tokens": 389,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/modules/analytics/service.ts": {
+            "lines": 6,
+            "tokens": 65,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/utils/conf.ts": {
+            "lines": 90,
+            "tokens": 905,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/types/qrcode.d.ts": {
+            "lines": 10,
+            "tokens": 87,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/types/express.d.ts": {
+            "lines": 8,
+            "tokens": 50,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/types/cors.d.ts": {
+            "lines": 5,
+            "tokens": 47,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/middleware/request-logger.ts": {
+            "lines": 11,
+            "tokens": 133,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/middleware/rate-limit.ts": {
+            "lines": 43,
+            "tokens": 353,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/middleware/error-handler.ts": {
+            "lines": 23,
+            "tokens": 188,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/middleware/auth.ts": {
+            "lines": 36,
+            "tokens": 316,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/validation.ts": {
+            "lines": 272,
+            "tokens": 2375,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/supabase-storage.ts": {
+            "lines": 117,
+            "tokens": 1041,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/request.ts": {
+            "lines": 16,
+            "tokens": 123,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/public-menu.ts": {
+            "lines": 289,
+            "tokens": 2772,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/public-menu-cache.ts": {
+            "lines": 34,
+            "tokens": 283,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/poster-service.ts": {
+            "lines": 149,
+            "tokens": 1043,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/poster-renderer.ts": {
+            "lines": 206,
+            "tokens": 930,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/ids.ts": {
+            "lines": 31,
+            "tokens": 336,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/errors.ts": {
+            "lines": 40,
+            "tokens": 421,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/dish-select.ts": {
+            "lines": 94,
+            "tokens": 651,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/auth.ts": {
+            "lines": 84,
+            "tokens": 811,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/lib/async-handler.ts": {
+            "lines": 17,
+            "tokens": 143,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/db/prisma.ts": {
+            "lines": 22,
+            "tokens": 160,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/server.ts": {
+            "lines": 5,
+            "tokens": 63,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          },
+          "src/app.ts": {
+            "lines": 42,
+            "tokens": 459,
+            "sources": 1,
+            "clones": 0,
+            "duplicatedLines": 0,
+            "duplicatedTokens": 0,
+            "percentage": 0,
+            "percentageTokens": 0,
+            "newDuplicatedLines": 0,
+            "newClones": 0
+          }
+        },
+        "total": {
+          "lines": 3763,
+          "tokens": 31077,
+          "sources": 50,
+          "clones": 8,
+          "duplicatedLines": 95,
+          "duplicatedTokens": 861,
+          "percentage": 2.52,
+          "percentageTokens": 2.77,
+          "newDuplicatedLines": 0,
+          "newClones": 0
+        }
+      }
+    },
+    "total": {
+      "lines": 3763,
+      "tokens": 31077,
+      "sources": 50,
+      "clones": 8,
+      "duplicatedLines": 95,
+      "duplicatedTokens": 861,
+      "percentage": 2.52,
+      "percentageTokens": 2.77,
+      "newDuplicatedLines": 0,
+      "newClones": 0
+    }
+  },
+  "duplicates": [
+    {
+      "format": "typescript",
+      "lines": 10,
+      "fragment": "),\n    },\n  );\n\n  res.status(200).json(payload);\n};\n\nexport const remove = async (req: Request, res: Response): Promise<void> => {\n  const auth = requireAuthContext(req);\n  const payload = await deleteMenu",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src\\modules\\menu\\controller.ts",
+        "start": 38,
+        "end": 47,
+        "startLoc": {
+          "line": 38,
+          "column": 77,
+          "position": 401
+        },
+        "endLoc": {
+          "line": 47,
+          "column": 35,
+          "position": 486
+        }
+      },
+      "secondFile": {
+        "name": "src\\modules\\restaurant\\controller.ts",
+        "start": 45,
+        "end": 54,
+        "startLoc": {
+          "line": 45,
+          "column": 71,
+          "position": 448
+        },
+        "endLoc": {
+          "line": 54,
+          "column": 41,
+          "position": 533
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 17,
+      "fragment": ");\n\n  router.patch(\n    \"/:id\",\n    asyncHandler(requireAuth),\n    adminWriteLimiter,\n    asyncHandler(controller.update),\n  );\n  router.delete(\n    \"/:id\",\n    asyncHandler(requireAuth),\n    adminWriteLimiter,\n    asyncHandler(controller.remove),\n  );\n\n  return router;\n};",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src\\modules\\dish\\route.ts",
+        "start": 14,
+        "end": 30,
+        "startLoc": {
+          "line": 14,
+          "column": 4,
+          "position": 135
+        },
+        "endLoc": {
+          "line": 30,
+          "column": 3,
+          "position": 215
+        }
+      },
+      "secondFile": {
+        "name": "src\\modules\\menu\\route.ts",
+        "start": 22,
+        "end": 37,
+        "startLoc": {
+          "line": 22,
+          "column": 3,
+          "position": 183
+        },
+        "endLoc": {
+          "line": 37,
+          "column": 3,
+          "position": 262
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 10,
+      "fragment": "),\n    },\n  );\n\n  res.status(200).json(payload);\n};\n\nexport const remove = async (req: Request, res: Response): Promise<void> => {\n  const auth = requireAuthContext(req);\n  const payload = await deleteDish",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src\\modules\\dish\\controller.ts",
+        "start": 37,
+        "end": 46,
+        "startLoc": {
+          "line": 37,
+          "column": 68,
+          "position": 421
+        },
+        "endLoc": {
+          "line": 46,
+          "column": 35,
+          "position": 506
+        }
+      },
+      "secondFile": {
+        "name": "src\\modules\\restaurant\\controller.ts",
+        "start": 45,
+        "end": 54,
+        "startLoc": {
+          "line": 45,
+          "column": 71,
+          "position": 448
+        },
+        "endLoc": {
+          "line": 54,
+          "column": 41,
+          "position": 533
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 17,
+      "fragment": "),\n  );\n  router.patch(\n    \"/:id\",\n    asyncHandler(requireAuth),\n    adminWriteLimiter,\n    asyncHandler(controller.update),\n  );\n  router.delete(\n    \"/:id\",\n    asyncHandler(requireAuth),\n    adminWriteLimiter,\n    asyncHandler(controller.remove),\n  );\n\n  return router;\n};",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src\\modules\\category\\route.ts",
+        "start": 20,
+        "end": 36,
+        "startLoc": {
+          "line": 20,
+          "column": 39,
+          "position": 166
+        },
+        "endLoc": {
+          "line": 36,
+          "column": 3,
+          "position": 249
+        }
+      },
+      "secondFile": {
+        "name": "src\\modules\\menu\\route.ts",
+        "start": 21,
+        "end": 37,
+        "startLoc": {
+          "line": 21,
+          "column": 50,
+          "position": 179
+        },
+        "endLoc": {
+          "line": 37,
+          "column": 3,
+          "position": 262
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 14,
+      "fragment": "(\n    auth.userId,\n    requireString(req.params.id, \"id\", 1),\n    {\n      name: requireString(req.body.name, \"name\", 1),\n      isPublished: optionalBoolean(req.body.isPublished, \"isPublished\"),\n      sortOrder: optionalInteger(req.body.sortOrder, \"sortOrder\", { min: 0 }),\n    },\n  );\n\n  res.status(201).json(payload);\n};\n\nexport const createDish",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src\\modules\\category\\controller.ts",
+        "start": 27,
+        "end": 40,
+        "startLoc": {
+          "line": 27,
+          "column": 39,
+          "position": 168
+        },
+        "endLoc": {
+          "line": 40,
+          "column": 24,
+          "position": 291
+        }
+      },
+      "secondFile": {
+        "name": "src\\modules\\menu\\controller.ts",
+        "start": 17,
+        "end": 30,
+        "startLoc": {
+          "line": 17,
+          "column": 35,
+          "position": 140
+        },
+        "endLoc": {
+          "line": 30,
+          "column": 20,
+          "position": 263
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 9,
+      "fragment": "(req.body.currency),\n      description: optionalString(req.body.description, \"description\"),\n      badgeLabel: optionalNullableString(req.body.badgeLabel, \"badgeLabel\"),\n      servingSize: optionalInteger(req.body.servingSize, \"servingSize\", { min: 1 }),\n      detailsPanelEnabled: optionalBoolean(req.body.detailsPanelEnabled, \"detailsPanelEnabled\"),\n      crossSellItems: optionalCrossSellItems(req.body.crossSellItems),\n      isPublished: optionalBoolean(req.body.isPublished, \"isPublished\"),\n      sortOrder: optionalInteger(req.body.sortOrder, \"sortOrder\", { min: 0 }),\n      dietaryType: optionalDietaryType",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src\\modules\\category\\controller.ts",
+        "start": 51,
+        "end": 59,
+        "startLoc": {
+          "line": 51,
+          "column": 36,
+          "position": 428
+        },
+        "endLoc": {
+          "line": 59,
+          "column": 39,
+          "position": 577
+        }
+      },
+      "secondFile": {
+        "name": "src\\modules\\dish\\controller.ts",
+        "start": 29,
+        "end": 37,
+        "startLoc": {
+          "line": 29,
+          "column": 37,
+          "position": 265
+        },
+        "endLoc": {
+          "line": 37,
+          "column": 47,
+          "position": 414
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 10,
+      "fragment": "),\n    },\n  );\n\n  res.status(201).json(payload);\n};\n\nexport const update = async (req: Request, res: Response): Promise<void> => {\n  const auth = requireAuthContext(req);\n  const payload = await updateCategory",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src\\modules\\category\\controller.ts",
+        "start": 59,
+        "end": 68,
+        "startLoc": {
+          "line": 59,
+          "column": 60,
+          "position": 584
+        },
+        "endLoc": {
+          "line": 68,
+          "column": 39,
+          "position": 669
+        }
+      },
+      "secondFile": {
+        "name": "src\\modules\\menu\\controller.ts",
+        "start": 23,
+        "end": 32,
+        "startLoc": {
+          "line": 23,
+          "column": 77,
+          "position": 229
+        },
+        "endLoc": {
+          "line": 32,
+          "column": 35,
+          "position": 314
+        }
+      }
+    },
+    {
+      "format": "typescript",
+      "lines": 16,
+      "fragment": "(\n    auth.userId,\n    requireString(req.params.id, \"id\", 1),\n    {\n      name: optionalString(req.body.name, \"name\"),\n      isPublished: optionalBoolean(req.body.isPublished, \"isPublished\"),\n      sortOrder: optionalInteger(req.body.sortOrder, \"sortOrder\", { min: 0 }),\n    },\n  );\n\n  res.status(200).json(payload);\n};\n\nexport const remove = async (req: Request, res: Response): Promise<void> => {\n  const auth = requireAuthContext(req);\n  const payload = await deleteCategory",
+      "tokens": 0,
+      "firstFile": {
+        "name": "src\\modules\\category\\controller.ts",
+        "start": 68,
+        "end": 83,
+        "startLoc": {
+          "line": 68,
+          "column": 39,
+          "position": 670
+        },
+        "endLoc": {
+          "line": 83,
+          "column": 39,
+          "position": 841
+        }
+      },
+      "secondFile": {
+        "name": "src\\modules\\menu\\controller.ts",
+        "start": 32,
+        "end": 54,
+        "startLoc": {
+          "line": 32,
+          "column": 35,
+          "position": 315
+        },
+        "endLoc": {
+          "line": 54,
+          "column": 41,
+          "position": 533
+        }
+      }
+    }
+  ]
+}

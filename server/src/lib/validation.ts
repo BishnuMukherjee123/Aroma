@@ -124,11 +124,12 @@ export const requirePassword = (
   return password;
 };
 
-export const requirePublicId = (
+const requirePublicId = (
   value: unknown,
   fieldName = "publicId",
 ): string => {
   const publicId = normalizePublicId(requireString(value, fieldName, 3));
+  // eslint-disable-next-line security/detect-unsafe-regex
   const publicIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
   if (publicId.length > 50) {

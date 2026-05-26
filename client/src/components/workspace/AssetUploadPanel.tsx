@@ -50,14 +50,15 @@ export function AssetUploadPanel({
         </div>
 
         <div className="space-y-2">
-          <label className="px-1 text-[10px] font-black uppercase tracking-[0.18em] text-on-surface-variant">
+          <p className="px-1 text-[10px] font-black uppercase tracking-[0.18em] text-on-surface-variant">
             AR Model (.GLB)
-          </label>
+          </p>
           <label className="group flex min-h-44 cursor-pointer flex-col items-center justify-center rounded-[1.3rem] border-2 border-dashed border-slate-200 bg-slate-50/70 px-6 text-center transition-all hover:border-primary/35 hover:bg-primary/5">
             <input
               type="file"
               accept=".glb,.gltf,model/gltf-binary,model/gltf+json"
               className="hidden"
+              aria-label="Upload 3D model file"
               onChange={(event) =>
                 onModelChange(event.target.files?.[0] ?? null)
               }
@@ -75,14 +76,15 @@ export function AssetUploadPanel({
         </div>
 
         <div className="space-y-2">
-          <label className="px-1 text-[10px] font-black uppercase tracking-[0.18em] text-on-surface-variant">
+          <p className="px-1 text-[10px] font-black uppercase tracking-[0.18em] text-on-surface-variant">
             Thumbnail Media
-          </label>
+          </p>
           <label className="group flex aspect-[1.35/1] cursor-pointer flex-col items-center justify-center rounded-[1.2rem] border border-dashed border-slate-200 bg-slate-50 px-5 text-center transition-all hover:border-primary/35 hover:bg-primary/5">
             <input
               type="file"
               accept="image/png,image/jpeg,image/webp"
               className="hidden"
+              aria-label="Upload thumbnail image"
               onChange={(event) =>
                 onThumbnailChange(event.target.files?.[0] ?? null)
               }

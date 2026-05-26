@@ -1,8 +1,18 @@
+import { createClient } from "@supabase/supabase-js";
 import { prisma } from "../../db/prisma.js";
-import { hashPassword } from "../../lib/auth.js";
 import { conflict, ensureFoundValue } from "../../lib/errors.js";
 import { rebuildPublicRestaurantSnapshot } from "../../lib/public-menu.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
+import { config } from "../../utils/conf.js";
+
+const getSupabaseAdminClient = () => {
+  return createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+};
 
 export const RESTAURANT_MEMBER_ROLES = ["OWNER", "ADMIN", "EDITOR"] as const;
 
@@ -151,10 +161,10 @@ export const createRestaurantManagerAccount = async (
     );
   }
 
-  const passwordHash = await hashPassword(input.password);
+  const normalizedEmail = input.email.toLowerCase().trim();
 
   const existingUser = await prisma.user.findUnique({
-    where: { email: input.email },
+    where: { email: normalizedEmail },
     select: {
       id: true,
       email: true,
@@ -201,17 +211,43 @@ export const createRestaurantManagerAccount = async (
     }
   }
 
+  const supabase = getSupabaseAdminClient();
+  let supabaseUserId = existingUser?.id;
+
+  if (!existingUser) {
+    const { data: sbData, error: sbError } = await supabase.auth.admin.createUser({
+      email: normalizedEmail,
+      password: input.password,
+      email_confirm: true,
+    });
+
+    if (sbError || !sbData.user) {
+      throw new Error(`Failed to create user in Supabase Auth: ${sbError?.message || "Unknown error"}`);
+    }
+
+    supabaseUserId = sbData.user.id;
+  } else {
+    const { error: sbError } = await supabase.auth.admin.updateUserById(existingUser.id, {
+      password: input.password,
+    });
+
+    if (sbError) {
+      throw new Error(`Failed to update password in Supabase Auth: ${sbError.message}`);
+    }
+  }
+
   const payload = await prisma.$transaction(async (tx) => {
     const managerUser = await tx.user.upsert({
       where: {
-        email: input.email,
+        email: normalizedEmail,
       },
       update: {
-        passwordHash,
+        passwordHash: "",
       },
       create: {
-        email: input.email,
-        passwordHash,
+        id: supabaseUserId,
+        email: normalizedEmail,
+        passwordHash: "",
       },
       select: {
         id: true,

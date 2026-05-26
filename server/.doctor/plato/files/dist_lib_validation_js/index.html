@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - dist/lib/validation.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato.css" rel="stylesheet" type="text/css">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet" type="text/css">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="https://github.com/the-simian/es6-plato">ES6 Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+      <li class="active">
+        <a href="display.html">Summary Display</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>dist/lib/validation.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">69.05</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">160</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">43.16</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.76</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { badRequest } from &quot;./errors.js&quot;;
+import { normalizePublicId } from &quot;./ids.js&quot;;
+export const requireString = (value, fieldName, minLength = 1) =&gt; {
+    if (typeof value !== &quot;string&quot;) {
+        badRequest(`${fieldName} must be a string`);
+    }
+    const trimmed = value.trim();
+    if (trimmed.length &lt; minLength) {
+        badRequest(`${fieldName} must be at least ${minLength} characters`);
+    }
+    return trimmed;
+};
+export const optionalString = (value, fieldName) =&gt; {
+    if (value === undefined || value === null || value === &quot;&quot;) {
+        return undefined;
+    }
+    return requireString(value, fieldName, 1);
+};
+export const optionalNullableString = (value, fieldName) =&gt; {
+    if (value === undefined) {
+        return undefined;
+    }
+    if (value === null || value === &quot;&quot;) {
+        return null;
+    }
+    return requireString(value, fieldName, 1);
+};
+export const requireInteger = (value, fieldName, options = {}) =&gt; {
+    const parsed = typeof value === &quot;number&quot;
+        ? value
+        : typeof value === &quot;string&quot;
+            ? Number(value)
+            : Number.NaN;
+    if (!Number.isInteger(parsed)) {
+        badRequest(`${fieldName} must be an integer`);
+    }
+    if (options.min !== undefined &amp;&amp; parsed &lt; options.min) {
+        badRequest(`${fieldName} must be at least ${options.min}`);
+    }
+    if (options.max !== undefined &amp;&amp; parsed &gt; options.max) {
+        badRequest(`${fieldName} must be at most ${options.max}`);
+    }
+    return parsed;
+};
+export const optionalInteger = (value, fieldName, options = {}) =&gt; {
+    if (value === undefined || value === null || value === &quot;&quot;) {
+        return undefined;
+    }
+    return requireInteger(value, fieldName, options);
+};
+export const optionalBoolean = (value, fieldName) =&gt; {
+    if (value === undefined || value === null || value === &quot;&quot;) {
+        return undefined;
+    }
+    if (typeof value !== &quot;boolean&quot;) {
+        badRequest(`${fieldName} must be a boolean`);
+    }
+    return value;
+};
+export const requireEmail = (value, fieldName = &quot;email&quot;) =&gt; {
+    const email = requireString(value, fieldName, 3).toLowerCase();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailPattern.test(email)) {
+        badRequest(`${fieldName} must be a valid email address`);
+    }
+    return email;
+};
+export const requirePassword = (value, fieldName = &quot;password&quot;) =&gt; {
+    const password = requireString(value, fieldName, 8);
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/\d/.test(password)) {
+        badRequest(`${fieldName} must contain at least one uppercase letter, one lowercase letter, and one number`);
+    }
+    return password;
+};
+const requirePublicId = (value, fieldName = &quot;publicId&quot;) =&gt; {
+    const publicId = normalizePublicId(requireString(value, fieldName, 3));
+    // eslint-disable-next-line security/detect-unsafe-regex
+    const publicIdPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+    if (publicId.length &gt; 50) {
+        badRequest(`${fieldName} must be at most 50 characters`);
+    }
+    if (!publicIdPattern.test(publicId)) {
+        badRequest(`${fieldName} must contain only lowercase letters, numbers, and hyphens`);
+    }
+    return publicId;
+};
+export const optionalPublicId = (value, fieldName = &quot;publicId&quot;) =&gt; {
+    if (value === undefined || value === null || value === &quot;&quot;) {
+        return undefined;
+    }
+    return requirePublicId(value, fieldName);
+};
+export const requireEnumValue = (value, fieldName, allowedValues) =&gt; {
+    const normalized = requireString(value, fieldName, 1);
+    if (!allowedValues.includes(normalized)) {
+        badRequest(`${fieldName} must be one of: ${allowedValues.join(&quot;, &quot;)}`);
+    }
+    return normalized;
+};
+const currencyCodes = [&quot;USD&quot;, &quot;INR&quot;, &quot;EUR&quot;, &quot;GBP&quot;, &quot;AED&quot;];
+export const requireCurrencyCode = (value, fieldName = &quot;currency&quot;) =&gt; requireEnumValue(value, fieldName, currencyCodes);
+export const optionalCurrencyCode = (value, fieldName = &quot;currency&quot;) =&gt; {
+    if (value === undefined || value === null || value === &quot;&quot;) {
+        return undefined;
+    }
+    return requireCurrencyCode(value, fieldName);
+};
+const dietaryCodes = [&quot;VEG&quot;, &quot;NON_VEG&quot;, &quot;BOTH&quot;];
+export const optionalDietaryType = (value, fieldName = &quot;dietaryType&quot;) =&gt; {
+    if (value === undefined || value === null || value === &quot;&quot;) {
+        return undefined;
+    }
+    return requireEnumValue(value, fieldName, dietaryCodes);
+};
+export const optionalNullableDietaryType = (value, fieldName = &quot;dietaryType&quot;) =&gt; {
+    if (value === undefined) {
+        return undefined;
+    }
+    if (value === null || value === &quot;&quot;) {
+        return null;
+    }
+    return requireEnumValue(value, fieldName, dietaryCodes);
+};
+export const optionalCrossSellItems = (value, fieldName = &quot;crossSellItems&quot;) =&gt; {
+    if (value === undefined) {
+        return undefined;
+    }
+    if (!Array.isArray(value)) {
+        badRequest(`${fieldName} must be an array`);
+    }
+    const items = value;
+    if (items.length &gt; 12) {
+        badRequest(`${fieldName} can include at most 12 items`);
+    }
+    return items.map((item, index) =&gt; {
+        if (!item || typeof item !== &quot;object&quot;) {
+            badRequest(`${fieldName}[${index}] must be an object`);
+        }
+        const candidate = item;
+        const name = requireString(candidate.name, `${fieldName}[${index}].name`, 1);
+        const price = requireInteger(candidate.price, `${fieldName}[${index}].price`, { min: 0 });
+        const id = typeof candidate.id === &quot;string&quot; &amp;&amp; candidate.id.trim()
+            ? candidate.id.trim()
+            : `cross-sell-${index + 1}`;
+        const imageUrl = typeof candidate.imageUrl === &quot;string&quot; &amp;&amp; candidate.imageUrl.trim()
+            ? candidate.imageUrl.trim()
+            : null;
+        const imageStorageKey = typeof candidate.imageStorageKey === &quot;string&quot; &amp;&amp; candidate.imageStorageKey.trim()
+            ? candidate.imageStorageKey.trim()
+            : null;
+        return {
+            id,
+            name,
+            price,
+            imageUrl,
+            imageStorageKey,
+        };
+    });
+};
+//# sourceMappingURL=validation.js.map</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

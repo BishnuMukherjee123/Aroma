@@ -26,6 +26,7 @@ export function DashboardTopbar({
         <input
           type="text"
           placeholder="Search control room..."
+          aria-label="Search control room"
           className="w-full rounded-full bg-surface-container-low px-11 py-2.5 text-sm font-medium text-on-surface outline-none transition-all placeholder:text-on-surface-variant/65 focus:bg-white focus:ring-2 focus:ring-primary/20"
         />
       </div>
@@ -35,7 +36,8 @@ export function DashboardTopbar({
           <button
             key={icon}
             type="button"
-            className="flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant/80 transition-colors hover:bg-surface-container-low hover:text-on-surface"
+            aria-label={icon}
+            className="flex size-10 items-center justify-center rounded-full text-on-surface-variant/80 transition-colors hover:bg-surface-container-low hover:text-on-surface"
           >
             <span className="material-symbols-outlined text-[1.1rem]">{icon}</span>
           </button>
@@ -52,7 +54,7 @@ export function DashboardTopbar({
           </p>
         </div>
 
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-surface-container-high to-surface-container-low text-sm font-bold text-primary shadow-[0_8px_20px_rgba(18,28,42,0.06)]">
+        <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-surface-container-high to-surface-container-low text-sm font-bold text-primary shadow-[0_8px_20px_rgba(18,28,42,0.06)]">
           {user.email.charAt(0).toUpperCase()}
         </div>
 

@@ -58,6 +58,7 @@ export const ensureRestaurantRole = async (
     "You do not have access to this restaurant",
   );
 
+  // eslint-disable-next-line security/detect-object-injection
   if (roleRank[existingMembership.role] < roleRank[minimumRole]) {
     forbidden(`You need ${minimumRole} access to perform this action`);
   }

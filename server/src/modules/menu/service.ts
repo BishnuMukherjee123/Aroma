@@ -1,5 +1,6 @@
 import { prisma } from "../../db/prisma.js";
 import { badRequest, conflict, ensureFoundValue } from "../../lib/errors.js";
+import { buildPartialUpdate } from "../../lib/dish-select.js";
 import { rebuildPublicRestaurantSnapshot } from "../../lib/public-menu.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
 
@@ -69,13 +70,7 @@ export const updateMenu = async (
 
   const updatedMenu = await prisma.mainMenu.update({
     where: { id: menuId },
-    data: {
-      ...(input.name !== undefined ? { name: input.name } : {}),
-      ...(input.isPublished !== undefined
-        ? { isPublished: input.isPublished }
-        : {}),
-      ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
-    },
+    data: buildPartialUpdate(input),
     select: {
       id: true,
       name: true,

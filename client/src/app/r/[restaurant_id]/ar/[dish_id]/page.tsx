@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { notFound } from "next/navigation";
+import { redirect, notFound, unstable_rethrow } from "next/navigation";
 import { fetchPublicRestaurantServer } from "@/lib/api";
 
 type PublicArDishPageProps = {
@@ -24,22 +23,30 @@ export default async function PublicArDishPage({
 }: PublicArDishPageProps) {
   const { restaurant_id, dish_id } = await params;
 
-  // Look up the dish first. We DON'T put redirect() inside the try/catch:
-  // Next.js implements redirect() by throwing a NEXT_REDIRECT signal, and
-  // a generic catch block intercepts that signal and triggers notFound(),
-  // which is why the user was seeing 404 on every click.
-  let modelUrl: string | null = null;
-  try {
-    const restaurant = await fetchPublicRestaurantServer(restaurant_id);
-    const dish = restaurant.menus
-      .flatMap((menu) => menu.categories)
-      .flatMap((category) => category.dishes)
-      .find((item) => item.id === dish_id);
+  // Use .catch() so that notFound() is never called inside a try-catch block.
+  // unstable_rethrow re-throws Next.js internal signals (NEXT_REDIRECT,
+  // NEXT_NOT_FOUND, etc.) so they propagate correctly through the framework.
+  //
+  // We DON'T put redirect() inside a try/catch: Next.js implements redirect()
+  // by throwing a NEXT_REDIRECT signal, and a generic catch block would
+  // intercept that signal and trigger notFound().
+  const restaurant = await fetchPublicRestaurantServer(restaurant_id).catch(
+    (error: unknown) => {
+      unstable_rethrow(error);
+      return null;
+    },
+  );
 
-    modelUrl = dish?.modelUrl ?? null;
-  } catch {
+  if (!restaurant) {
     notFound();
   }
+
+  const dish = restaurant.menus
+    .flatMap((menu) => menu.categories)
+    .flatMap((category) => category.dishes)
+    .find((item) => item.id === dish_id);
+
+  const modelUrl = dish?.modelUrl ?? null;
 
   if (!modelUrl) {
     notFound();

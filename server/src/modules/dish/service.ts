@@ -1,8 +1,9 @@
 import { prisma } from "../../db/prisma.js";
 import { badRequest, ensureFoundValue } from "../../lib/errors.js";
+import { dishFieldsSelect, type CurrencyCode, type DietaryType } from "../../lib/dish-select.js";
+import type { CrossSellItemInput } from "../../lib/validation.js";
 import { rebuildPublicRestaurantSnapshot } from "../../lib/public-menu.js";
 import { removeStorageObjects } from "../../lib/supabase-storage.js";
-import type { CrossSellItemInput } from "../../lib/validation.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
 
 export const updateDish = async (
@@ -12,7 +13,7 @@ export const updateDish = async (
     menuId?: string;
     name?: string;
     price?: number;
-    currency?: "USD" | "INR" | "EUR" | "GBP" | "AED";
+    currency?: CurrencyCode;
     description?: string;
     badgeLabel?: string | null;
     servingSize?: number;
@@ -20,7 +21,7 @@ export const updateDish = async (
     crossSellItems?: CrossSellItemInput[];
     isPublished?: boolean;
     sortOrder?: number;
-    dietaryType?: "VEG" | "NON_VEG" | "BOTH" | null;
+    dietaryType?: DietaryType | null;
   },
 ) => {
   const dish = await prisma.dish.findUnique({
@@ -49,52 +50,34 @@ export const updateDish = async (
     }
   }
 
+  const data: Record<string, unknown> = {};
+  const keys = [
+    "menuId",
+    "name",
+    "price",
+    "currency",
+    "description",
+    "badgeLabel",
+    "servingSize",
+    "detailsPanelEnabled",
+    "crossSellItems",
+    "isPublished",
+    "sortOrder",
+    "dietaryType",
+  ] as const;
+
+  for (const key of keys) {
+    // eslint-disable-next-line security/detect-object-injection
+    if (input[key] !== undefined) {
+      // eslint-disable-next-line security/detect-object-injection
+      data[key] = input[key];
+    }
+  }
+
   const updatedDish = await prisma.dish.update({
     where: { id: dishId },
-    data: {
-      ...(input.menuId !== undefined ? { menuId: input.menuId } : {}),
-      ...(input.name !== undefined ? { name: input.name } : {}),
-      ...(input.price !== undefined ? { price: input.price } : {}),
-      ...(input.currency !== undefined ? { currency: input.currency } : {}),
-      ...(input.description !== undefined
-        ? { description: input.description }
-        : {}),
-      ...(input.badgeLabel !== undefined
-        ? { badgeLabel: input.badgeLabel }
-        : {}),
-      ...(input.servingSize !== undefined
-        ? { servingSize: input.servingSize }
-        : {}),
-      ...(input.detailsPanelEnabled !== undefined
-        ? { detailsPanelEnabled: input.detailsPanelEnabled }
-        : {}),
-      ...(input.crossSellItems !== undefined
-        ? { crossSellItems: input.crossSellItems }
-        : {}),
-      ...(input.isPublished !== undefined
-        ? { isPublished: input.isPublished }
-        : {}),
-      ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
-      ...(input.dietaryType !== undefined ? { dietaryType: input.dietaryType } : {}),
-    },
-    select: {
-      id: true,
-      name: true,
-      price: true,
-      currency: true,
-      description: true,
-      badgeLabel: true,
-      servingSize: true,
-      detailsPanelEnabled: true,
-      crossSellItems: true,
-      restaurantId: true,
-      menuId: true,
-      isPublished: true,
-      sortOrder: true,
-      dietaryType: true,
-      createdAt: true,
-      updatedAt: true,
-    },
+    data,
+    select: dishFieldsSelect,
   });
 
   await rebuildPublicRestaurantSnapshot(existingDish.restaurantId);
