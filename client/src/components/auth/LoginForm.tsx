@@ -5,16 +5,16 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
 import { fetchCurrentUser, loginRequest, sendOtpRequest, verifyOtpRequest } from "@/lib/api";
-import { clearStoredToken, getStoredToken, storeToken } from "@/lib/auth-storage";
+import { clearStoredToken, storeToken } from "@/lib/auth-storage";
 import {
   getActiveManagerMemberships,
-  getPortalDestinationForUser,
   getPortalDestinationForVariant,
   getPortalLoginPath,
   hasManagerMembership,
   hasOwnerMembership,
   type PortalVariant,
 } from "@/lib/portal";
+
 
 export function LoginForm({
   portalVariant = "owner",
@@ -97,34 +97,8 @@ export function LoginForm({
     }
   }, [countdown]);
 
-  useEffect(() => {
-    const token = getStoredToken();
-    if (!token) {
-      return;
-    }
 
-    let cancelled = false;
 
-    const redirectToPortal = async () => {
-      try {
-        const user = await fetchCurrentUser(token);
-        if (!cancelled) {
-          router.replace(getPortalDestinationForUser(user));
-        }
-      } catch {
-        clearStoredToken();
-        if (!cancelled) {
-          router.replace(getPortalLoginPath(portalVariant));
-        }
-      }
-    };
-
-    void redirectToPortal();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [portalVariant, router]);
 
   const handleSendOtp = async () => {
     setErrorMessage(null);
