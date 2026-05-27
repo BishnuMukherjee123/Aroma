@@ -113,8 +113,10 @@ export const sendOtpService = async (email: string) => {
     select: { id: true },
   });
 
+  // Always return the same generic success message to prevent email enumeration.
+  // If user doesn't exist, we silently skip sending the OTP.
   if (!user) {
-    unauthorized("Unauthorized email address");
+    return { success: true, message: "If this email is registered, an OTP has been sent" };
   }
 
   const supabase = getSupabaseClient();
@@ -126,10 +128,11 @@ export const sendOtpService = async (email: string) => {
   });
 
   if (error) {
-    throw new Error(`Failed to send OTP: ${error.message}`);
+    // Don't expose Supabase internal error messages to the client
+    throw new Error("OTP delivery failed. Please try again later.");
   }
 
-  return { success: true, message: "OTP sent successfully" };
+  return { success: true, message: "If this email is registered, an OTP has been sent" };
 };
 
 export const verifyOtpService = async (email: string, code: string) => {

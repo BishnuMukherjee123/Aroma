@@ -30,8 +30,9 @@ export const sendOtp = async (req: Request, res: Response): Promise<void> => {
 export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
   const email = requireEmail(req.body.email);
   const code = String(req.body.code || "").trim();
-  if (!code) {
-    throw new Error("OTP verification code is required");
+
+  if (!/^\d{6}$/.test(code)) {
+    throw Object.assign(new Error("OTP code must be exactly 6 digits"), { statusCode: 400 });
   }
 
   const payload = await verifyOtpService(email, code);

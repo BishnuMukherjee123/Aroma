@@ -63,10 +63,22 @@ export const config: AppConfig = {
   JSON_LIMIT: readString("JSON_LIMIT", { fallback: "1mb" }),
   DATABASE_URL: readString("DATABASE_URL", { required: true }),
   DIRECT_URL: readString("DIRECT_URL", { fallback: "" }),
-  AUTH_TOKEN_SECRET: readString("AUTH_TOKEN_SECRET", {
-    fallback: "change-me",
-  }),
-  AUTH_TOKEN_TTL_HOURS: readNumber("AUTH_TOKEN_TTL_HOURS", 168, { min: 1 }),
+  AUTH_TOKEN_SECRET: (() => {
+    const secret = process.env["AUTH_TOKEN_SECRET"]?.trim();
+    if (!secret || secret === "change-me") {
+      if (process.env["NODE_ENV"] === "production") {
+        throw new Error(
+          "Missing required environment variable: AUTH_TOKEN_SECRET. " +
+          "Generate a strong secret with: openssl rand -hex 64"
+        );
+      }
+      // Development fallback — NOT for production use
+      return "dev-only-insecure-secret-do-not-use-in-production";
+    }
+    return secret;
+  })(),
+  AUTH_TOKEN_TTL_HOURS: readNumber("AUTH_TOKEN_TTL_HOURS", 24, { min: 1 }),
+
   PUBLIC_BASE_URL: readString("PUBLIC_BASE_URL", {
     fallback: "http://localhost:3000",
   }),
