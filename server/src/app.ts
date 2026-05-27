@@ -19,7 +19,7 @@ app.set("trust proxy", 1);
 
 // Security headers
 app.use(
-  helmet({
+  (helmet as any)({
     crossOriginResourcePolicy: { policy: "cross-origin" }, // needed for public assets / 3D models
   }),
 );
