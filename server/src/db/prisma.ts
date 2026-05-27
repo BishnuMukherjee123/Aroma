@@ -10,14 +10,12 @@ type GlobalPrisma = typeof globalThis & {
 
 const globalState = globalThis as GlobalPrisma;
 
-export const prisma =
-  globalState.__aromaPrisma ??
-  new PrismaClient({
+if (!globalState.__aromaPrisma) {
+  globalState.__aromaPrisma = new PrismaClient({
     adapter: new PrismaPg({
       connectionString: config.DATABASE_URL,
     }),
   });
-
-if (config.NODE_ENV !== "production") {
-  globalState.__aromaPrisma = prisma;
 }
+
+export const prisma = globalState.__aromaPrisma;
