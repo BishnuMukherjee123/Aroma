@@ -41,3 +41,6 @@ app.use("/api/v1/assets", createAssetRouter());
 app.use("/api/v1/public", createPublicRouter());
 
 app.use(errorHandler);
+
+export default app;
+
