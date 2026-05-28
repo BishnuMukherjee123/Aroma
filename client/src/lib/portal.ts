@@ -3,6 +3,10 @@ import type { MeResponse } from "@/lib/api";
 export type MembershipRole = "OWNER" | "ADMIN" | "EDITOR";
 export type PortalVariant = "owner" | "manager";
 
+// Role hierarchy (stored in DB):
+//   OWNER  = full access — the restaurant owner
+//   ADMIN  = manager access — daily operations, dishes, menus
+//   EDITOR = limited access — view/edit dishes only
 const roleLabels: Record<MembershipRole, string> = {
   OWNER: "Owner",
   ADMIN: "Manager",
