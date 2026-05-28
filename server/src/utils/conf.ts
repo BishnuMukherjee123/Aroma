@@ -56,8 +56,6 @@ export type AppConfig = {
   SUPABASE_STORAGE_BUCKET: string;
   SUPABASE_STORAGE_FILE_SIZE_LIMIT_BYTES: number;
   IMAGEKIT_PRIVATE_KEY: string;
-  IMAGEKIT_PUBLIC_KEY: string;
-  IMAGEKIT_URL_ENDPOINT: string;
 };
 
 export const config: AppConfig = {
@@ -104,6 +102,4 @@ export const config: AppConfig = {
     { min: 1 },
   ),
   IMAGEKIT_PRIVATE_KEY: readString("IMAGEKIT_PRIVATE_KEY", { fallback: "" }),
-  IMAGEKIT_PUBLIC_KEY: readString("IMAGEKIT_PUBLIC_KEY", { fallback: "" }),
-  IMAGEKIT_URL_ENDPOINT: readString("IMAGEKIT_URL_ENDPOINT", { fallback: "" }),
 };
