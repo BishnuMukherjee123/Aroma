@@ -31,6 +31,7 @@ export function WorkspaceSidebar({
   portalVariant = "owner",
   activeTab = "dishes",
   onTabChange,
+  profilePicUrl,
 }: {
   profileLabel: string;
   profileCaption: string;
@@ -38,6 +39,7 @@ export function WorkspaceSidebar({
   portalVariant?: PortalVariant;
   activeTab?: WorkspaceTab;
   onTabChange?: (tab: WorkspaceTab) => void;
+  profilePicUrl?: string | null;
 }) {
   const workspaceNav =
     portalVariant === "owner" ? ownerWorkspaceNav : managerWorkspaceNav;
@@ -94,9 +96,17 @@ export function WorkspaceSidebar({
 
       <div className="mt-auto space-y-3 p-2">
         <div className="flex items-center gap-3 rounded-[1.2rem] bg-white p-3 shadow-[0_10px_24px_rgba(18,28,42,0.05)]">
-          <div className="flex size-11 items-center justify-center rounded-full bg-gradient-to-br from-primary/12 to-surface-container-high text-sm font-bold text-primary">
-            {profileLabel.charAt(0).toUpperCase()}
-          </div>
+          {profilePicUrl ? (
+            <img
+              src={profilePicUrl}
+              alt={profileLabel}
+              className="size-11 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex size-11 items-center justify-center rounded-full bg-gradient-to-br from-primary/12 to-surface-container-high text-sm font-bold text-primary">
+              {profileLabel.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-on-surface">
               {profileLabel}

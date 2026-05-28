@@ -3164,11 +3164,8 @@ export function RestaurantWorkspace({
         homePath={getPortalHomePath(effectivePortalVariant)}
         activeTab={activeTab}
         onTabChange={setActiveTab}
-        profileLabel={
-          effectivePortalVariant === "owner"
-            ? resolveOwnerLabel(restaurant)
-            : session.user.email
-        }
+        profileLabel={session.user.name || session.user.email}
+        profilePicUrl={session.user.profilePicUrl}
         profileCaption={
           effectivePortalVariant === "owner"
             ? "Workspace Owner"
