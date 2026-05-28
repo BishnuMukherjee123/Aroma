@@ -3173,7 +3173,7 @@ export function RestaurantWorkspace({
         }
       />
 
-      <main className="min-h-screen">
+      <main className="min-h-screen md:pl-[288px]">
         <WorkspaceHeader
           restaurantName={restaurant.name}
           publicId={restaurant.publicId}
