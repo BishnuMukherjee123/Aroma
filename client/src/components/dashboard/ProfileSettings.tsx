@@ -28,6 +28,7 @@ export function ProfileSettings({
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, startSaveTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isOwner = user.memberships?.some((m) => m.role === "OWNER") || false;
 
   // Handle avatar upload
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -139,7 +140,12 @@ export function ProfileSettings({
             </div>
 
             <div className="space-y-2 text-center sm:text-left">
-              <h3 className="text-base font-bold text-on-surface">Profile Picture</h3>
+              <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                <h3 className="text-base font-bold text-on-surface">Profile Picture</h3>
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 border border-emerald-100">
+                  {isOwner ? "Account Owner" : "Manager"}
+                </span>
+              </div>
               <p className="text-xs text-on-surface-variant max-w-xs">
                 Only JPG, PNG or WEBP. Max size of 5MB.
               </p>
@@ -206,6 +212,19 @@ export function ProfileSettings({
                   id="profile-email"
                   type="email"
                   value={user.email}
+                  disabled
+                  className="dash-create-input w-full rounded-[0.95rem] bg-surface-container-low px-4 py-3 text-sm font-medium text-on-surface-variant/70 cursor-not-allowed"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="profile-role" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Account Role
+                </label>
+                <input
+                  id="profile-role"
+                  type="text"
+                  value={isOwner ? "Account Owner" : "Restaurant Manager"}
                   disabled
                   className="dash-create-input w-full rounded-[0.95rem] bg-surface-container-low px-4 py-3 text-sm font-medium text-on-surface-variant/70 cursor-not-allowed"
                 />
