@@ -38,6 +38,7 @@ server/scripts/check-functions.ts
 server/scripts/db-audit.ts
 server/scripts/enable-rls.ts
 server/scripts/fix-handle-new-user.ts
+server/scripts/fix-trigger-types.ts
 server/scripts/profile-login.ts
 server/scripts/setup-delete-trigger.ts
 server/scripts/sync-passwords.ts
