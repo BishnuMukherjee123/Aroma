@@ -45,6 +45,7 @@ server/scripts/sync-passwords.ts
 server/scripts/test-new-key.ts
 server/scripts/test-trigger-execution.ts
 server/scripts/repair-trigger-final.ts
+server/scripts/fix-trigger-password.ts
 
 # Local logs
 *.log
