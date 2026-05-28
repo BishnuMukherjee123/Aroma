@@ -34,6 +34,7 @@ export const createAuthRouter = (): Router => {
   router.post("/otp/send", otpSendLimiter, asyncHandler(controller.sendOtp));
   router.post("/otp/verify", otpVerifyLimiter, asyncHandler(controller.verifyOtp));
   router.get("/me", asyncHandler(requireAuth), asyncHandler(controller.me));
+  router.get("/team", asyncHandler(requireAuth), asyncHandler(controller.getTeam));
   router.patch("/profile", asyncHandler(requireAuth), asyncHandler(controller.updateProfile));
   router.post("/profile/avatar-upload", asyncHandler(requireAuth), asyncHandler(controller.getAvatarUploadUrl));
 

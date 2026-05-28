@@ -274,3 +274,75 @@ export const getProfileAvatarUploadUrl = async (
     storageKey,
   };
 };
+
+export const getTeamMembers = async (userId: string) => {
+  const userMemberships = await prisma.restaurantMember.findMany({
+    where: { userId },
+    select: { restaurantId: true },
+  });
+
+  const restaurantIds = userMemberships.map((m) => m.restaurantId);
+
+  if (restaurantIds.length === 0) {
+    return [];
+  }
+
+  const members = await prisma.restaurantMember.findMany({
+    where: {
+      restaurantId: { in: restaurantIds },
+    },
+    select: {
+      role: true,
+      restaurant: {
+        select: {
+          name: true,
+        },
+      },
+      user: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          profilePicUrl: true,
+        },
+      },
+    },
+  });
+
+  const uniqueMembersMap = new Map<string, {
+    id: string;
+    email: string;
+    name: string | null;
+    profilePicUrl: string | null;
+    role: string;
+    restaurants: string[];
+  }>();
+
+  for (const member of members) {
+    if (!member.user) continue;
+    const existing = uniqueMembersMap.get(member.user.id);
+    if (existing) {
+      if (!existing.restaurants.includes(member.restaurant.name)) {
+        existing.restaurants.push(member.restaurant.name);
+      }
+      const ranks: Record<string, number> = { OWNER: 3, ADMIN: 2, EDITOR: 1 };
+      const currentRank = ranks[member.role] || 0;
+      const existingRank = ranks[existing.role] || 0;
+      if (currentRank > existingRank) {
+        existing.role = member.role;
+      }
+    } else {
+      uniqueMembersMap.set(member.user.id, {
+        id: member.user.id,
+        email: member.user.email,
+        name: member.user.name,
+        profilePicUrl: member.user.profilePicUrl,
+        role: member.role,
+        restaurants: [member.restaurant.name],
+      });
+    }
+  }
+
+  return Array.from(uniqueMembersMap.values());
+};
+

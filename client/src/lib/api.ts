@@ -857,3 +857,19 @@ export const updateUserProfile = async (
     body: input,
   });
 };
+
+export type TeamMember = {
+  id: string;
+  email: string;
+  name: string | null;
+  profilePicUrl: string | null;
+  role: string;
+  restaurants: string[];
+};
+
+export const fetchTeamMembers = async (token: string): Promise<TeamMember[]> => {
+  return apiRequest<TeamMember[]>("/api/v1/auth/team", {
+    token,
+    method: "GET",
+  });
+};

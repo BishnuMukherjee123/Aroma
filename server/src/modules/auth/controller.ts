@@ -10,6 +10,7 @@ import {
   verifyOtpService,
   updateUserProfile,
   getProfileAvatarUploadUrl,
+  getTeamMembers,
 } from "./service.js";
 
 export const register = async (req: Request, res: Response): Promise<void> => {
@@ -75,5 +76,11 @@ export const getAvatarUploadUrl = async (req: Request, res: Response): Promise<v
   }
 
   const payload = await getProfileAvatarUploadUrl(auth.userId, { fileName, mimeType });
+  res.status(200).json(payload);
+};
+
+export const getTeam = async (req: Request, res: Response): Promise<void> => {
+  const auth = requireAuthContext(req);
+  const payload = await getTeamMembers(auth.userId);
   res.status(200).json(payload);
 };

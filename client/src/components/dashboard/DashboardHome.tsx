@@ -28,6 +28,7 @@ import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardTopbar } from "./DashboardTopbar";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { ProfileSettings } from "./ProfileSettings";
+import { TeamView } from "./TeamView";
 import { type MeResponse } from "@/lib/api";
 
 type RestaurantBundle = {
@@ -614,6 +615,13 @@ export function DashboardHome({
                 user={(currentUser || session.user) as MeResponse}
                 token={session.token}
                 onUserUpdate={(updatedUser) => setCurrentUser(updatedUser)}
+              />
+            ) : null
+          ) : sidebarActiveKey === "team" ? (
+            /* ── Team Directory View ──────────────────────────────────── */
+            session.status === "authenticated" ? (
+              <TeamView
+                token={session.token}
               />
             ) : null
           ) : (
