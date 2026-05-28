@@ -80,6 +80,11 @@ type DishRow = DishSummary & {
 type TeamComposerState = {
   email: string;
   password: string;
+  name: string;
+  mobile: string;
+  profilePicUrl: string;
+  restaurantAddress: string;
+  isOpen: boolean;
   mode: "create" | "edit";
 };
 
@@ -157,6 +162,11 @@ const emptyMenuComposerState: MenuComposerState = {
 const emptyTeamComposerState: TeamComposerState = {
   email: "",
   password: "",
+  name: "",
+  mobile: "",
+  profilePicUrl: "",
+  restaurantAddress: "",
+  isOpen: false,
   mode: "create",
 };
 
@@ -1677,9 +1687,18 @@ export function RestaurantWorkspace({
         ? {
             email: member.user.email,
             password: "",
+            name: member.user.name || "",
+            mobile: member.user.mobile || "",
+            profilePicUrl: member.user.profilePicUrl || "",
+            restaurantAddress: restaurant.address || "",
+            isOpen: true,
             mode: "edit",
           }
-        : emptyTeamComposerState,
+        : {
+            ...emptyTeamComposerState,
+            restaurantAddress: restaurant.address || "",
+            isOpen: true,
+          },
     );
     setTeamMessage(null);
   };
@@ -1712,18 +1731,30 @@ export function RestaurantWorkspace({
     setTeamMessage(null);
 
     try {
+      await updateRestaurant(session.token, restaurant.id, {
+        address: teamComposerState.restaurantAddress.trim() || undefined,
+      });
+
       const payload = await createRestaurantManagerAccount(
         session.token,
         restaurant.id,
         {
           email,
           password,
+          name: teamComposerState.name.trim() || undefined,
+          mobile: teamComposerState.mobile.trim() || undefined,
+          profilePicUrl: teamComposerState.profilePicUrl.trim() || undefined,
         },
       );
       await refreshRestaurant();
       setTeamComposerState({
         email: payload.membership.user.email,
         password: "",
+        name: payload.membership.user.name || "",
+        mobile: payload.membership.user.mobile || "",
+        profilePicUrl: payload.membership.user.profilePicUrl || "",
+        restaurantAddress: teamComposerState.restaurantAddress,
+        isOpen: false,
         mode: "edit",
       });
       const successMessage = payload.createdUser
@@ -1861,120 +1892,6 @@ export function RestaurantWorkspace({
         </div>
       </div>
 
-      <div className="rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-              Manager Login
-            </p>
-            <h3 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-on-surface">
-              {assignedManager
-                ? "Update manager credentials"
-                : "Create manager credentials"}
-            </h3>
-          </div>
-
-          <button
-            type="button"
-            onClick={() =>
-              handleStartManagerAccess(assignedManager ?? undefined)
-            }
-            className="text-sm font-bold text-on-surface-variant transition-colors hover:text-primary"
-          >
-            Reset
-          </button>
-        </div>
-
-        <div className="mt-6 grid gap-5">
-          <div>
-            <label htmlFor="manager-email" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-              Manager Email
-            </label>
-            <input
-              id="manager-email"
-              type="email"
-              aria-label="Manager email address"
-              value={teamComposerState.email}
-              onChange={(event) =>
-                setTeamComposerState((current) => ({
-                  ...current,
-                  email: event.target.value,
-                }))
-              }
-              disabled={!canManageMembers}
-              className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="manager-password" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-              Manager Password
-            </label>
-            <input
-              id="manager-password"
-              type="password"
-              aria-label="Manager password"
-              value={teamComposerState.password}
-              onChange={(event) =>
-                setTeamComposerState((current) => ({
-                  ...current,
-                  password: event.target.value,
-                }))
-              }
-              disabled={!canManageMembers}
-              placeholder={
-                assignedManager
-                  ? "Enter a new password to reset this manager login"
-                  : "Create the manager password"
-              }
-              className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20 disabled:cursor-not-allowed disabled:opacity-60"
-            />
-          </div>
-
-          <div className="rounded-[1.2rem] bg-surface-container-low p-4 text-sm text-on-surface-variant">
-            <p className="font-semibold text-on-surface">Important</p>
-            <p className="mt-1">
-              Each restaurant gets one manager login. The company owner creates
-              the email and password, then the manager signs in through the
-              manager portal to control dishes, menus, the public link, and QR.
-            </p>
-            <p className="mt-2">
-              Manager login URL:
-              <span className="ml-1 font-semibold text-on-surface">
-                /manager/login
-              </span>
-            </p>
-            {!canManageMembers ? (
-              <p className="mt-2 font-medium text-error">
-                Only the company owner can change manager access.
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-          {teamMessage ? (
-            <p className="text-sm font-medium text-on-surface-variant">
-              {teamMessage}
-            </p>
-          ) : (
-            <p className="text-sm font-medium text-on-surface-variant">
-              Saving with a new email replaces the current manager assignment
-              for this restaurant.
-            </p>
-          )}
-
-          <button
-            type="button"
-            onClick={() => void handleSubmitMember()}
-            disabled={isSavingMember || !canManageMembers}
-            className="flex items-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-6 py-3.5 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {isSavingMember ? <span className="spinner-sm" /> : null}
-            {assignedManager ? "Save Manager Login" : "Create Manager Login"}
-          </button>
-        </div>
-      </div>
     </section>
   );
 
@@ -3905,6 +3822,195 @@ export function RestaurantWorkspace({
                 >
                   {isSavingDish ? <span className="spinner-sm" /> : null}
                   {composerState.mode === "edit" ? "Save Changes" : "Create Dish"}
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {teamComposerState.isOpen ? (
+        <div
+          className={cn(
+            "fixed inset-0 z-50 flex items-center justify-center bg-[rgba(18,28,42,0.32)] p-4 backdrop-blur-md animate-modal-backdrop",
+          )}
+          onClick={() => setTeamComposerState(emptyTeamComposerState)}
+        >
+          <section
+            className={cn(
+              "max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[2rem] bg-white p-6 shadow-[0_30px_80px_rgba(18,28,42,0.22)] md:p-7 animate-modal-card",
+            )}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="text-[2rem] font-bold tracking-[-0.04em] text-on-surface">
+                  {assignedManager ? "Edit Manager & Location" : "Set Manager & Location"}
+                </h2>
+                <p className="mt-1 text-sm font-medium text-on-surface-variant">
+                  Update manager profile, credentials, and restaurant address.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setTeamComposerState(emptyTeamComposerState)}
+                className="flex h-14 w-14 items-center justify-center rounded-full bg-surface-container-low text-on-surface-variant transition-colors hover:text-primary"
+              >
+                <span className="material-symbols-outlined text-[1.8rem]">close</span>
+              </button>
+            </div>
+
+            <div className="mt-8 grid gap-5 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Restaurant Location
+                </p>
+                <label htmlFor="restaurant-address" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Full Address
+                </label>
+                <input
+                  id="restaurant-address"
+                  type="text"
+                  aria-label="Restaurant Address"
+                  value={teamComposerState.restaurantAddress}
+                  onChange={(event) =>
+                    setTeamComposerState((current) => ({
+                      ...current,
+                      restaurantAddress: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div className="md:col-span-2 mt-4">
+                <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Manager Details
+                </p>
+              </div>
+
+              <div>
+                <label htmlFor="manager-name" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Manager Name
+                </label>
+                <input
+                  id="manager-name"
+                  type="text"
+                  aria-label="Manager name"
+                  value={teamComposerState.name}
+                  onChange={(event) =>
+                    setTeamComposerState((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="manager-mobile" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Manager Mobile Number
+                </label>
+                <input
+                  id="manager-mobile"
+                  type="text"
+                  aria-label="Manager mobile"
+                  value={teamComposerState.mobile}
+                  onChange={(event) =>
+                    setTeamComposerState((current) => ({
+                      ...current,
+                      mobile: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="manager-email" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Manager Email
+                </label>
+                <input
+                  id="manager-email"
+                  type="email"
+                  aria-label="Manager email"
+                  value={teamComposerState.email}
+                  onChange={(event) =>
+                    setTeamComposerState((current) => ({
+                      ...current,
+                      email: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div>
+                <label htmlFor="manager-password" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Manager Password
+                </label>
+                <input
+                  id="manager-password"
+                  type="password"
+                  aria-label="Manager password"
+                  value={teamComposerState.password}
+                  onChange={(event) =>
+                    setTeamComposerState((current) => ({
+                      ...current,
+                      password: event.target.value,
+                    }))
+                  }
+                  placeholder={
+                    assignedManager
+                      ? "Enter new password to reset"
+                      : "Create password"
+                  }
+                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label htmlFor="manager-pic" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Profile Picture URL
+                </label>
+                <input
+                  id="manager-pic"
+                  type="text"
+                  aria-label="Manager Profile Pic"
+                  value={teamComposerState.profilePicUrl}
+                  onChange={(event) =>
+                    setTeamComposerState((current) => ({
+                      ...current,
+                      profilePicUrl: event.target.value,
+                    }))
+                  }
+                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
+                />
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+              {teamMessage ? (
+                <p className="text-sm font-medium text-error">
+                  {teamMessage}
+                </p>
+              ) : (
+                <span className="text-sm font-medium text-on-surface-variant">
+                  Saving will update the location and manager details.
+                </span>
+              )}
+
+              <div className="flex flex-wrap items-center justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={() => void handleSubmitMember()}
+                  disabled={isSavingMember || !canManageMembers}
+                  className="flex items-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-6 py-3.5 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isSavingMember ? <span className="spinner-sm" /> : null}
+                  {assignedManager ? "Save Changes" : "Save and Create"}
                 </button>
               </div>
             </div>

@@ -41,6 +41,7 @@ export const update = async (req: Request, res: Response): Promise<void> => {
     {
       name: optionalString(req.body.name, "name"),
       publicId: optionalPublicId(req.body.publicId, "publicId"),
+      address: optionalString(req.body.address, "address"),
       isActive: optionalBoolean(req.body.isActive, "isActive"),
       isPublished: optionalBoolean(req.body.isPublished, "isPublished"),
     },

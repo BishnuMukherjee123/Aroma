@@ -57,6 +57,9 @@ export type RestaurantMemberSummary = {
   user: {
     id: string;
     email: string;
+    name?: string | null;
+    mobile?: string | null;
+    profilePicUrl?: string | null;
   };
 };
 
@@ -127,6 +130,7 @@ export type RestaurantDetails = {
   name: string;
   publicId: string;
   ownerId: string;
+  address: string | null;
   isActive: boolean;
   isPublished: boolean;
   publicMenuSnapshotUpdatedAt: string | null;
@@ -446,6 +450,7 @@ export const updateRestaurant = async (
   input: {
     name?: string;
     publicId?: string;
+    address?: string;
     isActive?: boolean;
     isPublished?: boolean;
   },
@@ -454,6 +459,7 @@ export const updateRestaurant = async (
   name: string;
   publicId: string;
   ownerId: string;
+  address: string | null;
   isActive: boolean;
   isPublished: boolean;
   createdAt: string;
@@ -511,6 +517,9 @@ export const createRestaurantManagerAccount = async (
   input: {
     email: string;
     password: string;
+    name?: string;
+    mobile?: string;
+    profilePicUrl?: string;
   },
 ): Promise<
   {

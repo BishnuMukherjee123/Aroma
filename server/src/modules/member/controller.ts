@@ -6,6 +6,7 @@ import {
   requireEnumValue,
   requirePassword,
   requireString,
+  optionalString,
 } from "../../lib/validation.js";
 import {
   addRestaurantMember,
@@ -38,6 +39,9 @@ export const createManagerAccount = async (
     {
       email: requireEmail(req.body.email),
       password: requirePassword(req.body.password),
+      name: optionalString(req.body.name, "name"),
+      mobile: optionalString(req.body.mobile, "mobile"),
+      profilePicUrl: optionalString(req.body.profilePicUrl, "profilePicUrl"),
     },
   );
 

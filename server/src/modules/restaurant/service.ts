@@ -26,6 +26,7 @@ export const createRestaurant = async (
         name: true,
         publicId: true,
         ownerId: true,
+        address: true,
         isActive: true,
         isPublished: true,
         createdAt: true,
@@ -58,6 +59,7 @@ export const getRestaurant = async (actorUserId: string, restaurantId: string) =
       name: true,
       publicId: true,
       ownerId: true,
+      address: true,
       isActive: true,
       isPublished: true,
       publicMenuSnapshotUpdatedAt: true,
@@ -71,6 +73,9 @@ export const getRestaurant = async (actorUserId: string, restaurantId: string) =
             select: {
               id: true,
               email: true,
+              name: true,
+              mobile: true,
+              profilePicUrl: true,
             },
           },
         },
@@ -110,6 +115,7 @@ export const updateRestaurant = async (
   input: {
     name?: string;
     publicId?: string;
+    address?: string;
     isActive?: boolean;
     isPublished?: boolean;
   },
@@ -145,6 +151,7 @@ export const updateRestaurant = async (
     data: {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.publicId !== undefined ? { publicId: input.publicId } : {}),
+      ...(input.address !== undefined ? { address: input.address } : {}),
       ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
       ...(input.isPublished !== undefined
         ? { isPublished: input.isPublished }
@@ -155,6 +162,7 @@ export const updateRestaurant = async (
       name: true,
       publicId: true,
       ownerId: true,
+      address: true,
       isActive: true,
       isPublished: true,
       createdAt: true,

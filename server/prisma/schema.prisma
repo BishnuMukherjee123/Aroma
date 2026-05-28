@@ -63,6 +63,7 @@ model Restaurant {
   name                        String
   publicId                    String             @unique
   ownerId                     String
+  address                     String?
   isActive                    Boolean            @default(true)
   isPublished                 Boolean            @default(false)
   publicMenuSnapshot          Json?
