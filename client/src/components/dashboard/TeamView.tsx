@@ -86,7 +86,7 @@ export function TeamView({
                   : "bg-surface text-on-surface border-outline-variant/20 hover:bg-surface-container-low"
               )}
             >
-              {role === "ALL" ? "All Staff" : role === "OWNER" ? "Owners" : role === "ADMIN" ? "Managers" : "Editors"}
+              {role === "ALL" ? "All Staff" : role === "OWNER" ? "Owners" : role === "ADMIN" ? "Admins" : "Managers"}
             </button>
           ))}
         </div>

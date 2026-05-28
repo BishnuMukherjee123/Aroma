@@ -325,7 +325,7 @@ export const getTeamMembers = async (userId: string) => {
       if (!existing.restaurants.includes(member.restaurant.name)) {
         existing.restaurants.push(member.restaurant.name);
       }
-      const ranks: Record<string, number> = { OWNER: 3, ADMIN: 2, EDITOR: 1 };
+      const ranks: Record<string, number> = { OWNER: 3, ADMIN: 2, MANAGER: 1 };
       const currentRank = ranks[member.role] || 0;
       const existingRank = ranks[existing.role] || 0;
       if (currentRank > existingRank) {

@@ -5,12 +5,12 @@ export type PortalVariant = "owner" | "manager";
 
 // Role hierarchy (stored in DB):
 //   OWNER  = full access — the restaurant owner
-//   ADMIN  = manager access — daily operations, dishes, menus
-//   MANAGER = limited access — view/edit dishes only
+//   ADMIN  = full access — same as owner, highest authority
+//   MANAGER = limited access — assigned to a particular kitchen
 const roleLabels: Record<MembershipRole, string> = {
   OWNER: "Owner",
-  ADMIN: "Manager",
-  MANAGER: "MANAGER",
+  ADMIN: "Admin",
+  MANAGER: "Manager",
 };
 
 export const isMembershipRole = (value: string): value is MembershipRole =>
