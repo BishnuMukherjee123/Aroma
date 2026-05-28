@@ -1,20 +1,20 @@
 import type { MeResponse } from "@/lib/api";
 
-export type MembershipRole = "OWNER" | "ADMIN" | "EDITOR";
+export type MembershipRole = "OWNER" | "ADMIN" | "MANAGER";
 export type PortalVariant = "owner" | "manager";
 
 // Role hierarchy (stored in DB):
 //   OWNER  = full access — the restaurant owner
 //   ADMIN  = manager access — daily operations, dishes, menus
-//   EDITOR = limited access — view/edit dishes only
+//   MANAGER = limited access — view/edit dishes only
 const roleLabels: Record<MembershipRole, string> = {
   OWNER: "Owner",
   ADMIN: "Manager",
-  EDITOR: "Editor",
+  MANAGER: "MANAGER",
 };
 
 export const isMembershipRole = (value: string): value is MembershipRole =>
-  value === "OWNER" || value === "ADMIN" || value === "EDITOR";
+  value === "OWNER" || value === "ADMIN" || value === "MANAGER";
 
 export const getRoleLabel = (role: string) =>
   isMembershipRole(role) ? roleLabels[role] : role;

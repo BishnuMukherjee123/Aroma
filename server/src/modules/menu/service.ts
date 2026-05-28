@@ -13,7 +13,7 @@ export const createMenu = async (
     sortOrder?: number;
   },
 ) => {
-  await ensureRestaurantRole(actorUserId, restaurantId, "EDITOR");
+  await ensureRestaurantRole(actorUserId, restaurantId, "MANAGER");
 
   const existingMainMenu = await prisma.mainMenu.findFirst({
     where: { restaurantId },
@@ -66,7 +66,7 @@ export const updateMenu = async (
   });
 
   const existingMenu = ensureFoundValue(menu, "Main menu not found");
-  await ensureRestaurantRole(actorUserId, existingMenu.restaurantId, "EDITOR");
+  await ensureRestaurantRole(actorUserId, existingMenu.restaurantId, "MANAGER");
 
   const updatedMenu = await prisma.mainMenu.update({
     where: { id: menuId },
@@ -101,7 +101,7 @@ export const deleteMenu = async (actorUserId: string, menuId: string) => {
   });
 
   const existingMenu = ensureFoundValue(menu, "Main menu not found");
-  await ensureRestaurantRole(actorUserId, existingMenu.restaurantId, "EDITOR");
+  await ensureRestaurantRole(actorUserId, existingMenu.restaurantId, "MANAGER");
 
   if (existingMenu._count.categories > 0) {
     badRequest(

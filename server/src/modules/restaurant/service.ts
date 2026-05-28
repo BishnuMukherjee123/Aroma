@@ -49,7 +49,7 @@ export const createRestaurant = async (
 };
 
 export const getRestaurant = async (actorUserId: string, restaurantId: string) => {
-  await ensureRestaurantRole(actorUserId, restaurantId, "EDITOR");
+  await ensureRestaurantRole(actorUserId, restaurantId, "MANAGER");
 
   const restaurant = await prisma.restaurant.findUnique({
     where: { id: restaurantId },

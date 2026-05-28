@@ -33,7 +33,7 @@ export const updateDish = async (
   });
 
   const existingDish = ensureFoundValue(dish, "Dish not found");
-  await ensureRestaurantRole(actorUserId, existingDish.restaurantId, "EDITOR");
+  await ensureRestaurantRole(actorUserId, existingDish.restaurantId, "MANAGER");
 
   if (input.menuId !== undefined && input.menuId !== null) {
     const category = await prisma.menu.findUnique({
@@ -99,7 +99,7 @@ export const deleteDish = async (actorUserId: string, dishId: string) => {
   });
 
   const existingDish = ensureFoundValue(dish, "Dish not found");
-  await ensureRestaurantRole(actorUserId, existingDish.restaurantId, "EDITOR");
+  await ensureRestaurantRole(actorUserId, existingDish.restaurantId, "MANAGER");
 
   await prisma.$transaction([
     prisma.asset.deleteMany({

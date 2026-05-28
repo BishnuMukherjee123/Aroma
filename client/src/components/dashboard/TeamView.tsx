@@ -11,7 +11,7 @@ export function TeamView({
 }) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [search, setSearch] = useState("");
-  const [filterRole, setFilterRole] = useState<"ALL" | "OWNER" | "ADMIN" | "EDITOR">("ALL");
+  const [filterRole, setFilterRole] = useState<"ALL" | "OWNER" | "ADMIN" | "MANAGER">("ALL");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, startFetchTransition] = useTransition();
 
@@ -74,7 +74,7 @@ export function TeamView({
 
         {/* Role Filters */}
         <div className="flex items-center gap-2">
-          {(["ALL", "OWNER", "ADMIN", "EDITOR"] as const).map((role) => (
+          {(["ALL", "OWNER", "ADMIN", "MANAGER"] as const).map((role) => (
             <button
               key={role}
               type="button"
@@ -228,7 +228,7 @@ export function TeamView({
                             ? "bg-blue-50 text-blue-700 border-blue-100"
                             : "bg-purple-50 text-purple-700 border-purple-100"
                         )}>
-                          {member.role === "ADMIN" ? "Manager" : "Editor"}
+                          {member.role === "ADMIN" ? "Manager" : "MANAGER"}
                         </span>
                       </div>
                     </div>

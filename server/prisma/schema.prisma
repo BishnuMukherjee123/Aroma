@@ -10,7 +10,7 @@ datasource db {
 enum RestaurantMemberRole {
   OWNER
   ADMIN
-  EDITOR
+  MANAGER
 }
 
 enum AssetKind {

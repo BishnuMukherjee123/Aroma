@@ -65,7 +65,7 @@ export const createAssetUpload = async (
   });
 
   const existingDish = ensureFoundValue(dish, "Dish not found");
-  await ensureRestaurantRole(actorUserId, existingDish.restaurantId, "EDITOR");
+  await ensureRestaurantRole(actorUserId, existingDish.restaurantId, "MANAGER");
   await ensureStorageBucket();
 
   const storageKey = `restaurants/${existingDish.restaurantId}/dishes/${existingDish.id}/${Date.now()}-${slugifyFileName(
@@ -132,7 +132,7 @@ export const completeAssetUpload = async (
   });
 
   const existingAsset = ensureFoundValue(asset, "Asset not found");
-  await ensureRestaurantRole(actorUserId, existingAsset.restaurantId, "EDITOR");
+  await ensureRestaurantRole(actorUserId, existingAsset.restaurantId, "MANAGER");
 
   const publicUrl = getStoragePublicUrl(existingAsset.storageKey);
   const updatedAsset = await prisma.asset.update({

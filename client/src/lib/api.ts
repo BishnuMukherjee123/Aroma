@@ -495,7 +495,7 @@ export const addRestaurantMember = async (
   restaurantId: string,
   input: {
     email: string;
-    role: "OWNER" | "ADMIN" | "EDITOR";
+    role: "OWNER" | "ADMIN" | "MANAGER";
   },
 ): Promise<RestaurantMemberSummary & { createdAt: string; updatedAt: string }> => {
   return apiRequest(`/api/v1/restaurants/${restaurantId}/members`, {

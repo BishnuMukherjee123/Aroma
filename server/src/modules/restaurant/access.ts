@@ -2,7 +2,7 @@ import { prisma } from "../../db/prisma.js";
 import { ensureFoundValue, forbidden } from "../../lib/errors.js";
 
 const roleRank = {
-  EDITOR: 1,
+  MANAGER: 1,
   ADMIN: 2,
   OWNER: 3,
 } as const;

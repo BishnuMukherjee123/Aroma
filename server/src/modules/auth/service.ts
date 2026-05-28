@@ -31,7 +31,7 @@ const authUserSelect = {
 } as const;
 
 const roleRank = {
-  EDITOR: 1,
+  MANAGER: 1,
   ADMIN: 2,
   OWNER: 3,
 } as const;

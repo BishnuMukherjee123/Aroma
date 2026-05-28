@@ -3020,7 +3020,7 @@ export function RestaurantWorkspace({
                 Editors
               </p>
               <p className="mt-1 text-sm font-semibold text-on-surface">
-                {restaurant.members.filter((member) => member.role === "EDITOR").length}
+                {restaurant.members.filter((member) => member.role === "MANAGER").length}
               </p>
             </div>
           </div>

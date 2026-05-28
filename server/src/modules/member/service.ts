@@ -14,7 +14,7 @@ const getSupabaseAdminClient = () => {
   });
 };
 
-export const RESTAURANT_MEMBER_ROLES = ["OWNER", "ADMIN", "EDITOR"] as const;
+export const RESTAURANT_MEMBER_ROLES = ["OWNER", "ADMIN", "MANAGER"] as const;
 
 const managerMembershipSelect = {
   id: true,
@@ -71,11 +71,11 @@ export const addRestaurantMember = async (
     );
   }
 
-  if (input.role === "ADMIN") {
+  if (input.role === "MANAGER") {
     const assignedManagerRestaurant = await prisma.restaurantMember.findFirst({
       where: {
         userId: existingUser.id,
-        role: "ADMIN",
+        role: "MANAGER",
         NOT: {
           restaurantId,
         },
@@ -258,7 +258,7 @@ export const createRestaurantManagerAccount = async (
     await tx.restaurantMember.deleteMany({
       where: {
         restaurantId,
-        role: "ADMIN",
+        role: "MANAGER",
         NOT: {
           userId: managerUser.id,
         },
@@ -273,12 +273,12 @@ export const createRestaurantManagerAccount = async (
         },
       },
       update: {
-        role: "ADMIN",
+        role: "MANAGER",
       },
       create: {
         userId: managerUser.id,
         restaurantId,
-        role: "ADMIN",
+        role: "MANAGER",
       },
       select: managerMembershipSelect,
     });

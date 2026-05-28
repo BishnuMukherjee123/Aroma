@@ -19,7 +19,7 @@ const requireCategoryEditorAccess = async (
     },
   });
   const existing = ensureFoundValue(category, CATEGORY_NOT_FOUND);
-  await ensureRestaurantRole(actorUserId, existing.restaurantId, "EDITOR");
+  await ensureRestaurantRole(actorUserId, existing.restaurantId, "MANAGER");
   return existing;
 };
 
@@ -41,7 +41,7 @@ export const createCategory = async (
   });
 
   const existingMainMenu = ensureFoundValue(mainMenu, "Main menu not found");
-  await ensureRestaurantRole(actorUserId, existingMainMenu.restaurantId, "EDITOR");
+  await ensureRestaurantRole(actorUserId, existingMainMenu.restaurantId, "MANAGER");
 
   const category = await prisma.menu.create({
     data: {
@@ -145,7 +145,7 @@ export const deleteCategory = async (
   });
 
   const existingCategory = ensureFoundValue(category, CATEGORY_NOT_FOUND);
-  await ensureRestaurantRole(actorUserId, existingCategory.restaurantId, "EDITOR");
+  await ensureRestaurantRole(actorUserId, existingCategory.restaurantId, "MANAGER");
 
   if (existingCategory._count.dishes > 0) {
     badRequest("Delete or move dishes out of this category before removing it.");
