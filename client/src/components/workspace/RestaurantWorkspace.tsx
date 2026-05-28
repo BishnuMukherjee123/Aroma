@@ -82,7 +82,7 @@ type TeamComposerState = {
   password: string;
   name: string;
   mobile: string;
-  profilePicUrl: string;
+  profilePic: string;
   restaurantAddress: string;
   isOpen: boolean;
   mode: "create" | "edit";
@@ -164,7 +164,7 @@ const emptyTeamComposerState: TeamComposerState = {
   password: "",
   name: "",
   mobile: "",
-  profilePicUrl: "",
+  profilePic: "",
   restaurantAddress: "",
   isOpen: false,
   mode: "create",
@@ -1689,7 +1689,7 @@ export function RestaurantWorkspace({
             password: "",
             name: member.user.name || "",
             mobile: member.user.mobile || "",
-            profilePicUrl: member.user.profilePicUrl || "",
+            profilePic: member.user.profilePicUrl || "",
             restaurantAddress: restaurant.address || "",
             isOpen: true,
             mode: "edit",
@@ -1743,7 +1743,7 @@ export function RestaurantWorkspace({
           password,
           name: teamComposerState.name.trim() || undefined,
           mobile: teamComposerState.mobile.trim() || undefined,
-          profilePicUrl: teamComposerState.profilePicUrl.trim() || undefined,
+          profilePic: teamComposerState.profilePic.trim() || undefined,
         },
       );
       await refreshRestaurant();
@@ -1752,7 +1752,7 @@ export function RestaurantWorkspace({
         password: "",
         name: payload.membership.user.name || "",
         mobile: payload.membership.user.mobile || "",
-        profilePicUrl: payload.membership.user.profilePicUrl || "",
+        profilePic: payload.membership.user.profilePicUrl || "",
         restaurantAddress: teamComposerState.restaurantAddress,
         isOpen: false,
         mode: "edit",
@@ -3979,11 +3979,11 @@ export function RestaurantWorkspace({
                   id="manager-pic"
                   type="text"
                   aria-label="Manager Profile Pic"
-                  value={teamComposerState.profilePicUrl}
+                  value={teamComposerState.profilePic}
                   onChange={(event) =>
                     setTeamComposerState((current) => ({
                       ...current,
-                      profilePicUrl: event.target.value,
+                      profilePic: event.target.value,
                     }))
                   }
                   className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"

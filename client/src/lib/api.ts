@@ -519,7 +519,7 @@ export const createRestaurantManagerAccount = async (
     password: string;
     name?: string;
     mobile?: string;
-    profilePicUrl?: string;
+    profilePic?: string;
   },
 ): Promise<
   {

@@ -55,6 +55,7 @@ export type AppConfig = {
   SUPABASE_SERVICE_ROLE_KEY: string;
   SUPABASE_STORAGE_BUCKET: string;
   SUPABASE_STORAGE_FILE_SIZE_LIMIT_BYTES: number;
+  IMAGEKIT_PRIVATE_KEY: string;
 };
 
 export const config: AppConfig = {
@@ -100,4 +101,5 @@ export const config: AppConfig = {
     31_457_280,
     { min: 1 },
   ),
+  IMAGEKIT_PRIVATE_KEY: readString("IMAGEKIT_PRIVATE_KEY", { fallback: "" }),
 };

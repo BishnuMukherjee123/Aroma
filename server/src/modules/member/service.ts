@@ -137,7 +137,7 @@ export const createRestaurantManagerAccount = async (
     password: string;
     name?: string;
     mobile?: string;
-    profilePicUrl?: string;
+    profilePic?: string;
   },
 ) => {
   await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
@@ -248,7 +248,7 @@ export const createRestaurantManagerAccount = async (
         passwordHash: "",
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.mobile !== undefined ? { mobile: input.mobile } : {}),
-        ...(input.profilePicUrl !== undefined ? { profilePicUrl: input.profilePicUrl } : {}),
+        ...(input.profilePic !== undefined ? { profilePicUrl: input.profilePic } : {}),
       },
       create: {
         id: supabaseUserId,
@@ -256,7 +256,7 @@ export const createRestaurantManagerAccount = async (
         passwordHash: "",
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.mobile !== undefined ? { mobile: input.mobile } : {}),
-        ...(input.profilePicUrl !== undefined ? { profilePicUrl: input.profilePicUrl } : {}),
+        ...(input.profilePic !== undefined ? { profilePicUrl: input.profilePic } : {}),
       },
       select: {
         id: true,
