@@ -3972,22 +3972,60 @@ export function RestaurantWorkspace({
               </div>
 
               <div className="md:col-span-2">
-                <label htmlFor="manager-pic" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-                  Profile Picture URL
-                </label>
-                <input
-                  id="manager-pic"
-                  type="text"
-                  aria-label="Manager Profile Pic"
-                  value={teamComposerState.profilePic}
-                  onChange={(event) =>
-                    setTeamComposerState((current) => ({
-                      ...current,
-                      profilePic: event.target.value,
-                    }))
-                  }
-                  className="w-full rounded-[1.1rem] bg-surface-container-lowest px-4 py-3.5 text-sm font-medium text-on-surface outline-none ring-1 ring-outline-variant/12 focus:ring-2 focus:ring-primary/20"
-                />
+                <p className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                  Profile Picture
+                </p>
+                <div className="flex items-center gap-4">
+                  {teamComposerState.profilePic ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={teamComposerState.profilePic}
+                      alt="Profile preview"
+                      className="size-16 rounded-full border border-slate-200 object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-16 items-center justify-center rounded-full border border-dashed border-slate-300 text-on-surface-variant">
+                      <span className="material-symbols-outlined text-[1.4rem]">person</span>
+                    </div>
+                  )}
+                  <label className="inline-flex cursor-pointer items-center gap-2 rounded-[1rem] border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-on-surface transition-colors hover:border-primary/30 hover:text-primary">
+                    <span className="material-symbols-outlined text-[1rem]">upload</span>
+                    {teamComposerState.profilePic ? "Replace photo" : "Upload photo"}
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="hidden"
+                      aria-label="Upload manager profile picture"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                          const dataUrl = typeof reader.result === "string" ? reader.result : "";
+                          setTeamComposerState((current) => ({
+                            ...current,
+                            profilePic: dataUrl,
+                          }));
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                  </label>
+                  {teamComposerState.profilePic ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTeamComposerState((current) => ({
+                          ...current,
+                          profilePic: "",
+                        }))
+                      }
+                      className="inline-flex items-center gap-2 rounded-[1rem] border border-red-200 bg-white px-4 py-3 text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
+                    >
+                      Remove
+                    </button>
+                  ) : null}
+                </div>
               </div>
             </div>
 
