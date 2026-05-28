@@ -32,6 +32,7 @@ server/.env
 server/src/generated/
 
 # Backend diagnostic/test scripts
+server/scripts/auto-assign-owners.ts
 server/scripts/check-connections.ts
 server/scripts/check-functions.ts
 server/scripts/db-audit.ts
