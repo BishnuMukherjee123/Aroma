@@ -23,7 +23,6 @@ type SidebarRestaurant = {
 const ownerNav = [
   { label: "Overview", icon: "dashboard", key: "overview" },
   { label: "Restaurants", icon: "restaurant", key: "restaurants" },
-  { label: "Assets", icon: "inventory_2", key: "assets" },
   { label: "Team", icon: "groups", key: "team" },
   { label: "Settings", icon: "settings", key: "settings" },
 ] as const;
@@ -126,18 +125,7 @@ export function DashboardSidebar({
       </nav>
 
       <div className="mt-auto space-y-3 border-t border-outline-variant/20 pt-4">
-        {portalVariant === "owner" ? (
-          <button
-            type="button"
-            onClick={() => onNavChange?.("create")}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-primary to-primary-container px-4 py-3 text-sm font-bold text-white shadow-[0_14px_30px_rgba(182,23,34,0.18)] transition-transform hover:-translate-y-0.5"
-          >
-            <span className="material-symbols-outlined text-[1rem]">
-              add_circle
-            </span>
-            New Location
-          </button>
-        ) : (
+        {portalVariant !== "owner" && (
           <Link
             href={getPortalHomePath(portalVariant)}
             className="flex items-center justify-center rounded-xl bg-surface-container-low px-4 py-3 text-sm font-semibold text-on-surface transition-colors hover:bg-surface-container-high"
