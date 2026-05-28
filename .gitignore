@@ -46,6 +46,7 @@ server/scripts/test-new-key.ts
 server/scripts/test-trigger-execution.ts
 server/scripts/repair-trigger-final.ts
 server/scripts/fix-trigger-password.ts
+server/scripts/fix-trigger-member.ts
 
 # Local logs
 *.log
