@@ -131,8 +131,19 @@ export function DashboardHome({
       return;
     }
 
-    if (portalVariant === "manager" && isOwnerUser) {
-      router.replace(getPortalHomePath("owner"));
+    if (portalVariant === "manager") {
+      if (isOwnerUser) {
+        router.replace(getPortalHomePath("owner"));
+        return;
+      }
+      
+      const managerMemberships = session.user.memberships.filter(
+        (m) => m.role !== "OWNER" && m.restaurant.isActive
+      );
+      if (managerMemberships.length === 1) {
+        router.replace(getWorkspacePath("manager", managerMemberships[0].restaurant.id));
+        return;
+      }
     }
   }, [portalVariant, router, session]);
 
@@ -532,40 +543,44 @@ export function DashboardHome({
                               Open workspace
                             </Link>
 
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void handleToggleRestaurantActive(
-                                  restaurant,
-                                  !restaurant.summary.isActive,
-                                )
-                              }
-                              disabled={
-                                lifecyclePendingRestaurantId ===
-                                restaurant.summary.id
-                              }
-                              className="dash-cta-outline inline-flex items-center gap-2 px-4 py-2 text-xs font-bold"
-                            >
-                              <span className="material-symbols-outlined text-[0.9rem]">
-                                {restaurant.summary.isActive
-                                  ? "pause_circle"
-                                  : "play_circle"}
-                              </span>
-                              {restaurant.summary.isActive
-                                ? "Deactivate kitchen"
-                                : "Reactivate kitchen"}
-                            </button>
+                            {portalVariant === "owner" && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    void handleToggleRestaurantActive(
+                                      restaurant,
+                                      !restaurant.summary.isActive,
+                                    )
+                                  }
+                                  disabled={
+                                    lifecyclePendingRestaurantId ===
+                                    restaurant.summary.id
+                                  }
+                                  className="dash-cta-outline inline-flex items-center gap-2 px-4 py-2 text-xs font-bold"
+                                >
+                                  <span className="material-symbols-outlined text-[0.9rem]">
+                                    {restaurant.summary.isActive
+                                      ? "pause_circle"
+                                      : "play_circle"}
+                                  </span>
+                                  {restaurant.summary.isActive
+                                    ? "Deactivate kitchen"
+                                    : "Reactivate kitchen"}
+                                </button>
 
-                            <button
-                              type="button"
-                              onClick={() => openLifecycleDialog(restaurant)}
-                              className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
-                            >
-                              <span className="material-symbols-outlined text-[0.9rem]">
-                                delete
-                              </span>
-                              Delete kitchen
-                            </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openLifecycleDialog(restaurant)}
+                                  className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
+                                >
+                                  <span className="material-symbols-outlined text-[0.9rem]">
+                                    delete
+                                  </span>
+                                  Delete kitchen
+                                </button>
+                              </>
+                            )}
                           </div>
                         </div>
 
