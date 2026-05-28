@@ -746,7 +746,7 @@ export function RestaurantWorkspace({
   const ownerMember =
     restaurant.members.find((member) => member.role === "OWNER") ?? null;
   const assignedManager =
-    restaurant.members.find((member) => member.role === "ADMIN") ?? null;
+    restaurant.members.find((member) => member.role === "MANAGER") ?? null;
 
   const removeToast = (toastId: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== toastId));
@@ -3008,7 +3008,7 @@ export function RestaurantWorkspace({
           <div className="mt-5 grid gap-3">
             <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-                Managers
+                Admins
               </p>
               <p className="mt-1 text-sm font-semibold text-on-surface">
                 {restaurant.members.filter((member) => member.role === "ADMIN").length}
@@ -3017,7 +3017,7 @@ export function RestaurantWorkspace({
 
             <div className="rounded-[1rem] bg-surface-container-low px-4 py-3">
               <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-on-surface-variant">
-                Editors
+                Managers
               </p>
               <p className="mt-1 text-sm font-semibold text-on-surface">
                 {restaurant.members.filter((member) => member.role === "MANAGER").length}
