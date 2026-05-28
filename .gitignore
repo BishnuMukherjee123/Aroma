@@ -47,6 +47,8 @@ server/scripts/test-trigger-execution.ts
 server/scripts/repair-trigger-final.ts
 server/scripts/fix-trigger-password.ts
 server/scripts/fix-trigger-member.ts
+server/scripts/fix-manager-role.ts
+server/scripts/restore-manager.ts
 
 # Local logs
 *.log
