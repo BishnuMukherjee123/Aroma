@@ -1,4 +1,4 @@
-import ImageKit from "@imagekit/nodejs";
+import { ImageKit } from "@imagekit/nodejs";
 import { config } from "../utils/conf.js";
 
 const client = new ImageKit({
