@@ -46,6 +46,11 @@ model User {
   id               String             @id @default(uuid())
   email            String             @unique
   passwordHash     String
+  name             String?
+  mobile           String?
+  companyName      String?
+  location         String?
+  profilePicUrl    String?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 

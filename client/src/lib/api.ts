@@ -28,6 +28,11 @@ type ApiErrorPayload = {
 export type AuthUser = {
   id: string;
   email: string;
+  name: string | null;
+  mobile: string | null;
+  companyName: string | null;
+  location: string | null;
+  profilePicUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -811,6 +816,44 @@ export const verifyOtpRequest = async (input: {
 }): Promise<{ user: AuthUser; token: string }> => {
   return apiRequest<{ user: AuthUser; token: string }>("/api/v1/auth/otp/verify", {
     method: "POST",
+    body: input,
+  });
+};
+
+export type AvatarUploadResponse = {
+  uploadUrl: string;
+  publicUrl: string;
+  token: string;
+  storageKey: string;
+};
+
+export const getAvatarUploadUrl = async (
+  token: string,
+  input: {
+    fileName: string;
+    mimeType: string;
+  },
+): Promise<AvatarUploadResponse> => {
+  return apiRequest<AvatarUploadResponse>("/api/v1/auth/profile/avatar-upload", {
+    token,
+    method: "POST",
+    body: input,
+  });
+};
+
+export const updateUserProfile = async (
+  token: string,
+  input: {
+    name?: string;
+    mobile?: string;
+    companyName?: string;
+    location?: string;
+    profilePicUrl?: string;
+  },
+): Promise<AuthUser> => {
+  return apiRequest<AuthUser>("/api/v1/auth/profile", {
+    token,
+    method: "PATCH",
     body: input,
   });
 };

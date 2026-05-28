@@ -27,6 +27,8 @@ import { useAuthSession } from "@/hooks/use-auth-session";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardTopbar } from "./DashboardTopbar";
 import { LoadingScreen } from "@/components/ui/LoadingScreen";
+import { ProfileSettings } from "./ProfileSettings";
+import { type MeResponse } from "@/lib/api";
 
 type RestaurantBundle = {
   summary: RestaurantCardData;
@@ -105,6 +107,13 @@ export function DashboardHome({
   const [dashboardError, setDashboardError] = useState<string | null>(null);
   const [sidebarActiveKey, setSidebarActiveKey] = useState<string>("overview");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState<MeResponse | null>(null);
+
+  useEffect(() => {
+    if (session.status === "authenticated") {
+      setCurrentUser(session.user);
+    }
+  }, [session]);
 
   useEffect(() => {
     if (session.status !== "authenticated") {
@@ -433,7 +442,7 @@ export function DashboardHome({
 
       <main className="min-h-screen md:ml-64">
         <DashboardTopbar
-          user={session.user}
+          user={(currentUser || session.user) as MeResponse}
           portalVariant={portalVariant}
         />
 
@@ -598,6 +607,15 @@ export function DashboardHome({
                 </div>
               ) : null}
             </section>
+          ) : sidebarActiveKey === "settings" ? (
+            /* ── Profile Settings View ────────────────────────────────── */
+            session.status === "authenticated" ? (
+              <ProfileSettings
+                user={(currentUser || session.user) as MeResponse}
+                token={session.token}
+                onUserUpdate={(updatedUser) => setCurrentUser(updatedUser)}
+              />
+            ) : null
           ) : (
           /* ── Dashboard Overview (default) ───────────────────────────── */
           <>

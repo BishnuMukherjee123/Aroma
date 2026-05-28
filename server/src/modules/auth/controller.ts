@@ -2,7 +2,15 @@ import type { Request, Response } from "express";
 
 import { requireAuthContext } from "../../lib/request.js";
 import { requireEmail, requirePassword } from "../../lib/validation.js";
-import { getCurrentUser, loginUser, registerUser, sendOtpService, verifyOtpService } from "./service.js";
+import {
+  getCurrentUser,
+  loginUser,
+  registerUser,
+  sendOtpService,
+  verifyOtpService,
+  updateUserProfile,
+  getProfileAvatarUploadUrl,
+} from "./service.js";
 
 export const register = async (req: Request, res: Response): Promise<void> => {
   const payload = await registerUser({
@@ -42,5 +50,30 @@ export const verifyOtp = async (req: Request, res: Response): Promise<void> => {
 export const me = async (req: Request, res: Response): Promise<void> => {
   const auth = requireAuthContext(req);
   const payload = await getCurrentUser(auth.userId);
+  res.status(200).json(payload);
+};
+
+export const updateProfile = async (req: Request, res: Response): Promise<void> => {
+  const auth = requireAuthContext(req);
+  const payload = await updateUserProfile(auth.userId, {
+    name: req.body.name,
+    mobile: req.body.mobile,
+    companyName: req.body.companyName,
+    location: req.body.location,
+    profilePicUrl: req.body.profilePicUrl,
+  });
+  res.status(200).json(payload);
+};
+
+export const getAvatarUploadUrl = async (req: Request, res: Response): Promise<void> => {
+  const auth = requireAuthContext(req);
+  const fileName = String(req.body.fileName || "").trim();
+  const mimeType = String(req.body.mimeType || "").trim();
+
+  if (!fileName || !mimeType) {
+    throw Object.assign(new Error("fileName and mimeType are required"), { statusCode: 400 });
+  }
+
+  const payload = await getProfileAvatarUploadUrl(auth.userId, { fileName, mimeType });
   res.status(200).json(payload);
 };

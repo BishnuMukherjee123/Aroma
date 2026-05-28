@@ -7,6 +7,8 @@ import {
 } from "../../lib/auth.js";
 import { config } from "../../utils/conf.js";
 
+import { createSignedUpload, ensureStorageBucket } from "../../lib/supabase-storage.js";
+
 const getSupabaseClient = () => {
   return createClient(config.SUPABASE_URL, config.SUPABASE_SERVICE_ROLE_KEY, {
     auth: {
@@ -19,6 +21,11 @@ const getSupabaseClient = () => {
 const authUserSelect = {
   id: true,
   email: true,
+  name: true,
+  mobile: true,
+  companyName: true,
+  location: true,
+  profilePicUrl: true,
   createdAt: true,
   updatedAt: true,
 } as const;
@@ -210,8 +217,60 @@ export const getCurrentUser = async (userId: string) => {
   return {
     id: existingUser.id,
     email: existingUser.email,
+    name: existingUser.name,
+    mobile: existingUser.mobile,
+    companyName: existingUser.companyName,
+    location: existingUser.location,
+    profilePicUrl: existingUser.profilePicUrl,
     createdAt: existingUser.createdAt,
     updatedAt: existingUser.updatedAt,
     memberships: Array.from(membershipMap.values()),
+  };
+};
+
+export const updateUserProfile = async (
+  userId: string,
+  input: {
+    name?: string;
+    mobile?: string;
+    companyName?: string;
+    location?: string;
+    profilePicUrl?: string;
+  },
+) => {
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      name: input.name !== undefined ? input.name.trim() : undefined,
+      mobile: input.mobile !== undefined ? input.mobile.trim() : undefined,
+      companyName: input.companyName !== undefined ? input.companyName.trim() : undefined,
+      location: input.location !== undefined ? input.location.trim() : undefined,
+      profilePicUrl: input.profilePicUrl !== undefined ? input.profilePicUrl.trim() : undefined,
+    },
+    select: authUserSelect,
+  });
+  return updated;
+};
+
+export const getProfileAvatarUploadUrl = async (
+  userId: string,
+  input: { fileName: string; mimeType: string },
+) => {
+  await ensureStorageBucket();
+
+  if (!["image/jpeg", "image/png", "image/webp"].includes(input.mimeType)) {
+    throw Object.assign(new Error("Only JPEG, PNG, and WEBP images are allowed for avatars"), { statusCode: 400 });
+  }
+
+  // Clean filename
+  const cleanedFileName = input.fileName.replace(/[^a-zA-Z0-9.-]+/g, "_").toLowerCase();
+  const storageKey = `profile-pics/${userId}/${Date.now()}-${cleanedFileName}`;
+  const upload = await createSignedUpload(storageKey);
+
+  return {
+    uploadUrl: upload.signedUrl,
+    publicUrl: upload.publicUrl,
+    token: upload.token,
+    storageKey,
   };
 };

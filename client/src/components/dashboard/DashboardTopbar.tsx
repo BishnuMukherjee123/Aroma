@@ -47,16 +47,24 @@ export function DashboardTopbar({
 
         <div className="hidden text-right md:block">
           <p className="text-xs font-bold text-on-surface">
-            {getAccountLabel(portalVariant)}
+            {user.name || getAccountLabel(portalVariant)}
           </p>
           <p className="text-[11px] font-medium text-on-surface-variant">
             {user.email}
           </p>
         </div>
 
-        <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-surface-container-high to-surface-container-low text-sm font-bold text-primary shadow-[0_8px_20px_rgba(18,28,42,0.06)]">
-          {user.email.charAt(0).toUpperCase()}
-        </div>
+        {user.profilePicUrl ? (
+          <img
+            src={user.profilePicUrl}
+            alt={user.name || "Profile Picture"}
+            className="size-10 rounded-full object-cover shadow-[0_8px_20px_rgba(18,28,42,0.06)]"
+          />
+        ) : (
+          <div className="flex size-10 items-center justify-center rounded-full bg-gradient-to-br from-surface-container-high to-surface-container-low text-sm font-bold text-primary shadow-[0_8px_20px_rgba(18,28,42,0.06)]">
+            {user.email.charAt(0).toUpperCase()}
+          </div>
+        )}
 
         <Link
           href={getPortalLoginPath(portalVariant)}
