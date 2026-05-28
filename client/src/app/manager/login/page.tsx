@@ -30,7 +30,7 @@ export default function ManagerLoginPage() {
       <div className="hidden lg:block lg:w-1/2 h-screen sticky top-0 overflow-hidden group">
         <div className="grid h-full grid-cols-3 grid-rows-4 gap-1 rounded-l-[2rem] overflow-hidden">
           {Array.from({ length: 12 }, (_, i) => (
-            <div key={i} className="overflow-hidden">
+            <div key={i} className="relative overflow-hidden">
               <Image
                 src={`/login/${i + 1}.jpg`}
                 alt=""

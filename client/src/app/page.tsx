@@ -38,7 +38,7 @@ export default function LoginPage() {
                   alt=""
                   fill
                   sizes="(min-width: 1024px) 16vw, 0px"
-                  className="object-cover transition-transform duration-700 ease-out group-hover:scale-110"
+                  className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-110"
                   loading="lazy"
                   style={{ transitionDelay: `${i * 30}ms` }}
                 />
