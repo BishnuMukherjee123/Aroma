@@ -39,6 +39,7 @@ server/scripts/db-audit.ts
 server/scripts/enable-rls.ts
 server/scripts/fix-handle-new-user.ts
 server/scripts/profile-login.ts
+server/scripts/sync-passwords.ts
 server/scripts/test-new-key.ts
 
 # Local logs
