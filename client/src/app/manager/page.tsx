@@ -32,26 +32,13 @@ export default function ManagerPage() {
       router.replace(getPortalHomePath("owner"));
       return;
     }
-
-    const managerMemberships = getActiveManagerMemberships(session.user.memberships);
-    
-    // Auto-redirect if exactly 1 workspace is assigned
-    if (managerMemberships.length === 1) {
-      router.replace(getWorkspacePath("manager", managerMemberships[0].restaurant.id));
-    }
   }, [router, session]);
 
   if (session.status === "loading" || session.status === "unauthenticated") {
-    return <LoadingScreen message="Loading manager portal..." />;
+    return <LoadingScreen message="Loading manager portal..." className="bg-[#f7f7f7]" />;
   }
 
   const managerMemberships = getActiveManagerMemberships(session.user.memberships);
-
-  // If 1 workspace, we are currently redirecting in the useEffect.
-  // Show loading screen in the meantime.
-  if (managerMemberships.length === 1) {
-    return <LoadingScreen message="Redirecting to your workspace..." />;
-  }
 
   return (
     <div className="min-h-screen bg-[#f7f7f7] p-8 flex flex-col items-center justify-center">
