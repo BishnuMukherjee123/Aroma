@@ -17,8 +17,7 @@ const nextConfig: NextConfig = {
       { key: "X-Content-Type-Options", value: "nosniff" },
       // Don't send Referer header to cross-origin destinations (prevents token leaks)
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-      // Disable access to camera/mic/geolocation (not used by the dashboard)
-      { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+      { key: "Permissions-Policy", value: "microphone=(), geolocation=()" },
       // Force HTTPS for 1 year (only takes effect over HTTPS)
       { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
     ];
