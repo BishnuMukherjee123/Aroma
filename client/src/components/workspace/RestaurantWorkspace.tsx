@@ -9,6 +9,7 @@ import {
   createAssetUpload,
   createDish,
   createRestaurantManagerAccount,
+  deleteRestaurantManagerAccount,
   createMenu,
   deleteCategory,
   deleteDish,
@@ -86,6 +87,7 @@ type TeamComposerState = {
   restaurantAddress: string;
   isOpen: boolean;
   mode: "create" | "edit";
+  isSubmitting?: boolean;
 };
 
 type MenuComposerState = {
@@ -1703,6 +1705,27 @@ export function RestaurantWorkspace({
     setTeamMessage(null);
   };
 
+  const handleDeleteManager = async () => {
+    if (session.status !== "authenticated" || !canManageMembers) return;
+    
+    if (!window.confirm("Are you sure you want to permanently delete this manager's account? They will lose access immediately.")) {
+      return;
+    }
+
+    setTeamComposerState((prev) => ({ ...prev, isSubmitting: true }));
+    setTeamMessage(null);
+
+    try {
+      await deleteRestaurantManagerAccount(session.token, restaurantId);
+      await refreshRestaurant();
+    } catch (err: any) {
+      console.error(err);
+      setTeamMessage(err.message || "Failed to delete manager account.");
+    } finally {
+      setTeamComposerState((prev) => ({ ...prev, isSubmitting: false }));
+    }
+  };
+
   const handleSubmitMember = async () => {
     if (session.status !== "authenticated") {
       return;
@@ -1877,14 +1900,24 @@ export function RestaurantWorkspace({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => handleStartManagerAccess(assignedManager)}
-                  disabled={!canManageMembers}
-                  className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant transition-colors hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Edit Login
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleStartManagerAccess(assignedManager)}
+                    disabled={!canManageMembers}
+                    className="rounded-full border border-slate-200 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-on-surface-variant transition-colors hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Edit Login
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteManager}
+                    disabled={!canManageMembers || teamComposerState.isSubmitting}
+                    className="rounded-full border border-error/30 px-4 py-2 text-xs font-bold uppercase tracking-[0.14em] text-error transition-colors hover:bg-error hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {teamComposerState.isSubmitting ? "Removing..." : "Remove Login"}
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="rounded-[1rem] border border-dashed border-slate-200 bg-white/65 p-4">

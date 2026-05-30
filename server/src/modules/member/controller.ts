@@ -11,6 +11,7 @@ import {
 import {
   addRestaurantMember,
   createRestaurantManagerAccount,
+  deleteRestaurantManagerAccount,
   RESTAURANT_MEMBER_ROLES,
 } from "./service.js";
 
@@ -71,4 +72,17 @@ export const createManagerAccount = async (
   );
 
   res.status(201).json(payload);
+};
+
+export const deleteManagerAccount = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const auth = requireAuthContext(req);
+  const payload = await deleteRestaurantManagerAccount(
+    auth.userId,
+    requireString(req.params.id, "id", 1),
+  );
+
+  res.status(200).json(payload);
 };

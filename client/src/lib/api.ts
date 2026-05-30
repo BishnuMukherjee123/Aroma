@@ -882,3 +882,13 @@ export const fetchTeamMembers = async (token: string): Promise<TeamMember[]> => 
     method: "GET",
   });
 };
+
+export const deleteRestaurantManagerAccount = async (
+  token: string,
+  restaurantId: string,
+): Promise<{ success: boolean }> => {
+  return apiRequest<{ success: boolean }>(`/api/v1/restaurants/${restaurantId}/manager-account`, {
+    token,
+    method: "DELETE",
+  });
+};

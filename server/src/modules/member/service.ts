@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { prisma } from "../../db/prisma.js";
-import { conflict, ensureFoundValue } from "../../lib/errors.js";
+import { conflict, ensureFoundValue, badRequest } from "../../lib/errors.js";
 import { rebuildPublicRestaurantSnapshot } from "../../lib/public-menu.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
 import { config } from "../../utils/conf.js";
@@ -304,4 +304,36 @@ export const createRestaurantManagerAccount = async (
   await rebuildPublicRestaurantSnapshot(restaurantId);
 
   return payload;
+};
+
+export const deleteRestaurantManagerAccount = async (
+  actorUserId: string,
+  restaurantId: string,
+) => {
+  // Only the owner can delete the manager
+  await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
+
+  const existingManager = await prisma.restaurantMember.findFirst({
+    where: {
+      restaurantId,
+      role: "MANAGER",
+    },
+  });
+
+  const manager = ensureFoundValue(existingManager, "No manager assigned to this restaurant.");
+
+  // Delete the manager user (this cascades to RestaurantMember automatically, 
+  // or we delete both in a transaction if needed. Let's delete the user completely)
+  await prisma.$transaction([
+    prisma.restaurantMember.delete({
+      where: { id: manager.id },
+    }),
+    prisma.user.delete({
+      where: { id: manager.userId },
+    }),
+  ]);
+
+  await rebuildPublicRestaurantSnapshot(restaurantId);
+
+  return { success: true };
 };
