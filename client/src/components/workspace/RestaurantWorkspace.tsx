@@ -107,6 +107,7 @@ type SettingsFormState = {
   name: string;
   publicId: string;
   isPublished: boolean;
+  managerPortalTheme: string;
 };
 
 type WorkspaceToast = {
@@ -181,6 +182,7 @@ const emptySettingsFormState: SettingsFormState = {
   name: "",
   publicId: "",
   isPublished: false,
+  managerPortalTheme: "DEFAULT",
 };
 
 const ownerWorkspaceTabs: Array<{ id: WorkspaceTab; label: string }> = [
@@ -536,6 +538,7 @@ export function RestaurantWorkspace({
       name: restaurant.name,
       publicId: sanitizePublicId(restaurant.publicId),
       isPublished: restaurant.isPublished,
+      managerPortalTheme: restaurant.managerPortalTheme ?? "DEFAULT",
     });
   }, [restaurant]);
 
@@ -1441,6 +1444,7 @@ export function RestaurantWorkspace({
         name,
         publicId,
         isPublished: settingsFormState.isPublished,
+        managerPortalTheme: settingsFormState.managerPortalTheme,
       });
       setSettingsFormState((current) => ({
         ...current,
@@ -2742,6 +2746,63 @@ export function RestaurantWorkspace({
                 />
               </label>
 
+              {isOwnerUser && (
+                <div className="rounded-[1.2rem] bg-surface-container-low p-5">
+                  <p className="text-sm font-semibold text-on-surface">
+                    Manager Portal Theme
+                  </p>
+                  <p className="text-[11px] font-medium text-on-surface-variant mt-1 mb-4">
+                    Choose the color combination displayed on the manager portal.
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {[
+                      { id: "DEFAULT", name: "Default (Salmon/Grey)", colors: ["#ffb3ad", "#c8c6c5"] },
+                      { id: "generic-gradient", name: "Generic Gradient", colors: ["#845ec2", "#d65db1", "#ff6f91", "#ff9671", "#ffc75f", "#f9f871"] },
+                      { id: "matching-gradient", name: "Matching Gradient", colors: ["#845ec2", "#2c73d2", "#0081cf", "#0089ba", "#008e9b", "#008f7a"] },
+                      { id: "spot-palette", name: "Spot Palette", colors: ["#845ec2", "#b39cd0", "#fbeaff", "#00c9a7"] },
+                      { id: "twisted-spot-palette", name: "Twisted Spot Palette", colors: ["#845ec2", "#00c9a7", "#c4fcef", "#4d8076"] },
+                      { id: "classy-palette", name: "Classy Palette", colors: ["#845ec2", "#4b4453", "#b0a8b9", "#c34a36", "#ff8066"] },
+                      { id: "cube-palette", name: "Cube Palette", colors: ["#845ec2", "#4e8397", "#d5cabd"] },
+                    ].map((theme) => {
+                      const isSelected = settingsFormState.managerPortalTheme === theme.id;
+                      return (
+                        <button
+                          key={theme.id}
+                          type="button"
+                          onClick={() =>
+                            setSettingsFormState((current) => ({
+                              ...current,
+                              managerPortalTheme: theme.id,
+                            }))
+                          }
+                          className={cn(
+                            "flex flex-col items-stretch gap-2.5 rounded-[1.1rem] bg-surface-container-lowest p-3 border text-left transition-all",
+                            isSelected
+                              ? "border-primary ring-2 ring-primary/20 shadow-md"
+                              : "border-outline-variant/12 hover:border-primary/20"
+                          )}
+                        >
+                          <div className="flex h-5 w-full gap-0.5 overflow-hidden rounded-md border border-outline-variant/10">
+                            {theme.colors.slice(0, 4).map((c, i) => (
+                              <div
+                                key={i}
+                                className="flex-1"
+                                style={{ backgroundColor: c }}
+                              />
+                            ))}
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-bold text-on-surface leading-tight">
+                              {theme.name}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="rounded-[1.2rem] bg-surface-container-low p-4 text-sm text-on-surface-variant">
                 <p className="font-semibold text-on-surface">Permissions</p>
                 <p className="mt-1">
@@ -3138,8 +3199,12 @@ export function RestaurantWorkspace({
               }
     : null;
 
+  const activeTheme = portalVariant === "manager"
+    ? (restaurant?.managerPortalTheme ?? "DEFAULT")
+    : "DEFAULT";
+
   return (
-    <div className="dashboard-shell min-h-screen">
+    <div className="dashboard-shell min-h-screen" data-theme={activeTheme}>
       {toasts.length > 0 ? (
         <div className="pointer-events-none fixed right-4 top-4 z-[70] flex w-[min(92vw,24rem)] flex-col gap-3">
           {toasts.map((toast) => (

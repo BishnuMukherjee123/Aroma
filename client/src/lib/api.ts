@@ -133,6 +133,7 @@ export type RestaurantDetails = {
   address: string | null;
   isActive: boolean;
   isPublished: boolean;
+  managerPortalTheme?: string;
   publicMenuSnapshotUpdatedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -453,6 +454,7 @@ export const updateRestaurant = async (
     address?: string;
     isActive?: boolean;
     isPublished?: boolean;
+    managerPortalTheme?: string;
   },
 ): Promise<{
   id: string;
@@ -462,6 +464,7 @@ export const updateRestaurant = async (
   address: string | null;
   isActive: boolean;
   isPublished: boolean;
+  managerPortalTheme?: string;
   createdAt: string;
   updatedAt: string;
 }> => {
