@@ -280,11 +280,27 @@ export const verifyManagerOtpAndCreate = async (
 
   // Verify OTP with Supabase
   const supabase = getSupabaseAdminClient();
-  const { data, error } = await supabase.auth.verifyOtp({
+  
+  // We try "email" type first, and if that fails, we fallback to "signup" type.
+  // This is because Supabase expects "signup" for new users and "email" for existing users.
+  let verifyResult = await supabase.auth.verifyOtp({
     email: pending.email,
     token: code,
     type: "email",
   });
+
+  if (verifyResult.error) {
+    const signupResult = await supabase.auth.verifyOtp({
+      email: pending.email,
+      token: code,
+      type: "signup",
+    });
+    if (!signupResult.error) {
+      verifyResult = signupResult;
+    }
+  }
+
+  const { data, error } = verifyResult;
 
   if (error || !data.user) {
     throw Object.assign(
