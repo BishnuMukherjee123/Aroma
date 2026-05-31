@@ -2884,19 +2884,19 @@ export function RestaurantWorkspace({
               <thead>
                 <tr className="hidden md:table-row" style={{ borderBottom: '2px solid #E1E1E2' }}>
                   <th className="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant bg-[#f9f4f2] rounded-tl-[1rem]">
-                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-[#C2E66E]">restaurant</span> Dish Name</span>
+                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-primary">restaurant</span> Dish Name</span>
                   </th>
                   <th className="px-4 py-4 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant bg-[#f9f4f2]">
-                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-[#C2E66E]">view_in_ar</span> 3D Model</span>
+                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-primary">view_in_ar</span> 3D Model</span>
                   </th>
                   <th className="px-4 py-4 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant bg-[#f9f4f2]">
-                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-[#C2E66E]">payments</span> Price</span>
+                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-primary">payments</span> Price</span>
                   </th>
                   <th className="px-4 py-4 text-left text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant bg-[#f9f4f2]">
-                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-[#C2E66E]">toggle_on</span> Status</span>
+                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-primary">toggle_on</span> Status</span>
                   </th>
                   <th className="px-4 py-4 text-right text-[11px] font-bold uppercase tracking-[0.16em] text-on-surface-variant bg-[#f9f4f2] rounded-tr-[1rem]">
-                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-[#C2E66E]">more_horiz</span> Actions</span>
+                    <span className="inline-flex items-center gap-2"><span className="material-symbols-outlined text-[1rem] text-primary">more_horiz</span> Actions</span>
                   </th>
                 </tr>
               </thead>

@@ -257,6 +257,11 @@ input[type="checkbox"] {
   --dash-green-600: #d65db1;
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
+
+  --dash-text: #14141e;
+  --dash-text-muted: #505060;
+  --dash-text-faint: #88889c;
+  --dash-shadow-color: 132, 94, 194;
 }
 
 .dashboard-shell[data-theme="matching-gradient"] {
@@ -271,6 +276,11 @@ input[type="checkbox"] {
   --dash-green-600: #2c73d2;
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
+
+  --dash-text: #14141e;
+  --dash-text-muted: #505060;
+  --dash-text-faint: #88889c;
+  --dash-shadow-color: 132, 94, 194;
 }
 
 .dashboard-shell[data-theme="spot-palette"] {
@@ -285,6 +295,11 @@ input[type="checkbox"] {
   --dash-green-600: #b39cd0;
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
+
+  --dash-text: #14141e;
+  --dash-text-muted: #505060;
+  --dash-text-faint: #88889c;
+  --dash-shadow-color: 132, 94, 194;
 }
 
 .dashboard-shell[data-theme="twisted-spot-palette"] {
@@ -299,6 +314,11 @@ input[type="checkbox"] {
   --dash-green-600: #00c9a7;
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
+
+  --dash-text: #14141e;
+  --dash-text-muted: #505060;
+  --dash-text-faint: #88889c;
+  --dash-shadow-color: 132, 94, 194;
 }
 
 .dashboard-shell[data-theme="classy-palette"] {
@@ -313,6 +333,11 @@ input[type="checkbox"] {
   --dash-green-600: #ff8066;
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
+
+  --dash-text: #14141e;
+  --dash-text-muted: #505060;
+  --dash-text-faint: #88889c;
+  --dash-shadow-color: 132, 94, 194;
 }
 
 .dashboard-shell[data-theme="cube-palette"] {
@@ -327,5 +352,10 @@ input[type="checkbox"] {
   --dash-green-600: #4e8397;
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
+
+  --dash-text: #14141e;
+  --dash-text-muted: #505060;
+  --dash-text-faint: #88889c;
+  --dash-shadow-color: 132, 94, 194;
 }
 

@@ -22,10 +22,10 @@
 
 /* Text colors — force dark text on light backgrounds. */
 .dashboard-shell .text-on-surface {
-  color: #14201a !important;
+  color: var(--dash-text) !important;
 }
 .dashboard-shell .text-on-surface-variant {
-  color: #5a6660 !important;
+  color: var(--dash-text-muted) !important;
 }
 
 /* ─── Workspace sidebar ────────────────────────────────────────────── */
@@ -44,23 +44,23 @@
 .dashboard-shell aside h1,
 .dashboard-shell aside h2,
 .dashboard-shell aside p {
-  color: #14201a !important;
+  color: var(--dash-text) !important;
 }
 .dashboard-shell aside .text-on-surface-variant,
 .dashboard-shell aside .text-on-surface-variant\/60,
 .dashboard-shell aside .text-on-surface-variant\/70 {
-  color: #5a6660 !important;
+  color: var(--dash-text-muted) !important;
 }
 
 /* Sidebar nav items */
 .dashboard-shell aside nav button,
 .dashboard-shell aside nav a {
-  color: #5a6660 !important;
+  color: var(--dash-text-muted) !important;
 }
 .dashboard-shell aside nav button:hover,
 .dashboard-shell aside nav a:hover {
-  background: #e6f1ea !important;
-  color: #176939 !important;
+  background: var(--dash-green-100) !important;
+  color: var(--dash-green-700) !important;
 }
 
 /* Active nav item in workspace sidebar */
@@ -69,7 +69,7 @@
 .dashboard-shell aside nav button[data-active="true"],
 .dashboard-shell aside nav a[data-active="true"] {
   background: transparent !important;
-  color: #14201a !important;
+  color: var(--dash-text) !important;
 }
 
 /* ─── Universal gap ────────────────────────────────────────────────────
@@ -187,30 +187,30 @@
 
 /* ─── Primary / accent color overrides ─────────────────────────────── */
 
-/* Red gradient buttons → green */
+/* Red gradient buttons → theme primary/accent gradient */
 .dashboard-shell .from-primary.to-primary-container,
 .dashboard-shell .bg-gradient-to-br.from-primary {
-  background: linear-gradient(135deg, #176939 0%, #1d7a3a 100%) !important;
+  background: linear-gradient(135deg, var(--dash-green-700) 0%, var(--dash-green-600) 100%) !important;
   /* Kill the red-tinted box-shadow that the component hardcodes via
-     shadow-[0_14px_28px_rgba(182,23,34,0.2)]. Replace with a green one. */
-  box-shadow: 0 14px 28px rgba(23, 105, 57, 0.22) !important;
+     shadow-[0_14px_28px_rgba(182,23,34,0.2)]. Replace with a theme one. */
+  box-shadow: 0 14px 28px rgba(var(--dash-shadow-color, 23, 105, 57), 0.22) !important;
   color: #ffffff !important;
 }
-/* Ensure icons inside green gradient buttons are white, not green. */
+/* Ensure icons inside green gradient buttons are white, not primary. */
 .dashboard-shell .from-primary.to-primary-container .material-symbols-outlined,
 .dashboard-shell .bg-gradient-to-br.from-primary .material-symbols-outlined {
   color: #ffffff !important;
 }
 
-/* Primary text (was red) → green */
+/* Primary text (was red) → theme primary color */
 .dashboard-shell .text-primary {
-  color: #176939 !important;
+  color: var(--dash-green-700) !important;
 }
 
-/* Primary border → green */
+/* Primary border → theme primary color */
 .dashboard-shell .border-primary,
 .dashboard-shell .border-primary\/30 {
-  border-color: #176939 !important;
+  border-color: var(--dash-green-700) !important;
 }
 
 /* Error/red stays red for delete actions — no override needed. */
@@ -221,36 +221,36 @@
    bg-surface-container-low for inner sections — make those light. */
 .dashboard-shell .rounded-\[1\.7rem\],
 .dashboard-shell .rounded-\[1\.4rem\] {
-  border-color: rgba(15, 28, 19, 0.06) !important;
+  border-color: var(--dash-border) !important;
 }
 
 /* ─── Tab pills ────────────────────────────────────────────────────── */
 
-/* Active tab — was using primary (red) ring/border. Make it green. */
+/* Active tab — was using primary (red) ring/border. Make it theme primary. */
 .dashboard-shell .ring-primary,
 .dashboard-shell .ring-primary\/20,
 .dashboard-shell .border-primary {
-  --tw-ring-color: #176939 !important;
-  border-color: #176939 !important;
+  --tw-ring-color: var(--dash-green-700) !important;
+  border-color: var(--dash-green-700) !important;
 }
 
 /* ─── Toggle switches ──────────────────────────────────────────────── */
 
 .dashboard-shell .bg-primary {
-  background-color: #176939 !important;
+  background-color: var(--dash-green-700) !important;
 }
 
 /* ─── Badges / pills ──────────────────────────────────────────────── */
 
-/* "PUBLISHED" badge — green */
+/* "PUBLISHED" badge */
 .dashboard-shell .bg-tertiary {
-  background-color: #176939 !important;
+  background-color: var(--dash-green-700) !important;
 }
 
-/* "MAIN MENU" pill — was red, make green */
+/* "MAIN MENU" pill — was red, make theme primary container / wash */
 .dashboard-shell .bg-primary-container {
-  background-color: #e6f1ea !important;
-  color: #176939 !important;
+  background-color: var(--dash-green-100) !important;
+  color: var(--dash-green-700) !important;
 }
 
 /* ─── Misc ─────────────────────────────────────────────────────────── */
@@ -259,40 +259,39 @@
 .dashboard-shell .border-outline-variant\/20,
 .dashboard-shell .border-outline-variant\/30,
 .dashboard-shell .bg-outline-variant\/30 {
-  border-color: rgba(15, 28, 19, 0.08) !important;
-  background-color: rgba(15, 28, 19, 0.08) !important;
+  border-color: var(--dash-border-2) !important;
+  background-color: var(--dash-border-2) !important;
 }
 
 /* The "Back to Portfolio" link */
 .dashboard-shell .text-primary\/80 {
-  color: #176939 !important;
+  color: var(--dash-green-700) !important;
 }
 
 /* Spinner overrides for inline spinners */
 .dashboard-shell .spinner-sm {
-  border-color: #e6f1ea !important;
-  border-top-color: #176939 !important;
+  border-color: var(--dash-green-100) !important;
+  border-top-color: var(--dash-green-700) !important;
 }
 
 /* User avatar circle */
 .dashboard-shell .from-surface-container-high.to-surface-container-low {
-  background: #e6f1ea !important;
-  color: #176939 !important;
+  background: var(--dash-green-100) !important;
+  color: var(--dash-green-700) !important;
 }
 
 /* ─── Kill ALL red-tinted shadows ──────────────────────────────────────
  * The workspace hardcodes shadow-[0_14px_28px_rgba(182,23,34,0.2)] and
  * shadow-[0_14px_30px_rgba(182,23,34,0.18)] on multiple buttons. These
- * produce the pink/red glow behind green buttons. We override any
- * element inside .dashboard-shell that has an inline box-shadow
- * containing the red rgba. Since we can't target arbitrary values by
- * class name, we use a broader selector on the gradient buttons. */
+ * produce the pink/red glow behind buttons. We override any
+ * element inside .dashboard-shell that has an inline box-shadow. */
 .dashboard-shell [class*="shadow-[0_14px"] {
-  box-shadow: 0 14px 28px rgba(23, 105, 57, 0.18) !important;
+  box-shadow: 0 14px 28px rgba(var(--dash-shadow-color, 23, 105, 57), 0.18) !important;
 }
 .dashboard-shell [class*="shadow-[0_10px"] {
-  box-shadow: 0 10px 22px rgba(23, 105, 57, 0.16) !important;
+  box-shadow: 0 10px 22px rgba(var(--dash-shadow-color, 23, 105, 57), 0.16) !important;
 }
 .dashboard-shell [class*="shadow-[0_12px"] {
-  box-shadow: 0 12px 26px rgba(23, 105, 57, 0.18) !important;
+  box-shadow: 0 12px 26px rgba(var(--dash-shadow-color, 23, 105, 57), 0.18) !important;
 }
+
