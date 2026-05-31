@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { prisma } from "../../db/prisma.js";
-import { badRequest, conflict, ensureFoundValue } from "../../lib/errors.js";
+import { badRequest, conflict, ensureFoundValue, unauthorized } from "../../lib/errors.js";
 import { hashPassword, encryptPassword, decryptPassword } from "../../lib/auth.js";
 import { rebuildPublicRestaurantSnapshot } from "../../lib/public-menu.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
@@ -248,7 +248,7 @@ export const sendManagerOtp = async (
   if (error) {
     // Clean up pending record if OTP send fails
     await prisma.pendingManagerOtp.deleteMany({ where: { restaurantId } });
-    throw new Error(`Failed to send OTP email: ${error.message}`);
+    badRequest(`Failed to send OTP email: ${error.message}`);
   }
 
   return { success: true, email: normalizedEmail };
@@ -304,10 +304,7 @@ export const verifyManagerOtpAndCreate = async (
   const { data, error } = verifyResult;
 
   if (error || !data.user) {
-    throw Object.assign(
-      new Error("Invalid or expired OTP code. Please check and try again."),
-      { statusCode: 401 },
-    );
+    unauthorized("Invalid or expired OTP code. Please check and try again.");
   }
 
   // OTP verified — now create the real account
@@ -316,7 +313,7 @@ export const verifyManagerOtpAndCreate = async (
     select: { id: true },
   });
 
-  let supabaseUserId = existingUser?.id ?? data.user.id;
+  let supabaseUserId = existingUser?.id ?? data.user!.id;
 
   // Decrypt the password to plaintext so we can set it in Supabase Auth
   const plaintextPassword = decryptPassword(pending.passwordHash);
@@ -324,12 +321,12 @@ export const verifyManagerOtpAndCreate = async (
   if (!existingUser) {
     // Update the Supabase user's password (they were created by signInWithOtp above)
     const { error: updateErr } = await supabase.auth.admin.updateUserById(
-      data.user.id,
+      data.user!.id,
       { password: plaintextPassword, email_confirm: true },
     );
 
     if (updateErr) {
-      throw new Error(`Failed to set manager password: ${updateErr.message}`);
+      badRequest(`Failed to set manager password: ${updateErr.message}`);
     }
   } else {
     // Update existing Supabase user's password
@@ -339,7 +336,7 @@ export const verifyManagerOtpAndCreate = async (
     );
 
     if (updateErr) {
-      throw new Error(`Failed to update manager password: ${updateErr.message}`);
+      badRequest(`Failed to update manager password: ${updateErr.message}`);
     }
   }
 
