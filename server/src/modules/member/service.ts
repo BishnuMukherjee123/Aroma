@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { prisma } from "../../db/prisma.js";
 import { badRequest, conflict, ensureFoundValue } from "../../lib/errors.js";
-import { hashPassword } from "../../lib/auth.js";
+import { hashPassword, encryptPassword, decryptPassword } from "../../lib/auth.js";
 import { rebuildPublicRestaurantSnapshot } from "../../lib/public-menu.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
 import { config } from "../../utils/conf.js";
@@ -212,15 +212,16 @@ export const sendManagerOtp = async (
 
   const { normalizedEmail } = await validateManagerInput(restaurantId, input);
 
-  // Hash password NOW so we never store plaintext anywhere
-  const passwordHash = await hashPassword(input.password);
+  // Encrypt password temporarily so we can pass the plaintext to Supabase upon verification.
+  // It is securely encrypted using our server's AUTH_TOKEN_SECRET.
+  const encryptedPassword = encryptPassword(input.password);
 
   // Upsert the pending record (10 min expiry, overwrites any old pending for this restaurant)
   await prisma.pendingManagerOtp.upsert({
     where: { restaurantId },
     update: {
       email: normalizedEmail,
-      passwordHash,
+      passwordHash: encryptedPassword,
       name: input.name ?? null,
       mobile: input.mobile ?? null,
       profilePicUrl: input.profilePic ?? null,
@@ -229,7 +230,7 @@ export const sendManagerOtp = async (
     create: {
       restaurantId,
       email: normalizedEmail,
-      passwordHash,
+      passwordHash: encryptedPassword,
       name: input.name ?? null,
       mobile: input.mobile ?? null,
       profilePicUrl: input.profilePic ?? null,
@@ -317,11 +318,14 @@ export const verifyManagerOtpAndCreate = async (
 
   let supabaseUserId = existingUser?.id ?? data.user.id;
 
+  // Decrypt the password to plaintext so we can set it in Supabase Auth
+  const plaintextPassword = decryptPassword(pending.passwordHash);
+
   if (!existingUser) {
     // Update the Supabase user's password (they were created by signInWithOtp above)
     const { error: updateErr } = await supabase.auth.admin.updateUserById(
       data.user.id,
-      { password: pending.passwordHash, email_confirm: true },
+      { password: plaintextPassword, email_confirm: true },
     );
 
     if (updateErr) {
@@ -331,7 +335,7 @@ export const verifyManagerOtpAndCreate = async (
     // Update existing Supabase user's password
     const { error: updateErr } = await supabase.auth.admin.updateUserById(
       existingUser.id,
-      { password: pending.passwordHash },
+      { password: plaintextPassword },
     );
 
     if (updateErr) {
@@ -339,12 +343,15 @@ export const verifyManagerOtpAndCreate = async (
     }
   }
 
+  // Hash the password with our standard scrypt hash for our database
+  const finalPasswordHash = await hashPassword(plaintextPassword);
+
   // Write to our database inside a transaction
   const payload = await prisma.$transaction(async (tx) => {
     const managerUser = await tx.user.upsert({
       where: { email: pending.email },
       update: {
-        passwordHash: pending.passwordHash,
+        passwordHash: finalPasswordHash,
         ...(pending.name !== null ? { name: pending.name } : {}),
         ...(pending.mobile !== null ? { mobile: pending.mobile } : {}),
         ...(pending.profilePicUrl !== null ? { profilePicUrl: pending.profilePicUrl } : {}),
@@ -352,7 +359,7 @@ export const verifyManagerOtpAndCreate = async (
       create: {
         id: supabaseUserId,
         email: pending.email,
-        passwordHash: pending.passwordHash,
+        passwordHash: finalPasswordHash,
         ...(pending.name !== null ? { name: pending.name } : {}),
         ...(pending.mobile !== null ? { mobile: pending.mobile } : {}),
         ...(pending.profilePicUrl !== null ? { profilePicUrl: pending.profilePicUrl } : {}),

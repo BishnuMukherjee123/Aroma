@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, scryptSync, timingSafeEqual, createCipheriv, createDecipheriv } from "node:crypto";
 
 import { unauthorized } from "./errors.js";
 import { config } from "../utils/conf.js";
@@ -21,6 +21,33 @@ const sign = (payload: string): string => {
   return createHmac("sha256", config.AUTH_TOKEN_SECRET)
     .update(payload)
     .digest("base64url");
+};
+
+const getEncryptionKey = (): Buffer => {
+  // Use the first 32 bytes of the AUTH_TOKEN_SECRET
+  return Buffer.from(config.AUTH_TOKEN_SECRET, "hex").subarray(0, 32);
+};
+
+export const encryptPassword = (password: string): string => {
+  const key = getEncryptionKey();
+  const iv = randomBytes(16);
+  const cipher = createCipheriv("aes-256-cbc", key, iv);
+  let encrypted = cipher.update(password, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return `${iv.toString("hex")}:${encrypted}`;
+};
+
+export const decryptPassword = (encryptedData: string): string => {
+  const [ivHex, encryptedHex] = encryptedData.split(":");
+  if (!ivHex || !encryptedHex) {
+    throw new Error("Invalid encrypted password format");
+  }
+  const key = getEncryptionKey();
+  const iv = Buffer.from(ivHex, "hex");
+  const decipher = createDecipheriv("aes-256-cbc", key, iv);
+  let decrypted = decipher.update(encryptedHex, "hex", "utf8");
+  decrypted += decipher.final("utf8");
+  return decrypted;
 };
 
 export const hashPassword = async (password: string): Promise<string> => {
