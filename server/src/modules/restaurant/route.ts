@@ -47,6 +47,12 @@ export const createRestaurantRouter = (): Router => {
     adminWriteLimiter,
     asyncHandler(memberController.createManagerAccount),
   );
+  router.post(
+    "/:id/manager-account/verify",
+    asyncHandler(requireAuth),
+    adminWriteLimiter,
+    asyncHandler(memberController.verifyManagerOtp),
+  );
   router.delete(
     "/:id/manager-account",
     asyncHandler(requireAuth),

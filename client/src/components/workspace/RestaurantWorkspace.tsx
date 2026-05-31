@@ -9,6 +9,7 @@ import {
   createAssetUpload,
   createDish,
   createRestaurantManagerAccount,
+  verifyManagerOtp,
   deleteRestaurantManagerAccount,
   createMenu,
   deleteCategory,
@@ -88,6 +89,10 @@ type TeamComposerState = {
   isOpen: boolean;
   mode: "create" | "edit";
   isSubmitting?: boolean;
+  // OTP verification step
+  otpStep?: boolean;       // true = show OTP input instead of form
+  otpEmail?: string;       // the email we sent the OTP to
+  otpCode?: string;        // the code the owner is typing
 };
 
 type MenuComposerState = {
@@ -1758,7 +1763,8 @@ export function RestaurantWorkspace({
         address: teamComposerState.restaurantAddress.trim() || undefined,
       });
 
-      const payload = await createRestaurantManagerAccount(
+      // Step 1: send OTP — no account created yet
+      const response = await createRestaurantManagerAccount(
         session.token,
         restaurant.id,
         {
@@ -1769,22 +1775,15 @@ export function RestaurantWorkspace({
           profilePic: teamComposerState.profilePic.trim() || undefined,
         },
       );
-      await refreshRestaurant();
-      setTeamComposerState({
-        email: payload.membership.user.email,
-        password: "",
-        name: payload.membership.user.name || "",
-        mobile: payload.membership.user.mobile || "",
-        profilePic: payload.membership.user.profilePicUrl || "",
-        restaurantAddress: teamComposerState.restaurantAddress,
-        isOpen: false,
-        mode: "edit",
-      });
-      const successMessage = payload.createdUser
-        ? "Manager account created. The manager can now sign in from the manager portal."
-        : "Manager credentials updated. The latest password is now active.";
-      setTeamMessage(successMessage);
-      pushToast(successMessage, "success");
+
+      // Transition to OTP verification step
+      setTeamComposerState((prev) => ({
+        ...prev,
+        otpStep: true,
+        otpEmail: response.email,
+        otpCode: "",
+      }));
+      setTeamMessage(`A 6-digit verification code was sent to ${response.email}. Ask the manager to check their inbox and share the code with you.`);
     } catch (error) {
       const message =
         error instanceof Error
@@ -1792,6 +1791,58 @@ export function RestaurantWorkspace({
           : "Unable to save manager access.";
       setTeamMessage(message);
       pushToast(message, "error");
+    } finally {
+      setIsSavingMember(false);
+    }
+  };
+
+  // ─── OTP verification submit ──────────────────────────────────────────────────
+  const handleVerifyOtp = async () => {
+    if (session.status !== "authenticated") return;
+    const code = (teamComposerState.otpCode ?? "").trim();
+    if (!code || code.length < 6) {
+      setTeamMessage("Please enter the full 6-digit code.");
+      return;
+    }
+
+    setIsSavingMember(true);
+    setTeamMessage(null);
+
+    try {
+      const payload = await verifyManagerOtp(session.token, restaurant.id, code);
+      await refreshRestaurant();
+      setTeamComposerState(emptyTeamComposerState);
+      const successMessage = payload.createdUser
+        ? "Manager account created. The manager can now sign in from the manager portal."
+        : "Manager credentials updated. The latest password is now active.";
+      setTeamMessage(successMessage);
+      pushToast(successMessage, "success");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "OTP verification failed.";
+      setTeamMessage(message);
+    } finally {
+      setIsSavingMember(false);
+    }
+  };
+
+  // ─── Resend OTP ───────────────────────────────────────────────────────────────
+  const handleResendOtp = async () => {
+    if (session.status !== "authenticated") return;
+    setTeamMessage(null);
+    setIsSavingMember(true);
+    try {
+      const email = teamComposerState.otpEmail ?? teamComposerState.email;
+      const password = teamComposerState.password;
+      const response = await createRestaurantManagerAccount(
+        session.token,
+        restaurant.id,
+        { email, password },
+      );
+      setTeamMessage(`A new code was sent to ${response.email}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to resend code.";
+      setTeamMessage(message);
     } finally {
       setIsSavingMember(false);
     }
@@ -3887,10 +3938,16 @@ export function RestaurantWorkspace({
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
                 <h2 className="text-[2rem] font-bold tracking-[-0.04em] text-on-surface">
-                  {assignedManager ? "Edit Manager & Location" : "Set Manager & Location"}
+                  {teamComposerState.otpStep
+                    ? "Verify Manager Email"
+                    : assignedManager
+                      ? "Edit Manager & Location"
+                      : "Set Manager & Location"}
                 </h2>
                 <p className="mt-1 text-sm font-medium text-on-surface-variant">
-                  Update manager profile, credentials, and restaurant address.
+                  {teamComposerState.otpStep
+                    ? `Enter the 6-digit code sent to ${teamComposerState.otpEmail}`
+                    : "Update manager profile, credentials, and restaurant address."}
                 </p>
               </div>
 
@@ -3903,6 +3960,88 @@ export function RestaurantWorkspace({
               </button>
             </div>
 
+            {/* ── OTP Step ─────────────────────────────────────────────── */}
+            {teamComposerState.otpStep ? (
+              <div className="mt-8">
+                <div className="rounded-[1.5rem] border border-primary/10 bg-gradient-to-br from-primary/5 to-white p-6">
+                  <div className="mb-6 flex items-center gap-4">
+                    <div className="flex size-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                      <span className="material-symbols-outlined text-[1.8rem]">mark_email_read</span>
+                    </div>
+                    <div>
+                      <p className="font-bold text-on-surface">Check the manager's inbox</p>
+                      <p className="mt-0.5 text-sm text-on-surface-variant">
+                        A 6-digit code was sent to <strong>{teamComposerState.otpEmail}</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  <label htmlFor="manager-otp-code" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+                    Verification Code
+                  </label>
+                  <input
+                    id="manager-otp-code"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder="000000"
+                    value={teamComposerState.otpCode ?? ""}
+                    onChange={(e) =>
+                      setTeamComposerState((prev) => ({
+                        ...prev,
+                        otpCode: e.target.value.replace(/\D/g, "").slice(0, 6),
+                      }))
+                    }
+                    className="w-full rounded-[1.1rem] bg-white px-5 py-4 text-center text-2xl font-bold tracking-[0.5em] text-on-surface outline-none ring-2 ring-primary/20 focus:ring-primary/50"
+                    autoComplete="one-time-code"
+                  />
+
+                  {teamMessage ? (
+                    <p className={`mt-3 text-sm font-medium ${teamMessage.startsWith("A ") || teamMessage.startsWith("Manager") ? "text-green-600" : "text-error"}`}>
+                      {teamMessage}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+                  <button
+                    type="button"
+                    onClick={() => void handleResendOtp()}
+                    disabled={isSavingMember}
+                    className="text-sm font-bold text-primary underline-offset-2 hover:underline disabled:opacity-50"
+                  >
+                    Resend code
+                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setTeamComposerState((prev) => ({
+                          ...prev,
+                          otpStep: false,
+                          otpCode: "",
+                        }))
+                      }
+                      className="rounded-[1rem] border border-slate-200 px-5 py-3 text-sm font-bold text-on-surface-variant transition-colors hover:text-primary"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleVerifyOtp()}
+                      disabled={isSavingMember || (teamComposerState.otpCode ?? "").length < 6}
+                      className="flex items-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-6 py-3 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {isSavingMember ? <span className="spinner-sm" /> : null}
+                      Verify &amp; Create Account
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {!teamComposerState.otpStep ? (
+            <>
             <div className="mt-8 grid gap-5 md:grid-cols-2">
               <div className="md:col-span-2">
                 <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
@@ -4090,10 +4229,11 @@ export function RestaurantWorkspace({
                   className="flex items-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-6 py-3.5 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
                 >
                   {isSavingMember ? <span className="spinner-sm" /> : null}
-                  {assignedManager ? "Save Changes" : "Save and Create"}
+                  {assignedManager ? "Save Changes" : "Send Verification Code"}
                 </button>
               </div>
             </div>
+            </>) : null}
           </section>
         </div>
       ) : null}

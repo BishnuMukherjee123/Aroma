@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { prisma } from "../../db/prisma.js";
-import { conflict, ensureFoundValue, badRequest } from "../../lib/errors.js";
+import { badRequest, conflict, ensureFoundValue } from "../../lib/errors.js";
+import { hashPassword } from "../../lib/auth.js";
 import { rebuildPublicRestaurantSnapshot } from "../../lib/public-menu.js";
 import { ensureRestaurantRole } from "../restaurant/access.js";
 import { config } from "../../utils/conf.js";
@@ -129,7 +130,74 @@ export const addRestaurantMember = async (
   return membership;
 };
 
-export const createRestaurantManagerAccount = async (
+// ─── Shared validation for manager account input ──────────────────────────────
+
+const validateManagerInput = async (
+  restaurantId: string,
+  input: { email: string },
+) => {
+  const restaurant = await prisma.restaurant.findUnique({
+    where: { id: restaurantId },
+    select: {
+      id: true,
+      name: true,
+      ownerId: true,
+      owner: {
+        select: { email: true },
+      },
+    },
+  });
+
+  const existingRestaurant = ensureFoundValue(restaurant, "Restaurant not found");
+
+  const normalizedEmail = input.email.toLowerCase().trim();
+
+  if (normalizedEmail === existingRestaurant.owner.email.toLowerCase().trim()) {
+    conflict("The company owner account cannot also be used as the restaurant manager.");
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+    select: {
+      id: true,
+      email: true,
+      restaurantsOwned: { select: { id: true } },
+    },
+  });
+
+  if (
+    existingUser &&
+    (existingUser.id === existingRestaurant.ownerId ||
+      existingUser.restaurantsOwned.length > 0)
+  ) {
+    conflict("A company owner account cannot be assigned as a restaurant manager.");
+  }
+
+  if (existingUser) {
+    const membershipElsewhere = await prisma.restaurantMember.findFirst({
+      where: {
+        userId: existingUser.id,
+        NOT: { restaurantId },
+      },
+      select: {
+        role: true,
+        restaurant: { select: { name: true } },
+      },
+    });
+
+    if (membershipElsewhere) {
+      conflict(
+        `This account already belongs to ${membershipElsewhere.restaurant.name}. A restaurant manager can only be assigned to one restaurant.`,
+      );
+    }
+  }
+
+  return { existingRestaurant, existingUser, normalizedEmail };
+};
+
+// ─── Step 1: Send OTP (no user created yet) ───────────────────────────────────
+
+export const sendManagerOtp = async (
   actorUserId: string,
   restaurantId: string,
   input: {
@@ -142,198 +210,187 @@ export const createRestaurantManagerAccount = async (
 ) => {
   await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
 
-  const restaurant = await prisma.restaurant.findUnique({
-    where: { id: restaurantId },
-    select: {
-      id: true,
-      name: true,
-      ownerId: true,
-      owner: {
-        select: {
-          email: true,
-        },
-      },
+  const { normalizedEmail } = await validateManagerInput(restaurantId, input);
+
+  // Hash password NOW so we never store plaintext anywhere
+  const passwordHash = await hashPassword(input.password);
+
+  // Upsert the pending record (10 min expiry, overwrites any old pending for this restaurant)
+  await prisma.pendingManagerOtp.upsert({
+    where: { restaurantId },
+    update: {
+      email: normalizedEmail,
+      passwordHash,
+      name: input.name ?? null,
+      mobile: input.mobile ?? null,
+      profilePicUrl: input.profilePic ?? null,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    },
+    create: {
+      restaurantId,
+      email: normalizedEmail,
+      passwordHash,
+      name: input.name ?? null,
+      mobile: input.mobile ?? null,
+      profilePicUrl: input.profilePic ?? null,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     },
   });
 
-  const existingRestaurant = ensureFoundValue(restaurant, "Restaurant not found");
-
-  if (input.email === existingRestaurant.owner.email) {
-    conflict(
-      "The company owner account cannot also be used as the restaurant manager.",
-    );
-  }
-
-  const normalizedEmail = input.email.toLowerCase().trim();
-
-  const existingUser = await prisma.user.findUnique({
-    where: { email: normalizedEmail },
-    select: {
-      id: true,
-      email: true,
-      restaurantsOwned: {
-        select: {
-          id: true,
-        },
-      },
-    },
-  });
-
-  if (
-    existingUser &&
-    (existingUser.id === existingRestaurant.ownerId ||
-      existingUser.restaurantsOwned.length > 0)
-  ) {
-    conflict(
-      "A company owner account cannot be assigned as a restaurant manager.",
-    );
-  }
-
-  if (existingUser) {
-    const membershipElsewhere = await prisma.restaurantMember.findFirst({
-      where: {
-        userId: existingUser.id,
-        NOT: {
-          restaurantId,
-        },
-      },
-      select: {
-        role: true,
-        restaurant: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    });
-
-    if (membershipElsewhere) {
-      conflict(
-        `This account already belongs to ${membershipElsewhere.restaurant.name}. A restaurant manager can only be assigned to one restaurant.`,
-      );
-    }
-  }
-
+  // Send OTP email via Supabase
   const supabase = getSupabaseAdminClient();
-  let supabaseUserId = existingUser?.id;
+  const { error } = await supabase.auth.signInWithOtp({
+    email: normalizedEmail,
+    options: { shouldCreateUser: true },
+  });
+
+  if (error) {
+    // Clean up pending record if OTP send fails
+    await prisma.pendingManagerOtp.deleteMany({ where: { restaurantId } });
+    throw new Error(`Failed to send OTP email: ${error.message}`);
+  }
+
+  return { success: true, email: normalizedEmail };
+};
+
+// ─── Step 2: Verify OTP and create the account ────────────────────────────────
+
+export const verifyManagerOtpAndCreate = async (
+  actorUserId: string,
+  restaurantId: string,
+  code: string,
+) => {
+  await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
+
+  // Fetch the pending record
+  const pendingRaw = await prisma.pendingManagerOtp.findUnique({
+    where: { restaurantId },
+  });
+
+  if (!pendingRaw) {
+    badRequest("No pending manager registration found. Please start over.");
+  }
+
+  const pending = ensureFoundValue(pendingRaw, "No pending manager registration found. Please start over.");
+
+  if (new Date() > pending.expiresAt) {
+    await prisma.pendingManagerOtp.delete({ where: { restaurantId } });
+    badRequest("OTP has expired. Please start over.");
+  }
+
+  // Verify OTP with Supabase
+  const supabase = getSupabaseAdminClient();
+  const { data, error } = await supabase.auth.verifyOtp({
+    email: pending.email,
+    token: code,
+    type: "email",
+  });
+
+  if (error || !data.user) {
+    throw Object.assign(
+      new Error("Invalid or expired OTP code. Please check and try again."),
+      { statusCode: 401 },
+    );
+  }
+
+  // OTP verified — now create the real account
+  const existingUser = await prisma.user.findUnique({
+    where: { email: pending.email },
+    select: { id: true },
+  });
+
+  let supabaseUserId = existingUser?.id ?? data.user.id;
 
   if (!existingUser) {
-    const { data: sbData, error: sbError } = await supabase.auth.admin.createUser({
-      email: normalizedEmail,
-      password: input.password,
-      email_confirm: true,
-    });
+    // Update the Supabase user's password (they were created by signInWithOtp above)
+    const { error: updateErr } = await supabase.auth.admin.updateUserById(
+      data.user.id,
+      { password: pending.passwordHash, email_confirm: true },
+    );
 
-    if (sbError || !sbData.user) {
-      throw new Error(`Failed to create user in Supabase Auth: ${sbError?.message || "Unknown error"}`);
+    if (updateErr) {
+      throw new Error(`Failed to set manager password: ${updateErr.message}`);
     }
-
-    supabaseUserId = sbData.user.id;
   } else {
-    const { error: sbError } = await supabase.auth.admin.updateUserById(existingUser.id, {
-      password: input.password,
-    });
+    // Update existing Supabase user's password
+    const { error: updateErr } = await supabase.auth.admin.updateUserById(
+      existingUser.id,
+      { password: pending.passwordHash },
+    );
 
-    if (sbError) {
-      throw new Error(`Failed to update password in Supabase Auth: ${sbError.message}`);
+    if (updateErr) {
+      throw new Error(`Failed to update manager password: ${updateErr.message}`);
     }
   }
 
+  // Write to our database inside a transaction
   const payload = await prisma.$transaction(async (tx) => {
     const managerUser = await tx.user.upsert({
-      where: {
-        email: normalizedEmail,
-      },
+      where: { email: pending.email },
       update: {
-        passwordHash: "",
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.mobile !== undefined ? { mobile: input.mobile } : {}),
-        ...(input.profilePic !== undefined ? { profilePicUrl: input.profilePic } : {}),
+        passwordHash: pending.passwordHash,
+        ...(pending.name !== null ? { name: pending.name } : {}),
+        ...(pending.mobile !== null ? { mobile: pending.mobile } : {}),
+        ...(pending.profilePicUrl !== null ? { profilePicUrl: pending.profilePicUrl } : {}),
       },
       create: {
         id: supabaseUserId,
-        email: normalizedEmail,
-        passwordHash: "",
-        ...(input.name !== undefined ? { name: input.name } : {}),
-        ...(input.mobile !== undefined ? { mobile: input.mobile } : {}),
-        ...(input.profilePic !== undefined ? { profilePicUrl: input.profilePic } : {}),
+        email: pending.email,
+        passwordHash: pending.passwordHash,
+        ...(pending.name !== null ? { name: pending.name } : {}),
+        ...(pending.mobile !== null ? { mobile: pending.mobile } : {}),
+        ...(pending.profilePicUrl !== null ? { profilePicUrl: pending.profilePicUrl } : {}),
       },
-      select: {
-        id: true,
-        email: true,
-      },
+      select: { id: true, email: true },
     });
 
+    // Remove any other manager for this restaurant
     await tx.restaurantMember.deleteMany({
       where: {
         restaurantId,
         role: "MANAGER",
-        NOT: {
-          userId: managerUser.id,
-        },
+        NOT: { userId: managerUser.id },
       },
     });
 
     const membership = await tx.restaurantMember.upsert({
       where: {
-        userId_restaurantId: {
-          userId: managerUser.id,
-          restaurantId,
-        },
+        userId_restaurantId: { userId: managerUser.id, restaurantId },
       },
-      update: {
-        role: "MANAGER",
-      },
-      create: {
-        userId: managerUser.id,
-        restaurantId,
-        role: "MANAGER",
-      },
+      update: { role: "MANAGER" },
+      create: { userId: managerUser.id, restaurantId, role: "MANAGER" },
       select: managerMembershipSelect,
     });
 
-    return {
-      membership,
-      createdUser: !existingUser,
-    };
-  }, {
-    maxWait: 15_000,
-    timeout: 15_000,
-  });
+    // Delete the pending record — it's no longer needed
+    await tx.pendingManagerOtp.delete({ where: { restaurantId } });
+
+    return { membership, createdUser: !existingUser };
+  }, { maxWait: 15_000, timeout: 15_000 });
 
   await rebuildPublicRestaurantSnapshot(restaurantId);
-
   return payload;
 };
+
+// ─── Delete manager ───────────────────────────────────────────────────────────
 
 export const deleteRestaurantManagerAccount = async (
   actorUserId: string,
   restaurantId: string,
 ) => {
-  // Only the owner can delete the manager
   await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
 
   const existingManager = await prisma.restaurantMember.findFirst({
-    where: {
-      restaurantId,
-      role: "MANAGER",
-    },
+    where: { restaurantId, role: "MANAGER" },
   });
 
   const manager = ensureFoundValue(existingManager, "No manager assigned to this restaurant.");
 
-  // Delete the manager user (this cascades to RestaurantMember automatically, 
-  // or we delete both in a transaction if needed. Let's delete the user completely)
   await prisma.$transaction([
-    prisma.restaurantMember.delete({
-      where: { id: manager.id },
-    }),
-    prisma.user.delete({
-      where: { id: manager.userId },
-    }),
+    prisma.restaurantMember.delete({ where: { id: manager.id } }),
+    prisma.user.delete({ where: { id: manager.userId } }),
   ]);
 
   await rebuildPublicRestaurantSnapshot(restaurantId);
-
   return { success: true };
 };

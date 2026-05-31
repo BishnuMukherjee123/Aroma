@@ -10,12 +10,13 @@ import {
 } from "../../lib/validation.js";
 import {
   addRestaurantMember,
-  createRestaurantManagerAccount,
+  sendManagerOtp,
+  verifyManagerOtpAndCreate,
   deleteRestaurantManagerAccount,
   RESTAURANT_MEMBER_ROLES,
 } from "./service.js";
 
-import {uploadFile} from "../../storage/storage.service.js"
+import { uploadFile } from "../../storage/storage.service.js";
 
 export const add = async (req: Request, res: Response): Promise<void> => {
   const auth = requireAuthContext(req);
@@ -31,6 +32,8 @@ export const add = async (req: Request, res: Response): Promise<void> => {
   res.status(201).json(payload);
 };
 
+// ─── Step 1: Validate form, hash password, save pending, send OTP ─────────────
+
 export const createManagerAccount = async (
   req: Request,
   res: Response,
@@ -45,7 +48,6 @@ export const createManagerAccount = async (
   );
 
   if (profilePicUrl && profilePicUrl.startsWith("data:")) {
-    // Strip the "data:image/...;base64," prefix
     const match = profilePicUrl.match(/^data:(.+);base64,(.+)$/);
     if (!match) {
       throw new Error("profilePic must be a valid base64 data URL");
@@ -59,7 +61,7 @@ export const createManagerAccount = async (
     profilePicUrl = uploadResponse.url;
   }
 
-  const payload = await createRestaurantManagerAccount(
+  const payload = await sendManagerOtp(
     auth.userId,
     requireString(req.params.id, "id", 1),
     {
@@ -71,8 +73,28 @@ export const createManagerAccount = async (
     },
   );
 
+  res.status(200).json(payload);
+};
+
+// ─── Step 2: Verify OTP and finalize account creation ────────────────────────
+
+export const verifyManagerOtp = async (
+  req: Request,
+  res: Response,
+): Promise<void> => {
+  const auth = requireAuthContext(req);
+  const code = requireString(req.body.code, "code", 6);
+
+  const payload = await verifyManagerOtpAndCreate(
+    auth.userId,
+    requireString(req.params.id, "id", 1),
+    code,
+  );
+
   res.status(201).json(payload);
 };
+
+// ─── Delete manager ───────────────────────────────────────────────────────────
 
 export const deleteManagerAccount = async (
   req: Request,

@@ -58,6 +58,21 @@ model User {
   restaurantsOwned Restaurant[]       @relation("RestaurantOwner")
 }
 
+model PendingManagerOtp {
+  id            String   @id @default(uuid())
+  restaurantId  String   @unique
+  email         String
+  passwordHash  String
+  name          String?
+  mobile        String?
+  profilePicUrl String?
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([restaurantId])
+  @@index([expiresAt])
+}
+
 model Restaurant {
   id                          String             @id @default(uuid())
   name                        String

@@ -521,19 +521,26 @@ export const createRestaurantManagerAccount = async (
     mobile?: string;
     profilePic?: string;
   },
-): Promise<
-  {
-    createdUser: boolean;
-    membership: RestaurantMemberSummary & {
-      createdAt: string;
-      updatedAt: string;
-    };
-  }
-> => {
+): Promise<{ success: boolean; email: string }> => {
   return apiRequest(`/api/v1/restaurants/${restaurantId}/manager-account`, {
     token,
     method: "POST",
     body: input,
+  });
+};
+
+export const verifyManagerOtp = async (
+  token: string,
+  restaurantId: string,
+  code: string,
+): Promise<{
+  createdUser: boolean;
+  membership: RestaurantMemberSummary & { createdAt: string; updatedAt: string };
+}> => {
+  return apiRequest(`/api/v1/restaurants/${restaurantId}/manager-account/verify`, {
+    token,
+    method: "POST",
+    body: { code },
   });
 };
 
