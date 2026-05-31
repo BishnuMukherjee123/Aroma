@@ -273,18 +273,18 @@ input[type="checkbox"] {
   --color-outline: #0089ba;
   --color-outline-variant: #008f7a;
 
-  --dash-green-900: #008f7a;
+  --dash-green-900: #008e9b;
   --dash-green-700: #845ec2;
   --dash-green-600: #2c73d2;
-  --dash-green-100: rgba(132, 94, 194, 0.12);
-  --dash-green-50: rgba(132, 94, 194, 0.06);
+  --dash-green-100: rgba(44, 115, 210, 0.12);
+  --dash-green-50: rgba(44, 115, 210, 0.06);
 
-  --dash-text: #241c30;
-  --dash-text-muted: #5a5066;
-  --dash-text-faint: #8a7e99;
-  --dash-shadow-color: 132, 94, 194;
-  --dash-bg: #faf9fc;
-  --dash-bg-surface: #f3f0f7;
+  --dash-text: #142230;
+  --dash-text-muted: #485a6a;
+  --dash-text-faint: #7c8e9e;
+  --dash-shadow-color: 44, 115, 210;
+  --dash-bg: #f4f7fa;
+  --dash-bg-surface: #ebf1f6;
 }
 
 .dashboard-shell[data-theme="spot-palette"] {
@@ -297,15 +297,15 @@ input[type="checkbox"] {
   --dash-green-900: #00c9a7;
   --dash-green-700: #845ec2;
   --dash-green-600: #b39cd0;
-  --dash-green-100: rgba(132, 94, 194, 0.12);
-  --dash-green-50: rgba(132, 94, 194, 0.06);
+  --dash-green-100: rgba(0, 201, 167, 0.12);
+  --dash-green-50: rgba(0, 201, 167, 0.06);
 
-  --dash-text: #241c30;
-  --dash-text-muted: #5a5066;
-  --dash-text-faint: #8a7e99;
+  --dash-text: #22162b;
+  --dash-text-muted: #564a60;
+  --dash-text-faint: #8c7f96;
   --dash-shadow-color: 132, 94, 194;
-  --dash-bg: #faf9fc;
-  --dash-bg-surface: #f3f0f7;
+  --dash-bg: #faf8fc;
+  --dash-bg-surface: #f2edf7;
 }
 
 .dashboard-shell[data-theme="twisted-spot-palette"] {
@@ -318,15 +318,15 @@ input[type="checkbox"] {
   --dash-green-900: #4d8076;
   --dash-green-700: #845ec2;
   --dash-green-600: #00c9a7;
-  --dash-green-100: rgba(132, 94, 194, 0.12);
-  --dash-green-50: rgba(132, 94, 194, 0.06);
+  --dash-green-100: rgba(0, 201, 167, 0.12);
+  --dash-green-50: rgba(0, 201, 167, 0.06);
 
-  --dash-text: #241c30;
-  --dash-text-muted: #5a5066;
-  --dash-text-faint: #8a7e99;
-  --dash-shadow-color: 132, 94, 194;
-  --dash-bg: #faf9fc;
-  --dash-bg-surface: #f3f0f7;
+  --dash-text: #142b26;
+  --dash-text-muted: #455e58;
+  --dash-text-faint: #77948e;
+  --dash-shadow-color: 0, 201, 167;
+  --dash-bg: #f3faf8;
+  --dash-bg-surface: #e5f3f0;
 }
 
 .dashboard-shell[data-theme="classy-palette"] {
@@ -338,16 +338,16 @@ input[type="checkbox"] {
 
   --dash-green-900: #4b4453;
   --dash-green-700: #845ec2;
-  --dash-green-600: #ff8066;
-  --dash-green-100: rgba(132, 94, 194, 0.12);
-  --dash-green-50: rgba(132, 94, 194, 0.06);
+  --dash-green-600: #c34a36;
+  --dash-green-100: rgba(75, 68, 83, 0.12);
+  --dash-green-50: rgba(75, 68, 83, 0.06);
 
-  --dash-text: #241c30;
-  --dash-text-muted: #5a5066;
-  --dash-text-faint: #8a7e99;
-  --dash-shadow-color: 132, 94, 194;
-  --dash-bg: #faf9fc;
-  --dash-bg-surface: #f3f0f7;
+  --dash-text: #2b2529;
+  --dash-text-muted: #5d5459;
+  --dash-text-faint: #8f868c;
+  --dash-shadow-color: 75, 68, 83;
+  --dash-bg: #faf9f9;
+  --dash-bg-surface: #f3f0f0;
 }
 
 .dashboard-shell[data-theme="cube-palette"] {
@@ -360,14 +360,14 @@ input[type="checkbox"] {
   --dash-green-900: #335e70;
   --dash-green-700: #845ec2;
   --dash-green-600: #4e8397;
-  --dash-green-100: rgba(132, 94, 194, 0.12);
-  --dash-green-50: rgba(132, 94, 194, 0.06);
+  --dash-green-100: rgba(78, 131, 151, 0.12);
+  --dash-green-50: rgba(78, 131, 151, 0.06);
 
-  --dash-text: #241c30;
-  --dash-text-muted: #5a5066;
-  --dash-text-faint: #8a7e99;
-  --dash-shadow-color: 132, 94, 194;
-  --dash-bg: #faf9fc;
-  --dash-bg-surface: #f3f0f7;
+  --dash-text: #242c30;
+  --dash-text-muted: #545c60;
+  --dash-text-faint: #889094;
+  --dash-shadow-color: 78, 131, 151;
+  --dash-bg: #fcfbfa;
+  --dash-bg-surface: #f5f2ed;
 }
 
