@@ -56,3 +56,6 @@ server/scripts/rename-editor-to-manager.ts
 *.log
 
 nul
+
+# Scratch directories
+server/scratch/
