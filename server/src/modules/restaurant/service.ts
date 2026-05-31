@@ -29,6 +29,7 @@ export const createRestaurant = async (
         address: true,
         isActive: true,
         isPublished: true,
+        managerPortalTheme: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -62,6 +63,7 @@ export const getRestaurant = async (actorUserId: string, restaurantId: string) =
       address: true,
       isActive: true,
       isPublished: true,
+      managerPortalTheme: true,
       publicMenuSnapshotUpdatedAt: true,
       createdAt: true,
       updatedAt: true,
@@ -118,6 +120,7 @@ export const updateRestaurant = async (
     address?: string;
     isActive?: boolean;
     isPublished?: boolean;
+    managerPortalTheme?: string;
   },
 ) => {
   await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
@@ -156,6 +159,9 @@ export const updateRestaurant = async (
       ...(input.isPublished !== undefined
         ? { isPublished: input.isPublished }
         : {}),
+      ...(input.managerPortalTheme !== undefined
+        ? { managerPortalTheme: input.managerPortalTheme }
+        : {}),
     },
     select: {
       id: true,
@@ -165,6 +171,7 @@ export const updateRestaurant = async (
       address: true,
       isActive: true,
       isPublished: true,
+      managerPortalTheme: true,
       createdAt: true,
       updatedAt: true,
     },

@@ -81,6 +81,7 @@ model Restaurant {
   address                     String?
   isActive                    Boolean            @default(true)
   isPublished                 Boolean            @default(false)
+  managerPortalTheme          String             @default("DEFAULT")
   publicMenuSnapshot          Json?
   publicMenuSnapshotUpdatedAt DateTime?
   createdAt                   DateTime           @default(now())

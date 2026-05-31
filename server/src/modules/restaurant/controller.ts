@@ -44,6 +44,10 @@ export const update = async (req: Request, res: Response): Promise<void> => {
       address: optionalString(req.body.address, "address"),
       isActive: optionalBoolean(req.body.isActive, "isActive"),
       isPublished: optionalBoolean(req.body.isPublished, "isPublished"),
+      managerPortalTheme: optionalString(
+        req.body.managerPortalTheme,
+        "managerPortalTheme",
+      ),
     },
   );
 
