@@ -245,50 +245,87 @@ input[type="checkbox"] {
 }
 
 /* Manager Portal Themes */
-[data-theme="generic-gradient"] {
+.dashboard-shell[data-theme="generic-gradient"] {
   --color-primary: #845ec2;
   --color-primary-container: #d65db1;
   --color-surface-tint: #ff6f91;
   --color-outline: #ff9671;
   --color-outline-variant: #ffc75f;
+
+  --dash-green-900: #3b1c6e;
+  --dash-green-700: #845ec2;
+  --dash-green-600: #d65db1;
+  --dash-green-100: rgba(132, 94, 194, 0.12);
+  --dash-green-50: rgba(132, 94, 194, 0.06);
 }
 
-[data-theme="matching-gradient"] {
+.dashboard-shell[data-theme="matching-gradient"] {
   --color-primary: #845ec2;
   --color-primary-container: #2c73d2;
   --color-surface-tint: #0081cf;
   --color-outline: #0089ba;
   --color-outline-variant: #008f7a;
+
+  --dash-green-900: #008f7a;
+  --dash-green-700: #845ec2;
+  --dash-green-600: #2c73d2;
+  --dash-green-100: rgba(132, 94, 194, 0.12);
+  --dash-green-50: rgba(132, 94, 194, 0.06);
 }
 
-[data-theme="spot-palette"] {
+.dashboard-shell[data-theme="spot-palette"] {
   --color-primary: #845ec2;
   --color-primary-container: #b39cd0;
   --color-surface-tint: #00c9a7;
   --color-outline: #b39cd0;
   --color-outline-variant: #00c9a7;
+
+  --dash-green-900: #00c9a7;
+  --dash-green-700: #845ec2;
+  --dash-green-600: #b39cd0;
+  --dash-green-100: rgba(132, 94, 194, 0.12);
+  --dash-green-50: rgba(132, 94, 194, 0.06);
 }
 
-[data-theme="twisted-spot-palette"] {
+.dashboard-shell[data-theme="twisted-spot-palette"] {
   --color-primary: #845ec2;
   --color-primary-container: #00c9a7;
   --color-surface-tint: #c4fcef;
   --color-outline: #4d8076;
   --color-outline-variant: #00c9a7;
+
+  --dash-green-900: #4d8076;
+  --dash-green-700: #845ec2;
+  --dash-green-600: #00c9a7;
+  --dash-green-100: rgba(132, 94, 194, 0.12);
+  --dash-green-50: rgba(132, 94, 194, 0.06);
 }
 
-[data-theme="classy-palette"] {
+.dashboard-shell[data-theme="classy-palette"] {
   --color-primary: #845ec2;
   --color-primary-container: #ff8066;
   --color-surface-tint: #b0a8b9;
   --color-outline: #4b4453;
   --color-outline-variant: #c34a36;
+
+  --dash-green-900: #4b4453;
+  --dash-green-700: #845ec2;
+  --dash-green-600: #ff8066;
+  --dash-green-100: rgba(132, 94, 194, 0.12);
+  --dash-green-50: rgba(132, 94, 194, 0.06);
 }
 
-[data-theme="cube-palette"] {
+.dashboard-shell[data-theme="cube-palette"] {
   --color-primary: #845ec2;
   --color-primary-container: #4e8397;
   --color-surface-tint: #d5cabd;
   --color-outline: #4e8397;
   --color-outline-variant: #d5cabd;
+
+  --dash-green-900: #335e70;
+  --dash-green-700: #845ec2;
+  --dash-green-600: #4e8397;
+  --dash-green-100: rgba(132, 94, 194, 0.12);
+  --dash-green-50: rgba(132, 94, 194, 0.06);
 }
+
