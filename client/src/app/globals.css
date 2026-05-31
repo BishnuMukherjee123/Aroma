@@ -258,10 +258,12 @@ input[type="checkbox"] {
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
 
-  --dash-text: #14141e;
-  --dash-text-muted: #505060;
-  --dash-text-faint: #88889c;
+  --dash-text: #241c30;
+  --dash-text-muted: #5a5066;
+  --dash-text-faint: #8a7e99;
   --dash-shadow-color: 132, 94, 194;
+  --dash-bg: #faf9fc;
+  --dash-bg-surface: #f3f0f7;
 }
 
 .dashboard-shell[data-theme="matching-gradient"] {
@@ -277,10 +279,12 @@ input[type="checkbox"] {
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
 
-  --dash-text: #14141e;
-  --dash-text-muted: #505060;
-  --dash-text-faint: #88889c;
+  --dash-text: #241c30;
+  --dash-text-muted: #5a5066;
+  --dash-text-faint: #8a7e99;
   --dash-shadow-color: 132, 94, 194;
+  --dash-bg: #faf9fc;
+  --dash-bg-surface: #f3f0f7;
 }
 
 .dashboard-shell[data-theme="spot-palette"] {
@@ -296,10 +300,12 @@ input[type="checkbox"] {
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
 
-  --dash-text: #14141e;
-  --dash-text-muted: #505060;
-  --dash-text-faint: #88889c;
+  --dash-text: #241c30;
+  --dash-text-muted: #5a5066;
+  --dash-text-faint: #8a7e99;
   --dash-shadow-color: 132, 94, 194;
+  --dash-bg: #faf9fc;
+  --dash-bg-surface: #f3f0f7;
 }
 
 .dashboard-shell[data-theme="twisted-spot-palette"] {
@@ -315,10 +321,12 @@ input[type="checkbox"] {
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
 
-  --dash-text: #14141e;
-  --dash-text-muted: #505060;
-  --dash-text-faint: #88889c;
+  --dash-text: #241c30;
+  --dash-text-muted: #5a5066;
+  --dash-text-faint: #8a7e99;
   --dash-shadow-color: 132, 94, 194;
+  --dash-bg: #faf9fc;
+  --dash-bg-surface: #f3f0f7;
 }
 
 .dashboard-shell[data-theme="classy-palette"] {
@@ -334,10 +342,12 @@ input[type="checkbox"] {
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
 
-  --dash-text: #14141e;
-  --dash-text-muted: #505060;
-  --dash-text-faint: #88889c;
+  --dash-text: #241c30;
+  --dash-text-muted: #5a5066;
+  --dash-text-faint: #8a7e99;
   --dash-shadow-color: 132, 94, 194;
+  --dash-bg: #faf9fc;
+  --dash-bg-surface: #f3f0f7;
 }
 
 .dashboard-shell[data-theme="cube-palette"] {
@@ -353,9 +363,11 @@ input[type="checkbox"] {
   --dash-green-100: rgba(132, 94, 194, 0.12);
   --dash-green-50: rgba(132, 94, 194, 0.06);
 
-  --dash-text: #14141e;
-  --dash-text-muted: #505060;
-  --dash-text-faint: #88889c;
+  --dash-text: #241c30;
+  --dash-text-muted: #5a5066;
+  --dash-text-faint: #8a7e99;
   --dash-shadow-color: 132, 94, 194;
+  --dash-bg: #faf9fc;
+  --dash-bg-surface: #f3f0f7;
 }
 

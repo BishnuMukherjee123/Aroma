@@ -17,7 +17,7 @@
 .dashboard-shell .bg-surface-container,
 .dashboard-shell .bg-surface-container-high,
 .dashboard-shell .bg-surface-container-highest {
-  background-color: #f7f7f7 !important;
+  background-color: var(--dash-bg-surface, #f7f7f7) !important;
 }
 
 /* Text colors — force dark text on light backgrounds. */
@@ -33,7 +33,7 @@
 /* The workspace sidebar uses a fixed dark aside. We re-paint it to
    match the dashboard sidebar (#f7f7f7, no border). */
 .dashboard-shell aside {
-  background: #f7f7f7 !important;
+  background: var(--dash-bg-surface, #f7f7f7) !important;
   border-color: transparent !important;
   box-shadow: none !important;
 }
@@ -97,12 +97,12 @@
 
 .dashboard-shell header,
 .dashboard-shell .bg-surface\/88 {
-  background: #f7f7f7 !important;
+  background: var(--dash-bg-surface, #f7f7f7) !important;
   border-color: transparent !important;
 }
 
 .dashboard-shell main > header {
-  background: #f7f7f7 !important;
+  background: var(--dash-bg-surface, #f7f7f7) !important;
   border: none !important;
   border-radius: 1.25rem;
   position: static !important;
@@ -114,7 +114,7 @@
 
 .dashboard-shell main > div.bg-slate-50\/55,
 .dashboard-shell main > .flex.flex-col {
-  background: #f7f7f7 !important;
+  background: var(--dash-bg-surface, #f7f7f7) !important;
   border-radius: 1.25rem;
   margin: 0;
   padding: var(--workspace-gap);
