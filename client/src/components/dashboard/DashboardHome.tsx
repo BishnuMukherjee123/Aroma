@@ -78,9 +78,16 @@ const getCoverTheme = (publicId: string) => {
     "from-[#5f1310] via-[#7d1f17] to-[#c23726]",
     "from-[#15191f] via-[#2c3138] to-[#40474f]",
     "from-[#3d1e0d] via-[#6d3b18] to-[#b96a2e]",
+    "from-[#0b3d1b] via-[#145a2c] to-[#258e4a]",
+    "from-[#471a4f] via-[#63296d] to-[#9c45aa]",
   ];
 
-  return themes[publicId.length % themes.length];
+  let hash = 0;
+  for (let i = 0; i < publicId.length; i++) {
+    hash = publicId.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  return themes[Math.abs(hash) % themes.length];
 };
 
 export function DashboardHome({

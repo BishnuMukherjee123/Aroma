@@ -279,7 +279,8 @@ export const uploadRestaurantCoverImage = async (
   // Reduce and optimize image to WebP format
   const { buffer: optimizedBuffer, extension } = await reduceImage(rawBuffer, 1200, 80);
   
-  const fileName = `restaurant-${restaurantId}.${extension}`;
+  // Append timestamp to ensure a completely new URL is generated, bypassing any browser or CDN caching
+  const fileName = `restaurant-${restaurantId}-${Date.now()}.${extension}`;
 
   const uploadResult = await uploadFile(optimizedBuffer, fileName, "/restaurant-pics");
 
