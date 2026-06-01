@@ -9,6 +9,7 @@ import {
   deleteRestaurant,
   fetchRestaurant,
   updateRestaurant,
+  uploadRestaurantCoverImage,
   type RestaurantCardData,
   type RestaurantDetails,
 } from "@/lib/api";
@@ -109,6 +110,9 @@ export function DashboardHome({
   const [sidebarActiveKey, setSidebarActiveKey] = useState<string>("overview");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<MeResponse | null>(null);
+  const [uploadingCoverId, setUploadingCoverId] = useState<string | null>(null);
+  const [coverUploadError, setCoverUploadError] = useState<string | null>(null);
+  const coverInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   useEffect(() => {
     if (session.status === "authenticated") {
@@ -375,6 +379,51 @@ export function DashboardHome({
     }
   };
 
+  const handleCoverImageUpload = async (
+    restaurantId: string,
+    file: File,
+  ) => {
+    setCoverUploadError(null);
+    setUploadingCoverId(restaurantId);
+    try {
+      const reader = new FileReader();
+      const base64 = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => {
+          const result = reader.result as string;
+          // Strip data URL prefix: data:image/jpeg;base64,XXXX
+          resolve(result.split(",")[1] ?? "");
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const result = await uploadRestaurantCoverImage(
+        session.token,
+        restaurantId,
+        base64,
+        file.type,
+      );
+
+      // Update local state so card immediately shows the new photo
+      setRestaurants((current) =>
+        current.map((r) =>
+          r.summary.id === restaurantId
+            ? {
+                ...r,
+                summary: { ...r.summary, coverImageUrl: result.coverImageUrl },
+              }
+            : r,
+        ),
+      );
+    } catch (error) {
+      setCoverUploadError(
+        error instanceof Error ? error.message : "Upload failed. Please try again.",
+      );
+    } finally {
+      setUploadingCoverId(null);
+    }
+  };
+
   const handleToggleRestaurantActive = async (
     restaurant: RestaurantBundle,
     nextActiveState: boolean,
@@ -545,6 +594,31 @@ export function DashboardHome({
 
                             {portalVariant === "owner" && (
                               <>
+                                {/* Upload cover photo button */}
+                                <input
+                                  ref={(el) => { coverInputRefs.current[restaurant.summary.id] = el; }}
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (file) void handleCoverImageUpload(restaurant.summary.id, file);
+                                    e.target.value = "";
+                                  }}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => coverInputRefs.current[restaurant.summary.id]?.click()}
+                                  disabled={uploadingCoverId === restaurant.summary.id}
+                                  className="dash-cta-outline inline-flex items-center gap-2 px-4 py-2 text-xs font-bold"
+                                >
+                                  {uploadingCoverId === restaurant.summary.id ? (
+                                    <span className="spinner-sm" />
+                                  ) : (
+                                    <span className="material-symbols-outlined text-[0.9rem]">add_photo_alternate</span>
+                                  )}
+                                  {restaurant.summary.coverImageUrl ? "Change Photo" : "Upload Photo"}
+                                </button>
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -583,6 +657,12 @@ export function DashboardHome({
                             )}
                           </div>
                         </div>
+
+                        {coverUploadError ? (
+                          <div className="rounded-[0.75rem] bg-error-container px-3 py-2 text-xs font-semibold text-error">
+                            {coverUploadError}
+                          </div>
+                        ) : null}
 
                         {/* Stats row — Menus, Dishes, 3D Ready */}
                         <div className="grid grid-cols-3 gap-3 text-center">
@@ -824,8 +904,17 @@ export function DashboardHome({
                         <div
                           className={cn(
                             "relative h-36 overflow-hidden bg-gradient-to-br",
-                            getCoverTheme(restaurant.summary.publicId),
+                            !restaurant.summary.coverImageUrl && getCoverTheme(restaurant.summary.publicId),
                           )}
+                          style={
+                            restaurant.summary.coverImageUrl
+                              ? {
+                                  backgroundImage: `url(${restaurant.summary.coverImageUrl})`,
+                                  backgroundSize: "cover",
+                                  backgroundPosition: "center",
+                                }
+                              : undefined
+                          }
                         >
                           <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
                           <div className="absolute bottom-4 left-4 flex items-center gap-2">

@@ -80,6 +80,7 @@ model Restaurant {
   publicId                    String             @unique
   ownerId                     String
   address                     String?
+  coverImageUrl               String?
   isActive                    Boolean            @default(true)
   isPublished                 Boolean            @default(false)
   managerPortalTheme          String             @default("DEFAULT")

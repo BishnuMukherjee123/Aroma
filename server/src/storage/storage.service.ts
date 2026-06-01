@@ -5,11 +5,12 @@ const client = new ImageKit({
   privateKey: config.IMAGEKIT_PRIVATE_KEY,
 });
 
-const uploadFile = async (buffer: Buffer, fileName = "file-name.jpg") => {
+const uploadFile = async (buffer: Buffer, fileName = "file-name.jpg", folder?: string) => {
   try {
     const response = await client.files.upload({
       file: buffer.toString("base64"),
       fileName,
+      ...(folder ? { folder } : {}),
     });
     return response;
   } catch (error: any) {

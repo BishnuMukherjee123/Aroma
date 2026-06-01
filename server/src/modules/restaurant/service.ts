@@ -7,6 +7,7 @@ import {
   invalidatePublicRestaurantSnapshot,
 } from "../../lib/public-menu.js";
 import { ensureRestaurantRole } from "./access.js";
+import { uploadFile } from "../../storage/storage.service.js";
 
 const RESTAURANT_NOT_FOUND = "Restaurant not found";
 
@@ -27,6 +28,7 @@ export const createRestaurant = async (
         publicId: true,
         ownerId: true,
         address: true,
+        coverImageUrl: true,
         isActive: true,
         isPublished: true,
         managerPortalTheme: true,
@@ -61,6 +63,7 @@ export const getRestaurant = async (actorUserId: string, restaurantId: string) =
       publicId: true,
       ownerId: true,
       address: true,
+      coverImageUrl: true,
       isActive: true,
       isPublished: true,
       managerPortalTheme: true,
@@ -169,6 +172,7 @@ export const updateRestaurant = async (
       publicId: true,
       ownerId: true,
       address: true,
+      coverImageUrl: true,
       isActive: true,
       isPublished: true,
       managerPortalTheme: true,
@@ -259,4 +263,27 @@ export const deleteRestaurant = async (
     name: existingRestaurant.name,
     deleted: true,
   };
+};
+
+export const uploadRestaurantCoverImage = async (
+  actorUserId: string,
+  restaurantId: string,
+  imageBase64: string,
+  mimeType: string,
+) => {
+  await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
+
+  const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg";
+  const fileName = `restaurant-${restaurantId}.${ext}`;
+
+  const buffer = Buffer.from(imageBase64, "base64");
+  const uploadResult = await uploadFile(buffer, fileName, "/restaurant-pics");
+
+  const restaurant = await prisma.restaurant.update({
+    where: { id: restaurantId },
+    data: { coverImageUrl: uploadResult.url },
+    select: { id: true, coverImageUrl: true },
+  });
+
+  return restaurant;
 };

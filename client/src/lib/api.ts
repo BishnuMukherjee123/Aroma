@@ -47,6 +47,7 @@ export type MeResponse = AuthUser & {
       publicId: string;
       isActive: boolean;
       isPublished: boolean;
+      coverImageUrl: string | null;
     };
   }>;
 };
@@ -131,6 +132,7 @@ export type RestaurantDetails = {
   publicId: string;
   ownerId: string;
   address: string | null;
+  coverImageUrl: string | null;
   isActive: boolean;
   isPublished: boolean;
   managerPortalTheme?: string;
@@ -486,6 +488,19 @@ export const deleteRestaurant = async (
   return apiRequest(`/api/v1/restaurants/${restaurantId}`, {
     token,
     method: "DELETE",
+  });
+};
+
+export const uploadRestaurantCoverImage = async (
+  token: string,
+  restaurantId: string,
+  imageBase64: string,
+  mimeType: string,
+): Promise<{ id: string; coverImageUrl: string | null }> => {
+  return apiRequest(`/api/v1/restaurants/${restaurantId}/cover-image`, {
+    token,
+    method: "POST",
+    body: { imageBase64, mimeType },
   });
 };
 

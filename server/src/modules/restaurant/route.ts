@@ -72,5 +72,12 @@ export const createRestaurantRouter = (): Router => {
     asyncHandler(qrController.create),
   );
 
+  router.post(
+    "/:id/cover-image",
+    asyncHandler(requireAuth),
+    adminWriteLimiter,
+    asyncHandler(controller.uploadCoverImage),
+  );
+
   return router;
 };

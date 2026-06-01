@@ -12,6 +12,7 @@ import {
   deleteRestaurant,
   getRestaurant,
   updateRestaurant,
+  uploadRestaurantCoverImage,
 } from "./service.js";
 
 export const create = async (req: Request, res: Response): Promise<void> => {
@@ -59,6 +60,22 @@ export const remove = async (req: Request, res: Response): Promise<void> => {
   const payload = await deleteRestaurant(
     auth.userId,
     requireString(req.params.id, "id", 1),
+  );
+
+  res.status(200).json(payload);
+};
+
+export const uploadCoverImage = async (req: Request, res: Response): Promise<void> => {
+  const auth = requireAuthContext(req);
+  const restaurantId = requireString(req.params.id, "id", 1);
+  const imageBase64 = requireString(req.body.imageBase64, "imageBase64", 1);
+  const mimeType = requireString(req.body.mimeType, "mimeType", 1);
+
+  const payload = await uploadRestaurantCoverImage(
+    auth.userId,
+    restaurantId,
+    imageBase64,
+    mimeType,
   );
 
   res.status(200).json(payload);
