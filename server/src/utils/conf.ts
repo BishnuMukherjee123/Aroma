@@ -67,7 +67,7 @@ export type AppConfig = {
 export const config: AppConfig = {
   PORT: readNumber("PORT", 3000, { min: 1 }),
   NODE_ENV: readString("NODE_ENV", { fallback: "development" }),
-  JSON_LIMIT: readString("JSON_LIMIT", { fallback: "1mb" }),
+  JSON_LIMIT: readString("JSON_LIMIT", { fallback: "10mb" }),
   DATABASE_URL: readString("DATABASE_URL", { required: true }),
   DIRECT_URL: readString("DIRECT_URL", { fallback: "" }),
   AUTH_TOKEN_SECRET: (() => {

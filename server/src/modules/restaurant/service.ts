@@ -8,6 +8,7 @@ import {
 } from "../../lib/public-menu.js";
 import { ensureRestaurantRole } from "./access.js";
 import { uploadFile } from "../../storage/storage.service.js";
+import { reduceImage } from "../../utils/image-reducer.js";
 
 const RESTAURANT_NOT_FOUND = "Restaurant not found";
 
@@ -273,11 +274,14 @@ export const uploadRestaurantCoverImage = async (
 ) => {
   await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
 
-  const ext = mimeType.split("/")[1]?.replace("jpeg", "jpg") ?? "jpg";
-  const fileName = `restaurant-${restaurantId}.${ext}`;
+  const rawBuffer = Buffer.from(imageBase64, "base64");
+  
+  // Reduce and optimize image to WebP format
+  const { buffer: optimizedBuffer, extension } = await reduceImage(rawBuffer, 1200, 80);
+  
+  const fileName = `restaurant-${restaurantId}.${extension}`;
 
-  const buffer = Buffer.from(imageBase64, "base64");
-  const uploadResult = await uploadFile(buffer, fileName, "/restaurant-pics");
+  const uploadResult = await uploadFile(optimizedBuffer, fileName, "/restaurant-pics");
 
   const restaurant = await prisma.restaurant.update({
     where: { id: restaurantId },
