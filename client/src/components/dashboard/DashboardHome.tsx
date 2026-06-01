@@ -31,6 +31,7 @@ import { LoadingScreen } from "@/components/ui/LoadingScreen";
 import { ProfileSettings } from "./ProfileSettings";
 import { TeamView } from "./TeamView";
 import { type MeResponse } from "@/lib/api";
+import { KitchenCard } from "./KitchenCard";
 
 type RestaurantBundle = {
   summary: RestaurantCardData;
@@ -566,138 +567,21 @@ export function DashboardHome({
                     ).length;
 
                     return (
-                      <div
-                        key={restaurant.summary.id}
-                        className="dash-panel space-y-4"
-                      >
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="min-w-0">
-                            <h3 className="truncate text-lg font-bold text-on-surface">
-                              {restaurant.summary.name}
-                            </h3>
-                            <p className="text-xs text-on-surface-variant">
-                              {restaurant.summary.publicId} ·{" "}
-                              {restaurant.summary.isActive
-                                ? restaurant.summary.isPublished
-                                  ? "Published"
-                                  : "Active (Draft)"
-                                : "Deactivated"}
-                            </p>
-                          </div>
-
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Link
-                              href={getWorkspacePath(
-                                portalVariant,
-                                restaurant.summary.id,
-                              )}
-                              className="dash-cta inline-flex items-center gap-2 px-4 py-2 text-xs font-bold"
-                            >
-                              <span className="material-symbols-outlined text-[0.9rem]">
-                                open_in_new
-                              </span>
-                              Open workspace
-                            </Link>
-
-                            {portalVariant === "owner" && (
-                              <>
-                                {/* Upload cover photo button */}
-                                <input
-                                  ref={(el) => { coverInputRefs.current[restaurant.summary.id] = el; }}
-                                  type="file"
-                                  accept="image/*"
-                                  className="hidden"
-                                  onChange={(e) => {
-                                    const file = e.target.files?.[0];
-                                    if (file) void handleCoverImageUpload(restaurant.summary.id, file);
-                                    e.target.value = "";
-                                  }}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => coverInputRefs.current[restaurant.summary.id]?.click()}
-                                  disabled={uploadingCoverId === restaurant.summary.id}
-                                  className="dash-cta-outline inline-flex items-center gap-2 px-4 py-2 text-xs font-bold"
-                                >
-                                  {uploadingCoverId === restaurant.summary.id ? (
-                                    <span className="spinner-sm" />
-                                  ) : (
-                                    <span className="material-symbols-outlined text-[0.9rem]">add_photo_alternate</span>
-                                  )}
-                                  {restaurant.summary.coverImageUrl ? "Change Photo" : "Upload Photo"}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    void handleToggleRestaurantActive(
-                                      restaurant,
-                                      !restaurant.summary.isActive,
-                                    )
-                                  }
-                                  disabled={
-                                    lifecyclePendingRestaurantId ===
-                                    restaurant.summary.id
-                                  }
-                                  className="dash-cta-outline inline-flex items-center gap-2 px-4 py-2 text-xs font-bold"
-                                >
-                                  <span className="material-symbols-outlined text-[0.9rem]">
-                                    {restaurant.summary.isActive
-                                      ? "pause_circle"
-                                      : "play_circle"}
-                                  </span>
-                                  {restaurant.summary.isActive
-                                    ? "Deactivate kitchen"
-                                    : "Reactivate kitchen"}
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={() => openLifecycleDialog(restaurant)}
-                                  className="inline-flex items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
-                                >
-                                  <span className="material-symbols-outlined text-[0.9rem]">
-                                    delete
-                                  </span>
-                                  Delete kitchen
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-
-                        {coverUploadError ? (
-                          <div className="rounded-[0.75rem] bg-error-container px-3 py-2 text-xs font-semibold text-error">
-                            {coverUploadError}
-                          </div>
-                        ) : null}
-
-                        {/* Stats row — Menus, Dishes, 3D Ready */}
-                        <div className="grid grid-cols-3 gap-3 text-center">
-                          <div className="dash-stat-tile">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
-                              Menus
-                            </p>
-                            <p className="mt-1 text-lg font-extrabold text-on-surface">
-                              {publishedMenus}
-                            </p>
-                          </div>
-                          <div className="dash-stat-tile">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
-                              Dishes
-                            </p>
-                            <p className="mt-1 text-lg font-extrabold text-on-surface">
-                              {allDishes.length}
-                            </p>
-                          </div>
-                          <div className="dash-stat-tile">
-                            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant/70">
-                              3D Ready
-                            </p>
-                            <p className="mt-1 text-lg font-extrabold text-on-surface">
-                              {ready3dAssets}
-                            </p>
-                          </div>
-                        </div>
+                      <div key={restaurant.summary.id} className="mb-6">
+                        <KitchenCard
+                          restaurant={restaurant}
+                          portalVariant={portalVariant}
+                          publishedMenus={publishedMenus}
+                          allDishesCount={allDishes.length}
+                          ready3dAssets={ready3dAssets}
+                          coverInputRef={(el) => { coverInputRefs.current[restaurant.summary.id] = el; }}
+                          onCoverImageUpload={(file) => void handleCoverImageUpload(restaurant.summary.id, file)}
+                          onToggleActive={() => void handleToggleRestaurantActive(restaurant, !restaurant.summary.isActive)}
+                          onDeleteRequest={() => openLifecycleDialog(restaurant)}
+                          uploadingCover={uploadingCoverId === restaurant.summary.id}
+                          lifecyclePending={lifecyclePendingRestaurantId === restaurant.summary.id}
+                          getCoverTheme={getCoverTheme}
+                        />
                       </div>
                     );
                   })}
