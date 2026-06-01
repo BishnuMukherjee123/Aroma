@@ -817,7 +817,7 @@ export function DashboardHome({
                     return (
                       <article
                         key={restaurant.summary.id}
-                        className="dash-restaurant-card group overflow-hidden rounded-[1.2rem] shadow-[0_18px_42px_rgba(18,28,42,0.06)] min-w-[320px] max-w-[360px] flex-shrink-0"
+                        className="dash-restaurant-card group overflow-hidden rounded-[1.2rem] shadow-[0_18px_42px_rgba(18,28,42,0.06)] w-[340px] flex-shrink-0"
                       >
                         <div
                           className={cn(
