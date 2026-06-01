@@ -179,7 +179,7 @@ export const buildWelcomeHtml = (setupUrl: string, email: string): string => `<!
           <td align="left">
             <!--[if mso]>
             <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word"
-              href="\${setupUrl}"
+              href="${setupUrl}"
               style="height:48px;v-text-anchor:middle;width:200px;"
               arcsize="10%" stroke="f" fillcolor="#c2660a">
               <w:anchorlock/>
@@ -189,7 +189,7 @@ export const buildWelcomeHtml = (setupUrl: string, email: string): string => `<!
             </v:roundrect>
             <![endif]-->
             <!--[if !mso]><!-->
-            <a href="\${setupUrl}" class="cb"
+            <a href="${setupUrl}" class="cb"
               style="display:inline-block;background-color:#c2660a;color:#ffffff;font-family:Arial,sans-serif;font-size:14px;font-weight:700;letter-spacing:0.04em;text-decoration:none;padding:14px 30px;border-radius:5px;mso-hide:all;">
               Setup My Account &nbsp;&rarr;
             </a>
@@ -303,11 +303,11 @@ export const buildWelcomeHtml = (setupUrl: string, email: string): string => `<!
     <td class="fp" style="background-color:#1c1008;padding:20px 24px;border-top:2px solid #2e1c0c;">
       <p style="margin:0 0 7px 0;font-family:Arial,sans-serif;font-size:11px;color:#6a4a28;line-height:1.6;">
         This invitation was sent to
-        <a href="mailto:\${email}" style="color:#c8955a;text-decoration:none;font-family:Arial,sans-serif;">\${email}</a>.
+        <a href="mailto:${email}" style="color:#c8955a;text-decoration:none;font-family:Arial,sans-serif;">${email}</a>.
         If you didn't expect this, you can safely ignore it.
       </p>
       <p style="margin:0;font-family:Arial,sans-serif;font-size:10px;color:#3e2810;letter-spacing:0.04em;">
-        &copy; \${new Date().getFullYear()} Aroma AR &middot; All rights reserved
+        &copy; ${new Date().getFullYear()} Aroma AR &middot; All rights reserved
       </p>
         <p style="margin:6px 0 0 0;font-family:Arial,sans-serif;font-size:10px;color:#5a3a20;line-height:1.6;">
           Aroma AR Inc. &middot; 123 Tech Lane, San Francisco, CA
@@ -324,4 +324,4 @@ export const buildWelcomeHtml = (setupUrl: string, email: string): string => `<!
 </td></tr>
 </table>
 </body>
-</html>\`;
+</html>`;
