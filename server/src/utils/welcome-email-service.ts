@@ -62,20 +62,6 @@ const buildWelcomeHtml = (setupUrl: string, email: string): string => `
                 Click the button below to set up your password and get started.
               </p>
 
-              <!-- Divider -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
-                <tr><td style="height:1px;background:#f3f4f6;"></td></tr>
-              </table>
-
-              <!-- Feature list -->
-              <p style="margin:0 0 16px;font-size:12px;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:0.06em;">What you can do</p>
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
-                <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151;">&#127869;&#65039; &nbsp; Manage all your restaurants</td></tr>
-                <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151;">&#128203; &nbsp; Create and publish menus &amp; dishes</td></tr>
-                <tr><td style="padding:10px 0;border-bottom:1px solid #f3f4f6;font-size:14px;color:#374151;">&#128101; &nbsp; Assign managers to restaurants</td></tr>
-                <tr><td style="padding:10px 0;font-size:14px;color:#374151;">&#129301; &nbsp; Showcase dishes in 3D Augmented Reality</td></tr>
-              </table>
-
               <!-- CTA Button -->
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
