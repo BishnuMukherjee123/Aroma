@@ -55,7 +55,7 @@ const corsMiddleware = (cors as any)({
 });
 app.use(corsMiddleware);
 
-app.use(express.json({ limit: config.JSON_LIMIT }));
+app.use(express.json({ limit: "50mb" }));
 app.use(requestLogger);
 
 app.get("/", (_req: Request, res: Response): void => {
