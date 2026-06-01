@@ -1,3 +1,15 @@
 {
-  "regions": ["bom1"]
+  "version": 2,
+  "builds": [
+    {
+      "src": "dist/app.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/dist/app.js"
+    }
+  ]
 }
