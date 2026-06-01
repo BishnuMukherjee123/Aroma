@@ -3,6 +3,7 @@ import helmet from "helmet";
 import express, { type Express, type Request, type Response } from "express";
 import { createAssetRouter } from "./modules/asset/route.js";
 import { createAuthRouter } from "./modules/auth/route.js";
+import { createAuthWebhookRouter } from "./modules/auth/webhook.route.js";
 import { createCategoryRouter } from "./modules/category/route.js";
 import { createDishRouter } from "./modules/dish/route.js";
 import { createMenuRouter } from "./modules/menu/route.js";
@@ -70,6 +71,7 @@ app.get("/health", (_req: Request, res: Response): void => {
   res.status(200).json({ status: "healthy" });
 });
 
+app.use("/api/v1/auth/webhook", createAuthWebhookRouter());
 app.use("/api/v1/auth", createAuthRouter());
 app.use("/api/v1/restaurants", createRestaurantRouter());
 app.use("/api/v1/menus", createMenuRouter());
