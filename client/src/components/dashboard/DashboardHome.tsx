@@ -394,22 +394,49 @@ export function DashboardHome({
     setCoverUploadError(null);
     setUploadingCoverId(restaurantId);
     try {
-      const reader = new FileReader();
-      const base64 = await new Promise<string>((resolve, reject) => {
-        reader.onload = () => {
-          const result = reader.result as string;
-          // Strip data URL prefix: data:image/jpeg;base64,XXXX
-          resolve(result.split(",")[1] ?? "");
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      // Compress the image on the client side using HTML5 Canvas
+      // This prevents the 413 Payload Too Large error from reverse proxies (like Vercel)
+      // which drop the request and strip CORS headers, causing "Failed to fetch".
+      const compressImage = async (imageFile: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.readAsDataURL(imageFile);
+          reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target?.result as string;
+            img.onload = () => {
+              const canvas = document.createElement("canvas");
+              const ctx = canvas.getContext("2d");
+              let width = img.width;
+              let height = img.height;
+              const maxWidth = 1200;
+              
+              if (width > maxWidth) {
+                height = (maxWidth / width) * height;
+                width = maxWidth;
+              }
+              
+              canvas.width = width;
+              canvas.height = height;
+              ctx?.drawImage(img, 0, 0, width, height);
+              
+              // Compress to WEBP at 80% quality to guarantee a payload well under 1MB
+              const dataUrl = canvas.toDataURL("image/webp", 0.8);
+              resolve(dataUrl.split(",")[1] ?? "");
+            };
+            img.onerror = reject;
+          };
+          reader.onerror = reject;
+        });
+      };
+
+      const base64 = await compressImage(file);
 
       const result = await uploadRestaurantCoverImage(
         session.token,
         restaurantId,
         base64,
-        file.type,
+        "image/webp", // Force type since we compressed to webp
       );
 
       // Update local state so card immediately shows the new photo
