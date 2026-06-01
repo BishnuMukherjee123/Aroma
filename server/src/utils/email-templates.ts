@@ -218,7 +218,7 @@ export const buildWelcomeHtml = (setupUrl: string, email: string): string => `<!
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;">
                     <tr>
                       <td class="icon-td" style="width:36px;height:36px;min-width:36px;max-width:36px;background-color:#fdefd8;border:1px solid #e8c882;border-radius:6px;text-align:center;vertical-align:middle;line-height:0;overflow:hidden;">
-                        <img src="${EMAIL_ICONS.menus}" width="20" height="20" alt="Menu and dishes icon" class="icon-img" style="display:block;border:0;outline:0;margin:0 auto;width:20px;height:20px;max-width:20px;max-height:20px;">
+                        <img src="${EMAIL_ICONS.menus}" width="26" height="26" alt="Menu and dishes icon" class="icon-img" style="display:block;border:0;outline:0;margin:0 auto;width:26px;height:26px;max-width:26px;max-height:26px;">
                       </td>
                     </tr>
                   </table>
@@ -234,8 +234,8 @@ export const buildWelcomeHtml = (setupUrl: string, email: string): string => `<!
                 <td class="ci" style="padding:12px;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;">
                     <tr>
-                      <td class="icon-td" style="width:36px;height:36px;min-width:36px;max-width:36px;background-color:#fdefd8;border:1px solid #e8c882;border-radius:6px;text-align:center;vertical-align:middle;line-height:0;overflow:hidden;padding:8px;">
-                        <img src="${EMAIL_ICONS.qr}" width="20" height="20" alt="QR code generator icon" class="icon-img" style="display:block;border:0;outline:0;margin:0 auto;width:20px;height:20px;max-width:20px;max-height:20px;">
+                      <td class="icon-td" style="width:36px;height:36px;min-width:36px;max-width:36px;background-color:#fdefd8;border:1px solid #e8c882;border-radius:6px;text-align:center;vertical-align:middle;line-height:0;overflow:hidden;">
+                        <img src="${EMAIL_ICONS.qr}" width="26" height="26" alt="QR code generator icon" class="icon-img" style="display:block;border:0;outline:0;margin:0 auto;width:26px;height:26px;max-width:26px;max-height:26px;">
                       </td>
                     </tr>
                   </table>
@@ -255,8 +255,8 @@ export const buildWelcomeHtml = (setupUrl: string, email: string): string => `<!
                 <td class="ci" style="padding:12px;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;">
                     <tr>
-                      <td class="icon-td" style="width:36px;height:36px;min-width:36px;max-width:36px;background-color:#fdefd8;border:1px solid #e8c882;border-radius:6px;text-align:center;vertical-align:middle;line-height:0;overflow:hidden;padding:8px;">
-                        <img src="${EMAIL_ICONS.team}" width="20" height="20" alt="Team management icon" class="icon-img" style="display:block;border:0;outline:0;margin:0 auto;width:20px;height:20px;max-width:20px;max-height:20px;">
+                      <td class="icon-td" style="width:36px;height:36px;min-width:36px;max-width:36px;background-color:#fdefd8;border:1px solid #e8c882;border-radius:6px;text-align:center;vertical-align:middle;line-height:0;overflow:hidden;">
+                        <img src="${EMAIL_ICONS.team}" width="26" height="26" alt="Team management icon" class="icon-img" style="display:block;border:0;outline:0;margin:0 auto;width:26px;height:26px;max-width:26px;max-height:26px;">
                       </td>
                     </tr>
                   </table>
@@ -272,8 +272,8 @@ export const buildWelcomeHtml = (setupUrl: string, email: string): string => `<!
                 <td class="ci" style="padding:12px;">
                   <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:10px;">
                     <tr>
-                      <td class="icon-td" style="width:36px;height:36px;min-width:36px;max-width:36px;background-color:#fdefd8;border:1px solid #e8c882;border-radius:6px;text-align:center;vertical-align:middle;line-height:0;overflow:hidden;padding:8px;">
-                        <img src="${EMAIL_ICONS.ar}" width="20" height="20" alt="3D augmented reality icon" class="icon-img" style="display:block;border:0;outline:0;margin:0 auto;width:20px;height:20px;max-width:20px;max-height:20px;">
+                      <td class="icon-td" style="width:36px;height:36px;min-width:36px;max-width:36px;background-color:#fdefd8;border:1px solid #e8c882;border-radius:6px;text-align:center;vertical-align:middle;line-height:0;overflow:hidden;">
+                        <img src="${EMAIL_ICONS.ar}" width="26" height="26" alt="3D augmented reality icon" class="icon-img" style="display:block;border:0;outline:0;margin:0 auto;width:26px;height:26px;max-width:26px;max-height:26px;">
                       </td>
                     </tr>
                   </table>
