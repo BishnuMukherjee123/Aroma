@@ -56,6 +56,12 @@ export type AppConfig = {
   SUPABASE_STORAGE_BUCKET: string;
   SUPABASE_STORAGE_FILE_SIZE_LIMIT_BYTES: number;
   IMAGEKIT_PRIVATE_KEY: string;
+  BREVO_SMTP_HOST: string;
+  BREVO_SMTP_PORT: number;
+  BREVO_SMTP_LOGIN: string;
+  BREVO_SMTP_KEY: string;
+  BREVO_SENDER_EMAIL: string;
+  BREVO_SENDER_NAME: string;
 };
 
 export const config: AppConfig = {
@@ -102,4 +108,10 @@ export const config: AppConfig = {
     { min: 1 },
   ),
   IMAGEKIT_PRIVATE_KEY: readString("IMAGEKIT_PRIVATE_KEY", { fallback: "" }),
+  BREVO_SMTP_HOST: readString("BREVO_SMTP_HOST", { fallback: "smtp-relay.brevo.com" }),
+  BREVO_SMTP_PORT: readNumber("BREVO_SMTP_PORT", 587),
+  BREVO_SMTP_LOGIN: readString("BREVO_SMTP_LOGIN", { fallback: "" }),
+  BREVO_SMTP_KEY: readString("BREVO_SMTP_KEY", { fallback: "" }),
+  BREVO_SENDER_EMAIL: readString("BREVO_SENDER_EMAIL", { fallback: "" }),
+  BREVO_SENDER_NAME: readString("BREVO_SENDER_NAME", { fallback: "Aroma AR" }),
 };
