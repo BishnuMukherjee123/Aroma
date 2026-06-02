@@ -2701,15 +2701,17 @@ export function RestaurantWorkspace({
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
-              Workspace Settings
+              {isOwnerUser ? "Workspace Settings" : "Kitchen Branding"}
             </p>
             <h2 className="mt-2 text-2xl font-bold tracking-[-0.03em] text-on-surface">
-              Control your public identity and launch state
+              {isOwnerUser ? "Control your public identity and launch state" : "Customize workspace appearance"}
             </h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-on-surface-variant">
-              Update the restaurant identity guests see, manage the public URL,
-              and control whether this workspace is live for QR visitors.
-            </p>
+            {isOwnerUser && (
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-on-surface-variant">
+                Update the restaurant identity guests see, manage the public URL,
+                and control whether this workspace is live for QR visitors.
+              </p>
+            )}
 
             <div className="mt-8 grid gap-5">
               <div className="flex items-center gap-4 rounded-[1.2rem] bg-surface-container-low p-4">
@@ -2760,8 +2762,10 @@ export function RestaurantWorkspace({
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="settings-restaurant-name" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
+              {isOwnerUser && (
+                <>
+                  <div>
+                    <label htmlFor="settings-restaurant-name" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Restaurant Name
                 </label>
                 <input
@@ -2895,32 +2899,36 @@ export function RestaurantWorkspace({
                   workspace.
                 </p>
               </div>
-            </div>
+            </>
+          )}
+        </div>
 
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-              {settingsMessage ? (
-                <p className="text-sm font-medium text-on-surface-variant">
-                  {settingsMessage}
-                </p>
-              ) : (
-                <p className="text-sm font-medium text-on-surface-variant">
-                  Saving settings also refreshes the public QR destination.
-                </p>
-              )}
+            {isOwnerUser && (
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
+                {settingsMessage ? (
+                  <p className="text-sm font-medium text-on-surface-variant">
+                    {settingsMessage}
+                  </p>
+                ) : (
+                  <p className="text-sm font-medium text-on-surface-variant">
+                    Saving settings also refreshes the public QR destination.
+                  </p>
+                )}
 
-              <button
-                type="button"
-                onClick={() => void handleSubmitSettings()}
-                disabled={isSavingSettings || !canManageSettings}
-                className="flex items-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-6 py-3.5 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isSavingSettings ? <span className="spinner-sm" /> : null}
-                Save Settings
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => void handleSubmitSettings()}
+                  disabled={isSavingSettings || !canManageSettings}
+                  className="flex items-center gap-2 rounded-[1rem] bg-gradient-to-br from-primary to-primary-container px-6 py-3.5 text-sm font-bold text-white shadow-[0_14px_28px_rgba(182,23,34,0.2)] transition-all hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isSavingSettings ? <span className="spinner-sm" /> : null}
+                  Save Settings
+                </button>
+              </div>
+            )}
           </div>
 
-          {renderQrAccessCard()}
+          {isOwnerUser && renderQrAccessCard()}
         </section>
       );
     }
