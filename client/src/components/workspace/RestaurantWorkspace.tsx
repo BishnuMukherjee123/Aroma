@@ -50,7 +50,7 @@ type RestaurantWorkspaceProps = {
   portalVariant?: PortalVariant;
 };
 
-type WorkspaceTab = "dishes" | "menus" | "team" | "settings";
+type WorkspaceTab = "dishes" | "menus" | "team" | "settings" | "share";
 
 type ComposerState = {
   mode: "create" | "edit";
@@ -2693,6 +2693,9 @@ export function RestaurantWorkspace({
 
             {renderQrAccessCard()}
           </section>
+        );
+    }
+
     if (activeTab === "settings") {
       return (
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
