@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import useSWR from "swr";
 
 import { fetchCurrentUser, type MeResponse } from "@/lib/api";
 import { clearStoredToken, getStoredToken } from "@/lib/auth-storage";
@@ -23,50 +24,41 @@ export function useAuthSession(options?: {
   const loginPath =
     options?.loginPath ??
     getPortalLoginPath(options?.portalVariant ?? "owner");
-  const [state, setState] = useState<SessionState>({ status: "loading" });
+  const [token, setToken] = useState<string | null>(null);
 
   useEffect(() => {
-    const token = getStoredToken();
-    if (!token) {
-      setState({
-        status: "unauthenticated",
-        message: "No login token was found. Please sign in again.",
-      });
-      return;
-    }
-
-    let cancelled = false;
-
-    const load = async () => {
-      try {
-        const user = await fetchCurrentUser(token);
-        if (!cancelled) {
-          setState({
-            status: "authenticated",
-            token,
-            user,
-          });
-        }
-      } catch (error) {
-        clearStoredToken();
-        if (!cancelled) {
-          setState({
-            status: "unauthenticated",
-            message:
-              error instanceof Error
-                ? error.message
-                : "Session verification failed.",
-          });
-        }
-      }
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
+    setToken(getStoredToken());
   }, []);
+
+  const { data: user, error, isLoading } = useSWR<MeResponse, Error>(
+    token ? ["fetchCurrentUser", token] : null,
+    async ([, t]: [string, string]) => {
+      try {
+        return await fetchCurrentUser(t);
+      } catch (err) {
+        clearStoredToken();
+        throw err;
+      }
+    },
+    {
+      revalidateOnFocus: true,
+      shouldRetryOnError: false,
+    }
+  );
+
+  let state: SessionState = { status: "loading" };
+  
+  // Wait until we have run the first useEffect to read the token
+  if (token === null) {
+    state = { status: "loading" };
+  } else if (!token || error) {
+    state = {
+      status: "unauthenticated",
+      message: error?.message || "No login token was found. Please sign in again.",
+    };
+  } else if (user) {
+    state = { status: "authenticated", token, user };
+  }
 
   useEffect(() => {
     if (state.status === "unauthenticated") {

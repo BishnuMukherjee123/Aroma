@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import useSWR from "swr";
 
 import {
   completeAssetUpload,
@@ -328,9 +329,13 @@ export function RestaurantWorkspace({
     portalVariant,
     loginPath: getPortalLoginPath(portalVariant),
   });
-  const [restaurant, setRestaurant] = useState<RestaurantDetails | null>(null);
-  const [isLoadingRestaurant, setIsLoadingRestaurant] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { data: restaurant = null, error: fetchError, isLoading: isLoadingRestaurant, mutate } = useSWR<RestaurantDetails, Error>(
+    session.status === "authenticated" ? ["fetchRestaurant", session.token, restaurantId] : null,
+    async ([, token, id]: [string, string, string]) => fetchRestaurant(token, id),
+    { revalidateOnFocus: true }
+  );
+  const loadError = fetchError?.message ?? null;
+  const setRestaurant = (newData: RestaurantDetails | null) => void mutate(newData || undefined, false);
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("dishes");
   const [selectedMainMenuId, setSelectedMainMenuId] = useState("");
   const [selectedDishId, setSelectedDishId] = useState<string | null>(null);
@@ -381,52 +386,9 @@ export function RestaurantWorkspace({
   );
   const [isSubmittingActionDialog, setIsSubmittingActionDialog] = useState(false);
 
-  useEffect(() => {
-    if (session.status !== "authenticated") {
-      return;
-    }
-
-    let cancelled = false;
-
-    const load = async () => {
-      setIsLoadingRestaurant(true);
-      setLoadError(null);
-
-      try {
-        const details = await fetchRestaurant(session.token, restaurantId);
-        if (!cancelled) {
-          setRestaurant(details);
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setLoadError(
-            error instanceof Error
-              ? error.message
-              : "Unable to load this workspace.",
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingRestaurant(false);
-        }
-      }
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [restaurantId, session]);
-
   const refreshRestaurant = async (): Promise<RestaurantDetails | null> => {
-    if (session.status !== "authenticated") {
-      return null;
-    }
-
-    const details = await fetchRestaurant(session.token, restaurantId);
-    setRestaurant(details);
-    return details;
+    const updatedData = await mutate();
+    return updatedData ?? null;
   };
 
   const sortedMainMenus = useMemo(

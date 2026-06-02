@@ -12,6 +12,8 @@ import { createRestaurantRouter } from "./modules/restaurant/route.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { requestLogger } from "./middleware/request-logger.js";
 import { config } from "./utils/conf.js";
+import compression from "compression";
+import { prisma } from "./db/prisma.js";
 
 export const app: Express = express();
 
@@ -56,7 +58,22 @@ const corsMiddleware = (cors as any)({
 app.use(corsMiddleware);
 
 app.use(express.json({ limit: "50mb" }));
+app.use(compression());
 app.use(requestLogger);
+
+app.get("/health", async (_req: Request, res: Response): Promise<void> => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({
+      status: "ok",
+      db: "connected",
+      uptime: Math.floor(process.uptime()),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(503).json({ status: "error", db: "disconnected" });
+  }
+});
 
 app.get("/", (_req: Request, res: Response): void => {
   res.status(200).json({

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import useSWR from "swr";
 
 import {
   createRestaurant,
@@ -102,10 +103,43 @@ export function DashboardHome({
     loginPath: getPortalLoginPath(portalVariant),
   });
   const createPanelRef = useRef<HTMLElement | null>(null);
-  const [restaurants, setRestaurants] = useState<RestaurantBundle[]>([]);
-  const [isBootstrapping, setIsBootstrapping] = useState(true);
   const [createName, setCreateName] = useState("");
   const [createError, setCreateError] = useState<string | null>(null);
+
+  const { data: restaurants = [], isLoading: isBootstrapping, error: fetchError, mutate } = useSWR<RestaurantBundle[], Error>(
+    session.status === "authenticated" ? ["bootstrapDashboard", session.token, portalVariant] : null,
+    async ([, token, variant]) => {
+      if (session.status !== "authenticated") return [];
+      const memberships = filterMembershipsForPortal(
+        session.user.memberships,
+        variant as PortalVariant,
+      );
+      return await Promise.all(
+        memberships.map(async (membership) => ({
+          summary: {
+            ...membership.restaurant,
+            role: membership.role,
+          },
+          details: await fetchRestaurant(
+            token as string,
+            membership.restaurant.id,
+          ).catch(() => undefined),
+        }))
+      );
+    },
+    { revalidateOnFocus: true }
+  );
+
+  const setRestaurants = (updater: RestaurantBundle[] | ((prev: RestaurantBundle[]) => RestaurantBundle[])) => {
+    if (typeof updater === "function") {
+      void mutate((prev) => updater(prev || []), false);
+    } else {
+      void mutate(updater, false);
+    }
+  };
+  
+  const [customDashboardError, setDashboardError] = useState<string | null>(null);
+  const dashboardError = customDashboardError || (fetchError?.message ?? null);
   const [isCreating, startCreateTransition] = useTransition();
   const [activeCardMenuId, setActiveCardMenuId] = useState<string | null>(null);
   const [lifecycleDialog, setLifecycleDialog] =
@@ -114,7 +148,7 @@ export function DashboardHome({
   const [isSubmittingLifecycle, setIsSubmittingLifecycle] = useState(false);
   const [lifecyclePendingRestaurantId, setLifecyclePendingRestaurantId] =
     useState<string | null>(null);
-  const [dashboardError, setDashboardError] = useState<string | null>(null);
+
   const [sidebarActiveKey, setSidebarActiveKey] = useState<string>("overview");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [currentUser, setCurrentUser] = useState<MeResponse | null>(null);
@@ -159,51 +193,7 @@ export function DashboardHome({
     }
   }, [portalVariant, router, session]);
 
-  useEffect(() => {
-    if (session.status !== "authenticated") {
-      return;
-    }
 
-    let cancelled = false;
-
-    const bootstrap = async () => {
-      setIsBootstrapping(true);
-
-      try {
-        const memberships = filterMembershipsForPortal(
-          session.user.memberships,
-          portalVariant,
-        );
-        const bundles = await Promise.all(
-          memberships.map(async (membership) => ({
-            summary: {
-              ...membership.restaurant,
-              role: membership.role,
-            },
-            details: await fetchRestaurant(
-              session.token,
-              membership.restaurant.id,
-            ).catch(() => undefined),
-          })),
-        );
-
-        if (!cancelled) {
-          setRestaurants(bundles);
-          setDashboardError(null);
-        }
-      } finally {
-        if (!cancelled) {
-          setIsBootstrapping(false);
-        }
-      }
-    };
-
-    void bootstrap();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [portalVariant, session]);
 
   useEffect(() => {
     if (!activeCardMenuId) {
