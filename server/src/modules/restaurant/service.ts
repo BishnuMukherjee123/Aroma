@@ -302,7 +302,7 @@ export const uploadRestaurantLogo = async (
   imageBase64: string,
   mimeType: string,
 ) => {
-  await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
+  await ensureRestaurantRole(actorUserId, restaurantId, "MANAGER");
 
   const rawBuffer = Buffer.from(imageBase64, "base64");
   

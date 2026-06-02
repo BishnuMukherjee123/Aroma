@@ -31,32 +31,26 @@ export function WorkspaceHeader({
     <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4 border-b border-white/80 bg-white/88 px-6 py-4 backdrop-blur md:px-8">
       <div className="flex items-center gap-4">
         <label
-          className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl transition-all ${
-            portalVariant === "owner"
-              ? "cursor-pointer hover:opacity-80"
-              : ""
-          } ${
+          className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl transition-all cursor-pointer hover:opacity-80 ${
             logoUrl
               ? "bg-transparent shadow-sm border border-outline-variant/30"
               : "bg-primary/10 text-primary"
           }`}
-          title={portalVariant === "owner" ? "Upload Kitchen Logo" : undefined}
+          title="Upload Kitchen Logo"
         >
-          {portalVariant === "owner" && (
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file && onLogoUpload) {
-                  onLogoUpload(file);
-                }
-                e.target.value = "";
-              }}
-              disabled={isUploadingLogo}
-            />
-          )}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file && onLogoUpload) {
+                onLogoUpload(file);
+              }
+              e.target.value = "";
+            }}
+            disabled={isUploadingLogo}
+          />
 
           {isUploadingLogo ? (
             <span className="material-symbols-outlined animate-spin text-[1.5rem]">
