@@ -81,6 +81,7 @@ model Restaurant {
   ownerId                     String
   address                     String?
   coverImageUrl               String?
+  logoUrl                     String?
   isActive                    Boolean            @default(true)
   isPublished                 Boolean            @default(false)
   managerPortalTheme          String             @default("DEFAULT")

@@ -22,6 +22,7 @@ import {
   updateMenu,
   updateRestaurant,
   uploadFileToSignedUrl,
+  uploadRestaurantLogo,
   type AssetSummary,
   type CategorySummary,
   type CrossSellItem,
@@ -343,6 +344,7 @@ export function RestaurantWorkspace({
   const [qrState, setQrState] = useState<string | null>(null);
   const [isCopyingQr, setIsCopyingQr] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [publishMessage, setPublishMessage] = useState<string | null>(null);
   const [settingsFormState, setSettingsFormState] =
     useState<SettingsFormState>(emptySettingsFormState);
@@ -1376,6 +1378,40 @@ export function RestaurantWorkspace({
     }
 
     triggerDownload(qr.publicUrl, "", { downloadAttribute: false });
+  };
+
+  const handleLogoUpload = async (file: File) => {
+    if (session.status !== "authenticated" || !restaurant) return;
+
+    try {
+      setIsUploadingLogo(true);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        try {
+          const base64Data = (reader.result as string).split(",")[1];
+          const payload = await uploadRestaurantLogo(
+            session.token,
+            restaurant.id,
+            base64Data,
+            file.type,
+          );
+          setRestaurant({ ...restaurant, logoUrl: payload.logoUrl });
+          pushToast("Logo updated successfully", "success");
+        } catch (err: any) {
+          pushToast(err.message || "Failed to upload logo", "error");
+        } finally {
+          setIsUploadingLogo(false);
+        }
+      };
+      reader.onerror = () => {
+        pushToast("Failed to read image file", "error");
+        setIsUploadingLogo(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setIsUploadingLogo(false);
+      pushToast(err.message || "Failed to initiate upload", "error");
+    }
   };
 
   const handlePublishWorkspace = async () => {
@@ -3257,6 +3293,9 @@ export function RestaurantWorkspace({
           onCopyQr={handleCopyQr}
           onCreateDish={handleStartCreate}
           portalVariant={effectivePortalVariant}
+          logoUrl={restaurant.logoUrl}
+          onLogoUpload={handleLogoUpload}
+          isUploadingLogo={isUploadingLogo}
         />
 
         <div className="flex flex-col gap-8 bg-slate-50/55 px-6 py-8 md:px-8 xl:flex-row xl:items-start">

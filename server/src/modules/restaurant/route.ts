@@ -79,5 +79,12 @@ export const createRestaurantRouter = (): Router => {
     asyncHandler(controller.uploadCoverImage),
   );
 
+  router.post(
+    "/:id/logo",
+    asyncHandler(requireAuth),
+    adminWriteLimiter,
+    asyncHandler(controller.uploadLogo),
+  );
+
   return router;
 };

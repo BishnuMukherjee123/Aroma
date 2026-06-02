@@ -48,6 +48,7 @@ export type MeResponse = AuthUser & {
       isActive: boolean;
       isPublished: boolean;
       coverImageUrl: string | null;
+      logoUrl: string | null;
     };
   }>;
 };
@@ -133,6 +134,7 @@ export type RestaurantDetails = {
   ownerId: string;
   address: string | null;
   coverImageUrl: string | null;
+  logoUrl: string | null;
   isActive: boolean;
   isPublished: boolean;
   managerPortalTheme?: string;
@@ -498,6 +500,19 @@ export const uploadRestaurantCoverImage = async (
   mimeType: string,
 ): Promise<{ id: string; coverImageUrl: string | null }> => {
   return apiRequest(`/api/v1/restaurants/${restaurantId}/cover-image`, {
+    token,
+    method: "POST",
+    body: { imageBase64, mimeType },
+  });
+};
+
+export const uploadRestaurantLogo = async (
+  token: string,
+  restaurantId: string,
+  imageBase64: string,
+  mimeType: string,
+): Promise<{ id: string; logoUrl: string | null }> => {
+  return apiRequest(`/api/v1/restaurants/${restaurantId}/logo`, {
     token,
     method: "POST",
     body: { imageBase64, mimeType },

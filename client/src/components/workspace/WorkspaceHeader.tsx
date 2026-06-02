@@ -10,6 +10,9 @@ type WorkspaceHeaderProps = {
   onCopyQr: () => void;
   onCreateDish: () => void;
   portalVariant?: PortalVariant;
+  logoUrl?: string | null;
+  onLogoUpload?: (file: File) => void;
+  isUploadingLogo?: boolean;
 };
 
 export function WorkspaceHeader({
@@ -20,13 +23,57 @@ export function WorkspaceHeader({
   onCopyQr,
   onCreateDish,
   portalVariant = "owner",
+  logoUrl,
+  onLogoUpload,
+  isUploadingLogo,
 }: WorkspaceHeaderProps) {
   return (
     <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4 border-b border-white/80 bg-white/88 px-6 py-4 backdrop-blur md:px-8">
       <div className="flex items-center gap-4">
-        <div className="rounded-2xl bg-primary/10 p-2.5 text-primary">
-          <span className="material-symbols-outlined">restaurant</span>
-        </div>
+        <label
+          className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl transition-all ${
+            portalVariant === "owner"
+              ? "cursor-pointer hover:opacity-80"
+              : ""
+          } ${
+            logoUrl
+              ? "bg-transparent shadow-sm border border-outline-variant/30"
+              : "bg-primary/10 text-primary"
+          }`}
+          title={portalVariant === "owner" ? "Upload Kitchen Logo" : undefined}
+        >
+          {portalVariant === "owner" && (
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file && onLogoUpload) {
+                  onLogoUpload(file);
+                }
+                e.target.value = "";
+              }}
+              disabled={isUploadingLogo}
+            />
+          )}
+
+          {isUploadingLogo ? (
+            <span className="material-symbols-outlined animate-spin text-[1.5rem]">
+              progress_activity
+            </span>
+          ) : logoUrl ? (
+            <img
+              src={logoUrl}
+              alt={`${restaurantName} logo`}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span className="material-symbols-outlined text-[1.5rem]">
+              restaurant
+            </span>
+          )}
+        </label>
 
         <div>
           <h1 className="text-[1.7rem] font-extrabold tracking-[-0.04em] text-on-surface">

@@ -30,6 +30,7 @@ export const createRestaurant = async (
         ownerId: true,
         address: true,
         coverImageUrl: true,
+        logoUrl: true,
         isActive: true,
         isPublished: true,
         managerPortalTheme: true,
@@ -65,6 +66,7 @@ export const getRestaurant = async (actorUserId: string, restaurantId: string) =
       ownerId: true,
       address: true,
       coverImageUrl: true,
+      logoUrl: true,
       isActive: true,
       isPublished: true,
       managerPortalTheme: true,
@@ -174,6 +176,7 @@ export const updateRestaurant = async (
       ownerId: true,
       address: true,
       coverImageUrl: true,
+      logoUrl: true,
       isActive: true,
       isPublished: true,
       managerPortalTheme: true,
@@ -288,6 +291,33 @@ export const uploadRestaurantCoverImage = async (
     where: { id: restaurantId },
     data: { coverImageUrl: uploadResult.url },
     select: { id: true, coverImageUrl: true },
+  });
+
+  return restaurant;
+};
+
+export const uploadRestaurantLogo = async (
+  actorUserId: string,
+  restaurantId: string,
+  imageBase64: string,
+  mimeType: string,
+) => {
+  await ensureRestaurantRole(actorUserId, restaurantId, "OWNER");
+
+  const rawBuffer = Buffer.from(imageBase64, "base64");
+  
+  // Reduce and optimize image to WebP format, use 400px max width for logo
+  const { buffer: optimizedBuffer, extension } = await reduceImage(rawBuffer, 400, 90);
+  
+  // Append timestamp to ensure a completely new URL is generated, bypassing any browser or CDN caching
+  const fileName = `restaurant-logo-${restaurantId}-${Date.now()}.${extension}`;
+
+  const uploadResult = await uploadFile(optimizedBuffer, fileName, "/restaurant-pics");
+
+  const restaurant = await prisma.restaurant.update({
+    where: { id: restaurantId },
+    data: { logoUrl: uploadResult.url },
+    select: { id: true, logoUrl: true },
   });
 
   return restaurant;
