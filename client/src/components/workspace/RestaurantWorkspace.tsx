@@ -2627,9 +2627,8 @@ export function RestaurantWorkspace({
       return renderTeamSection();
     }
 
-    if (activeTab === "settings") {
-      if (!isOwnerUser) {
-        return (
+    if (activeTab === "share") {
+      return (
           <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
             <div className="rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
@@ -2694,9 +2693,7 @@ export function RestaurantWorkspace({
 
             {renderQrAccessCard()}
           </section>
-        );
-      }
-
+    if (activeTab === "settings") {
       return (
         <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-[1.7rem] border border-slate-100 bg-white p-6 shadow-[0_16px_36px_rgba(18,28,42,0.05)]">
@@ -2712,6 +2709,54 @@ export function RestaurantWorkspace({
             </p>
 
             <div className="mt-8 grid gap-5">
+              <div className="flex items-center gap-4 rounded-[1.2rem] bg-surface-container-low p-4">
+                <label
+                  className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl transition-all cursor-pointer hover:opacity-80 ${
+                    restaurant.logoUrl
+                      ? "bg-transparent shadow-sm border border-outline-variant/30"
+                      : "bg-primary/10 text-primary"
+                  }`}
+                  title="Upload Kitchen Logo"
+                >
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        handleLogoUpload(file);
+                      }
+                      e.target.value = "";
+                    }}
+                    disabled={isUploadingLogo}
+                  />
+                  {isUploadingLogo ? (
+                    <span className="material-symbols-outlined animate-spin text-[1.5rem]">
+                      progress_activity
+                    </span>
+                  ) : restaurant.logoUrl ? (
+                    <img
+                      src={restaurant.logoUrl}
+                      alt="Kitchen logo"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="material-symbols-outlined text-[1.5rem]">
+                      add_photo_alternate
+                    </span>
+                  )}
+                </label>
+                <div>
+                  <p className="text-sm font-semibold text-on-surface">
+                    Kitchen Logo
+                  </p>
+                  <p className="text-[11px] font-medium text-on-surface-variant mt-0.5">
+                    Click the icon to upload a square logo. This appears on the workspace header.
+                  </p>
+                </div>
+              </div>
+
               <div>
                 <label htmlFor="settings-restaurant-name" className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-on-surface-variant">
                   Restaurant Name

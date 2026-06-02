@@ -11,7 +11,7 @@ import {
 } from "@/lib/portal";
 import { cn } from "@/lib/utils";
 
-type WorkspaceTab = "dishes" | "menus" | "team" | "settings";
+type WorkspaceTab = "dishes" | "menus" | "team" | "settings" | "share";
 
 const ownerWorkspaceNav: Array<{ id: WorkspaceTab; label: string; icon: string }> = [
   { id: "dishes", label: "Manage Dishes", icon: "restaurant_menu" },
@@ -21,7 +21,8 @@ const ownerWorkspaceNav: Array<{ id: WorkspaceTab; label: string; icon: string }
 
 const managerWorkspaceNav: Array<{ id: WorkspaceTab; label: string; icon: string }> = [
   { id: "dishes", label: "Manage Dishes", icon: "restaurant_menu" },
-  { id: "settings", label: "Share & QR", icon: "qr_code_2" },
+  { id: "share", label: "Share & QR", icon: "qr_code_2" },
+  { id: "settings", label: "Settings", icon: "settings" },
 ];
 
 export function WorkspaceSidebar({

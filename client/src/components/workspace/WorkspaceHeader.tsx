@@ -30,33 +30,12 @@ export function WorkspaceHeader({
   return (
     <header className="sticky top-0 z-30 flex flex-wrap items-center justify-between gap-4 border-b border-white/80 bg-white/88 px-6 py-4 backdrop-blur md:px-8">
       <div className="flex items-center gap-4">
-        <label
-          className={`relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl transition-all cursor-pointer hover:opacity-80 ${
-            logoUrl
-              ? "bg-transparent shadow-sm border border-outline-variant/30"
-              : "bg-primary/10 text-primary"
-          }`}
-          title="Upload Kitchen Logo"
-        >
-          <input
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file && onLogoUpload) {
-                onLogoUpload(file);
-              }
-              e.target.value = "";
-            }}
-            disabled={isUploadingLogo}
-          />
-
-          {isUploadingLogo ? (
-            <span className="material-symbols-outlined animate-spin text-[1.5rem]">
-              progress_activity
-            </span>
-          ) : logoUrl ? (
+        <div className={`flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl ${
+          logoUrl
+            ? "bg-transparent shadow-sm border border-outline-variant/30"
+            : "bg-primary/10 text-primary"
+        }`}>
+          {logoUrl ? (
             <img
               src={logoUrl}
               alt={`${restaurantName} logo`}
@@ -67,7 +46,7 @@ export function WorkspaceHeader({
               restaurant
             </span>
           )}
-        </label>
+        </div>
 
         <div>
           <h1 className="text-[1.7rem] font-extrabold tracking-[-0.04em] text-on-surface">
